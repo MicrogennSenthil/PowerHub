@@ -21,6 +21,8 @@ function serialize(r: SystemSettingsRow) {
     mqttPasswordSet: !!r.mqttPassword,
     mqttBaseTopic: r.mqttBaseTopic,
     mqttUseTls: r.mqttUseTls,
+    propertyCodeMode: r.propertyCodeMode,
+    propertyCodePrefix: r.propertyCodePrefix,
     updatedAt: r.updatedAt.toISOString(),
   };
 }
@@ -80,6 +82,12 @@ router.put("/", requirePermission("settings.manage"), async (req, res) => {
         ? { mqttBaseTopic: body.mqttBaseTopic }
         : {}),
       ...(body.mqttUseTls !== undefined ? { mqttUseTls: body.mqttUseTls } : {}),
+      ...(body.propertyCodeMode !== undefined
+        ? { propertyCodeMode: body.propertyCodeMode }
+        : {}),
+      ...(body.propertyCodePrefix !== undefined && body.propertyCodePrefix
+        ? { propertyCodePrefix: body.propertyCodePrefix.trim() }
+        : {}),
       updatedAt: new Date(),
     })
     .where(eq(systemSettingsTable.id, SETTINGS_ID))

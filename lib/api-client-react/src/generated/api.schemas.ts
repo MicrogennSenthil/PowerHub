@@ -57,8 +57,7 @@ export interface CurrentUser {
 export interface PropertyInput {
   /** @minLength 1 */
   name: string;
-  /** @minLength 1 */
-  code: string;
+  code?: string;
   address?: string;
   city?: string;
   pincode?: string;
@@ -322,6 +321,14 @@ export const SystemSettingsDeviceProtocol = {
   mqtt: 'mqtt',
 } as const;
 
+export type SystemSettingsPropertyCodeMode = typeof SystemSettingsPropertyCodeMode[keyof typeof SystemSettingsPropertyCodeMode];
+
+
+export const SystemSettingsPropertyCodeMode = {
+  manual: 'manual',
+  auto: 'auto',
+} as const;
+
 export interface SystemSettings {
   deviceProtocol: SystemSettingsDeviceProtocol;
   offlineThresholdMinutes: number;
@@ -336,6 +343,8 @@ export interface SystemSettings {
   /** @nullable */
   mqttBaseTopic?: string | null;
   mqttUseTls: boolean;
+  propertyCodeMode?: SystemSettingsPropertyCodeMode;
+  propertyCodePrefix?: string;
   updatedAt?: string;
 }
 
@@ -345,6 +354,14 @@ export type SystemSettingsUpdateDeviceProtocol = typeof SystemSettingsUpdateDevi
 export const SystemSettingsUpdateDeviceProtocol = {
   legacy: 'legacy',
   mqtt: 'mqtt',
+} as const;
+
+export type SystemSettingsUpdatePropertyCodeMode = typeof SystemSettingsUpdatePropertyCodeMode[keyof typeof SystemSettingsUpdatePropertyCodeMode];
+
+
+export const SystemSettingsUpdatePropertyCodeMode = {
+  manual: 'manual',
+  auto: 'auto',
 } as const;
 
 export interface SystemSettingsUpdate {
@@ -364,6 +381,9 @@ export interface SystemSettingsUpdate {
   /** @nullable */
   mqttBaseTopic?: string | null;
   mqttUseTls?: boolean;
+  propertyCodeMode?: SystemSettingsUpdatePropertyCodeMode;
+  /** @minLength 1 */
+  propertyCodePrefix?: string;
 }
 
 export interface Branding {

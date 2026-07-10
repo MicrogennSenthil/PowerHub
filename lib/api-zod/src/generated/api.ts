@@ -84,14 +84,13 @@ export const ListPropertiesResponse = zod.array(ListPropertiesResponseItem)
  * @summary Create a property
  */
 
-
 export const createPropertyBodyTariffPerKwhMin = 0;
 
 
 
 export const CreatePropertyBody = zod.object({
   "name": zod.string().min(1),
-  "code": zod.string().min(1),
+  "code": zod.string().optional(),
   "address": zod.string().optional(),
   "city": zod.string().optional(),
   "pincode": zod.string().optional(),
@@ -925,6 +924,8 @@ export const GetSettingsResponse = zod.object({
   "mqttPasswordSet": zod.boolean(),
   "mqttBaseTopic": zod.string().nullish(),
   "mqttUseTls": zod.boolean(),
+  "propertyCodeMode": zod.enum(['manual', 'auto']).optional(),
+  "propertyCodePrefix": zod.string().optional(),
   "updatedAt": zod.coerce.date().optional()
 })
 
@@ -932,6 +933,7 @@ export const GetSettingsResponse = zod.object({
 /**
  * @summary Update global system / device-communication settings
  */
+
 
 
 
@@ -945,7 +947,9 @@ export const UpdateSettingsBody = zod.object({
   "mqttUsername": zod.string().nullish(),
   "mqttPassword": zod.string().nullish(),
   "mqttBaseTopic": zod.string().nullish(),
-  "mqttUseTls": zod.boolean().optional()
+  "mqttUseTls": zod.boolean().optional(),
+  "propertyCodeMode": zod.enum(['manual', 'auto']).optional(),
+  "propertyCodePrefix": zod.string().min(1).optional()
 })
 
 export const UpdateSettingsResponse = zod.object({
@@ -958,6 +962,8 @@ export const UpdateSettingsResponse = zod.object({
   "mqttPasswordSet": zod.boolean(),
   "mqttBaseTopic": zod.string().nullish(),
   "mqttUseTls": zod.boolean(),
+  "propertyCodeMode": zod.enum(['manual', 'auto']).optional(),
+  "propertyCodePrefix": zod.string().optional(),
   "updatedAt": zod.coerce.date().optional()
 })
 

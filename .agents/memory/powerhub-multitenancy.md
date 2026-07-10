@@ -58,6 +58,15 @@ The API is multi-tenant, keyed by `propertyId`. Access is gated by `canAccessPro
   This requires raising `express.json({ limit })` above the 100kb default (set to
   2mb) or uploads 413. Downscale client-side (~320px) + cap/validate server-side.
 
+## Property code uniqueness (manual/auto)
+- Property `code` is either admin-typed ("manual") or auto-generated
+  (`<prefix>-NNN`) depending on `system_settings.propertyCodeMode` (Software Setup
+  page). **Rule:** the case-insensitive DB unique index on `lower(code)` is the
+  source of truth — app-level duplicate checks are only for friendly errors.
+  Translate Postgres `23505` into a 409. Auto-generation guesses `max+1` then
+  must **retry on 23505** (concurrent inserts race the guess); never trust a
+  scan-and-increment alone.
+
 ## Device communication protocol (config-switchable)
 - Direction agreed with user: **run legacy HTTP-poll now, keep MQTT as a stored,
   UI-switchable setting** (global singleton `system_settings`, super-admin/

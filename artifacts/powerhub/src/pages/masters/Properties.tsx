@@ -5,6 +5,8 @@ import {
   useCreateProperty, 
   useUpdateProperty, 
   useDeleteProperty,
+  useGetSettings,
+  getGetSettingsQueryKey,
   getListPropertiesQueryKey,
   Property
 } from '@workspace/api-client-react';
@@ -16,9 +18,38 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Loader2, Plus, Edit2, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+
+// Common IANA timezones offered in the property form. The property's current
+// value is always included even if it isn't in this list (see options below).
+const TIMEZONES = [
+  'UTC',
+  'Asia/Kolkata',
+  'Asia/Dubai',
+  'Asia/Singapore',
+  'Asia/Tokyo',
+  'Asia/Shanghai',
+  'Asia/Hong_Kong',
+  'Asia/Bangkok',
+  'Asia/Jakarta',
+  'Asia/Karachi',
+  'Asia/Colombo',
+  'Australia/Sydney',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Europe/Moscow',
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Sao_Paulo',
+  'Africa/Johannesburg',
+  'Pacific/Auckland',
+];
 
 export function Properties() {
   const { toast } = useToast();
@@ -26,7 +57,11 @@ export function Properties() {
   const { setSelectedPropertyId } = useProperty();
   
   const { data: properties, isLoading } = useListProperties();
-  
+  const { data: settings } = useGetSettings({
+    query: { queryKey: getGetSettingsQueryKey() },
+  });
+  const codeMode = settings?.propertyCodeMode === 'auto' ? 'auto' : 'manual';
+
   const createMutation = useCreateProperty();
   const updateMutation = useUpdateProperty();
   const deleteMutation = useDeleteProperty();
@@ -93,8 +128,12 @@ export function Properties() {
   };
 
   const handleSave = async () => {
-    if (!formData.name || !formData.code) {
-      toast({ title: 'Validation Error', description: 'Name and Code are required', variant: 'destructive' });
+    if (!formData.name) {
+      toast({ title: 'Validation Error', description: 'Name is required', variant: 'destructive' });
+      return;
+    }
+    if (codeMode === 'manual' && !formData.code) {
+      toast({ title: 'Validation Error', description: 'Code is required', variant: 'destructive' });
       return;
     }
 
@@ -212,8 +251,21 @@ export function Properties() {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="code">Code (Unique)</Label>
-                <Input id="code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. SF-01" />
+                <Label htmlFor="code">
+                  {codeMode === 'auto' ? 'Code (Auto-generated)' : 'Code (Unique)'}
+                </Label>
+                <Input
+                  id="code"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  placeholder={codeMode === 'auto' ? 'Auto-generated on save' : 'e.g. SF-01'}
+                  disabled={codeMode === 'auto'}
+                />
+                {codeMode === 'auto' && !editingRecord && (
+                  <p className="text-xs text-gray-500">
+                    A unique code will be assigned automatically.
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
@@ -259,7 +311,16 @@ export function Properties() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="timezone">Timezone</Label>
-                <Input id="timezone" value={formData.timezone} onChange={(e) => setFormData({ ...formData, timezone: e.target.value })} />
+                <Select value={formData.timezone} onValueChange={(v) => setFormData({ ...formData, timezone: v })}>
+                  <SelectTrigger id="timezone">
+                    <SelectValue placeholder="Select timezone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(TIMEZONES.includes(formData.timezone) ? TIMEZONES : [formData.timezone, ...TIMEZONES]).map((tz) => (
+                      <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

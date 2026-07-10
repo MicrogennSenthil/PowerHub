@@ -987,10 +987,10 @@ components:
         updatedAt: { type: string, format: date-time }
     PropertyInput:
       type: object
-      required: [name, code]
+      required: [name]
       properties:
         name: { type: string, minLength: 1 }
-        code: { type: string, minLength: 1 }
+        code: { type: string }
         address: { type: string }
         city: { type: string }
         pincode: { type: string }
@@ -1241,6 +1241,8 @@ components:
         mqttPasswordSet: { type: boolean }
         mqttBaseTopic: { type: ["string", "null"] }
         mqttUseTls: { type: boolean }
+        propertyCodeMode: { type: string, enum: [manual, auto] }
+        propertyCodePrefix: { type: string }
         updatedAt: { type: string, format: date-time }
     SystemSettingsUpdate:
       type: object
@@ -1254,6 +1256,8 @@ components:
         mqttPassword: { type: ["string", "null"] }
         mqttBaseTopic: { type: ["string", "null"] }
         mqttUseTls: { type: boolean }
+        propertyCodeMode: { type: string, enum: [manual, auto] }
+        propertyCodePrefix: { type: string, minLength: 1 }
 
     Branding:
       type: object

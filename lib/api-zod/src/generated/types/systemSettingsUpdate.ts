@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SystemSettingsUpdateDeviceProtocol } from './systemSettingsUpdateDeviceProtocol';
+import type { SystemSettingsUpdatePropertyCodeMode } from './systemSettingsUpdatePropertyCodeMode';
 
 export interface SystemSettingsUpdate {
   deviceProtocol?: SystemSettingsUpdateDeviceProtocol;
@@ -24,4 +25,7 @@ export interface SystemSettingsUpdate {
   /** @nullable */
   mqttBaseTopic?: string | null;
   mqttUseTls?: boolean;
+  propertyCodeMode?: SystemSettingsUpdatePropertyCodeMode;
+  /** @minLength 1 */
+  propertyCodePrefix?: string;
 }

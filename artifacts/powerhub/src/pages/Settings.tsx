@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Radio, Wifi, Save, ShieldCheck } from 'lucide-react';
+import { Loader2, Radio, Wifi, Save, ShieldCheck, Hash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type ProtocolKind = 'legacy' | 'mqtt';
@@ -28,6 +28,8 @@ interface FormState {
   mqttPassword: string;
   mqttBaseTopic: string;
   mqttUseTls: boolean;
+  propertyCodeMode: 'manual' | 'auto';
+  propertyCodePrefix: string;
 }
 
 const EMPTY: FormState = {
@@ -40,6 +42,8 @@ const EMPTY: FormState = {
   mqttPassword: '',
   mqttBaseTopic: 'powerhub',
   mqttUseTls: false,
+  propertyCodeMode: 'manual',
+  propertyCodePrefix: 'PROP',
 };
 
 export function Settings() {
@@ -67,6 +71,9 @@ export function Settings() {
       mqttPassword: '',
       mqttBaseTopic: settings.mqttBaseTopic ?? 'powerhub',
       mqttUseTls: settings.mqttUseTls ?? false,
+      propertyCodeMode:
+        (settings.propertyCodeMode as 'manual' | 'auto') ?? 'manual',
+      propertyCodePrefix: settings.propertyCodePrefix ?? 'PROP',
     });
   }, [settings]);
 
@@ -102,6 +109,8 @@ export function Settings() {
           ...(form.mqttPassword ? { mqttPassword: form.mqttPassword } : {}),
           mqttBaseTopic: form.mqttBaseTopic.trim() || null,
           mqttUseTls: form.mqttUseTls,
+          propertyCodeMode: form.propertyCodeMode,
+          propertyCodePrefix: form.propertyCodePrefix.trim() || 'PROP',
         },
       });
       queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
@@ -248,6 +257,68 @@ export function Settings() {
               <p className="text-xs text-gray-500">Encrypt the connection to the broker (recommended for public brokers).</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Property code generation */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2"><Hash className="h-4 w-4" /> Property Code</CardTitle>
+          <CardDescription>
+            Choose how the code for each property is assigned when a new property is created.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <RadioGroup
+            value={form.propertyCodeMode}
+            onValueChange={(v) => set('propertyCodeMode', v as 'manual' | 'auto')}
+            className="grid gap-4 sm:grid-cols-2"
+          >
+            <label
+              htmlFor="code-manual"
+              className={cn(
+                'flex cursor-pointer gap-3 rounded-lg border p-4 transition-colors',
+                form.propertyCodeMode === 'manual' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:bg-gray-50',
+              )}
+            >
+              <RadioGroupItem value="manual" id="code-manual" className="mt-1" />
+              <div>
+                <div className="font-medium text-gray-900">Manual</div>
+                <p className="mt-1 text-xs text-gray-500">
+                  The admin types a unique code for each property. Duplicates are rejected.
+                </p>
+              </div>
+            </label>
+
+            <label
+              htmlFor="code-auto"
+              className={cn(
+                'flex cursor-pointer gap-3 rounded-lg border p-4 transition-colors',
+                form.propertyCodeMode === 'auto' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:bg-gray-50',
+              )}
+            >
+              <RadioGroupItem value="auto" id="code-auto" className="mt-1" />
+              <div>
+                <div className="font-medium text-gray-900">Auto-generate</div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Codes are generated automatically as <span className="font-mono">{(form.propertyCodePrefix.trim() || 'PROP')}-001</span>, incrementing per property.
+                </p>
+              </div>
+            </label>
+          </RadioGroup>
+
+          {form.propertyCodeMode === 'auto' && (
+            <div className="space-y-2 max-w-xs">
+              <Label htmlFor="code-prefix">Code Prefix</Label>
+              <Input
+                id="code-prefix"
+                value={form.propertyCodePrefix}
+                onChange={(e) => set('propertyCodePrefix', e.target.value)}
+                placeholder="PROP"
+              />
+              <p className="text-xs text-gray-500">Used as the prefix for auto-generated codes.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

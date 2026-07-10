@@ -28,6 +28,10 @@ export const systemSettingsTable = pgTable("system_settings", {
   brandName: text("brand_name"),
   brandColor: text("brand_color"),
   brandLogoUrl: text("brand_logo_url"),
+  // Property code generation: "manual" lets the admin type a code, "auto"
+  // generates a unique sequential code from propertyCodePrefix on create.
+  propertyCodeMode: text("property_code_mode").notNull().default("manual"),
+  propertyCodePrefix: text("property_code_prefix").notNull().default("PROP"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

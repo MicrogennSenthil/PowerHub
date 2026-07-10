@@ -9,8 +9,7 @@
 export interface PropertyInput {
   /** @minLength 1 */
   name: string;
-  /** @minLength 1 */
-  code: string;
+  code?: string;
   address?: string;
   city?: string;
   pincode?: string;
