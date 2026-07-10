@@ -24,6 +24,7 @@ import processTypesRouter from "./processTypes";
 import rolesRouter from "./roles";
 import usersRouter from "./users";
 import dashboardRouter from "./dashboard";
+import settingsRouter from "./settings";
 import { makeSimpleMasterRouter } from "./simpleMaster";
 import { requireAuth } from "../lib/auth";
 
@@ -73,5 +74,6 @@ router.use("/process-types", processTypesRouter);
 router.use("/roles", rolesRouter);
 router.use("/users", usersRouter);
 router.use("/dashboard", dashboardRouter);
+router.use("/settings", settingsRouter);
 
 export default router;

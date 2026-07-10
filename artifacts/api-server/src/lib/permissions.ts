@@ -42,6 +42,13 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   { key: "users.manage", label: "Manage users", group: "Administration" },
   { key: "roles.view", label: "View roles", group: "Administration" },
   { key: "roles.manage", label: "Manage roles", group: "Administration" },
+
+  { key: "settings.view", label: "View software setup", group: "System" },
+  {
+    key: "settings.manage",
+    label: "Manage software setup",
+    group: "System",
+  },
 ];
 
 export const ALL_PERMISSION_KEYS: string[] = PERMISSION_CATALOG.map(

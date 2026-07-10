@@ -55,4 +55,8 @@ export * from './roomType';
 export * from './roomTypeInput';
 export * from './roomTypeUpdate';
 export * from './roomUpdate';
+export * from './systemSettings';
+export * from './systemSettingsDeviceProtocol';
+export * from './systemSettingsUpdate';
+export * from './systemSettingsUpdateDeviceProtocol';
 export * from './unauthorizedResponse';

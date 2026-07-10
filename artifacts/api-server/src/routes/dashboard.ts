@@ -12,6 +12,7 @@ import {
 import { requirePermission, canAccessProperty } from "../lib/auth";
 import { parsePropertyIdQuery } from "../lib/http";
 import { isDeviceOnline, serializeDevice } from "../lib/serialize";
+import { getOfflineThresholdMinutes } from "../lib/settings";
 
 const router: IRouter = Router();
 
@@ -85,8 +86,9 @@ router.get(
 
     const floorNames = new Map(floorRows.map((f) => [f.id, f.name]));
     const channelCounts = new Map(channelRows.map((c) => [c.deviceId, c.count]));
+    const threshold = await getOfflineThresholdMinutes();
     const devicesOnline = deviceRows.filter((d) =>
-      isDeviceOnline(d.lastSeenAt),
+      isDeviceOnline(d.lastSeenAt, threshold),
     ).length;
 
     res.json({
@@ -104,6 +106,7 @@ router.get(
         serializeDevice(d, {
           floorName: d.floorId ? (floorNames.get(d.floorId) ?? null) : null,
           channelCount: channelCounts.get(d.id) ?? 0,
+          onlineThresholdMinutes: threshold,
         }),
       ),
     });

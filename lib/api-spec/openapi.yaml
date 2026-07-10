@@ -38,6 +38,8 @@ tags:
     description: Dashboard summaries
   - name: meta
     description: Static catalogs
+  - name: settings
+    description: Global software / device-communication setup
 
 paths:
   /healthz:
@@ -822,6 +824,40 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardSummary"
 
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get global system / device-communication settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemSettings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update global system / device-communication settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SystemSettingsUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
 components:
   parameters:
     IdPath:
@@ -1150,6 +1186,40 @@ components:
         cutoffMinutes: { type: integer, minimum: 0 }
         isAuto: { type: boolean }
         active: { type: boolean }
+
+    SystemSettings:
+      type: object
+      required:
+        [
+          deviceProtocol,
+          offlineThresholdMinutes,
+          pollIntervalSeconds,
+          mqttPasswordSet,
+          mqttUseTls,
+        ]
+      properties:
+        deviceProtocol: { type: string, enum: [legacy, mqtt] }
+        offlineThresholdMinutes: { type: integer }
+        pollIntervalSeconds: { type: integer }
+        mqttBrokerUrl: { type: ["string", "null"] }
+        mqttPort: { type: ["integer", "null"] }
+        mqttUsername: { type: ["string", "null"] }
+        mqttPasswordSet: { type: boolean }
+        mqttBaseTopic: { type: ["string", "null"] }
+        mqttUseTls: { type: boolean }
+        updatedAt: { type: string, format: date-time }
+    SystemSettingsUpdate:
+      type: object
+      properties:
+        deviceProtocol: { type: string, enum: [legacy, mqtt] }
+        offlineThresholdMinutes: { type: integer, minimum: 1 }
+        pollIntervalSeconds: { type: integer, minimum: 1 }
+        mqttBrokerUrl: { type: ["string", "null"] }
+        mqttPort: { type: ["integer", "null"] }
+        mqttUsername: { type: ["string", "null"] }
+        mqttPassword: { type: ["string", "null"] }
+        mqttBaseTopic: { type: ["string", "null"] }
+        mqttUseTls: { type: boolean }
 
     Role:
       type: object

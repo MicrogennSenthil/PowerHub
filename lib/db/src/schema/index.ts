@@ -10,3 +10,4 @@ export * from "./processTypes";
 export * from "./roles";
 export * from "./appUsers";
 export * from "./userProperties";
+export * from "./systemSettings";

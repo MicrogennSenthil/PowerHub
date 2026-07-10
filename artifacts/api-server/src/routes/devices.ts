@@ -12,6 +12,7 @@ import { requirePermission, canAccessProperty } from "../lib/auth";
 import { parseId, parsePropertyIdQuery, validateBody } from "../lib/http";
 import { serializeDevice } from "../lib/serialize";
 import { refBelongsToProperty } from "../lib/integrity";
+import { getOfflineThresholdMinutes } from "../lib/settings";
 
 const router: IRouter = Router();
 
@@ -49,15 +50,21 @@ async function serializeMany(devices: DeviceRow[]) {
   const counts = await channelCounts(devices.map((d) => d.id));
   const propertyIds = [...new Set(devices.map((d) => d.propertyId))];
   const floorMaps = new Map<number, Map<number, string>>();
-  await Promise.all(
-    propertyIds.map(async (pid) => floorMaps.set(pid, await floorNameMap(pid))),
-  );
+  const [, threshold] = await Promise.all([
+    Promise.all(
+      propertyIds.map(async (pid) =>
+        floorMaps.set(pid, await floorNameMap(pid)),
+      ),
+    ),
+    getOfflineThresholdMinutes(),
+  ]);
   return devices.map((d) =>
     serializeDevice(d, {
       floorName: d.floorId
         ? (floorMaps.get(d.propertyId)?.get(d.floorId) ?? null)
         : null,
       channelCount: counts.get(d.id) ?? 0,
+      onlineThresholdMinutes: threshold,
     }),
   );
 }

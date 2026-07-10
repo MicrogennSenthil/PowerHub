@@ -39,15 +39,15 @@ export function Sidebar({ me }: SidebarProps) {
         { title: "Properties", href: "/properties", icon: Building, show: me.isSuperAdmin }, // super admin only as per spec
         { title: "Blocks", href: "/blocks", icon: BoxSelect, show: hasPerm('blocks.view') },
         { title: "Floors", href: "/floors", icon: Layers, show: hasPerm('floors.view') },
-        { title: "Room Types", href: "/room-types", icon: Bed, show: hasPerm('room_types.view') },
+        { title: "Room Types", href: "/room-types", icon: Bed, show: hasPerm('roomTypes.view') },
         { title: "Rooms", href: "/rooms", icon: DoorOpen, show: hasPerm('rooms.view') },
       ]
     },
     {
       title: "Automation",
       items: [
-        { title: "Control Types", href: "/control-types", icon: Settings2, show: hasPerm('control_types.view') },
-        { title: "Process Types", href: "/process-types", icon: Timer, show: hasPerm('process_types.view') },
+        { title: "Control Types", href: "/control-types", icon: Settings2, show: hasPerm('controlTypes.view') },
+        { title: "Process Types", href: "/process-types", icon: Timer, show: hasPerm('processTypes.view') },
         { title: "Devices", href: "/devices", icon: Cpu, show: hasPerm('devices.view') },
       ]
     },
@@ -56,6 +56,7 @@ export function Sidebar({ me }: SidebarProps) {
       items: [
         { title: "Users", href: "/users", icon: Users, show: hasPerm('users.view') || hasPerm('users.manage') }, // User requested users.manage only for users, but viewing users needs view
         { title: "Roles", href: "/roles", icon: ShieldAlert, show: hasPerm('roles.view') || hasPerm('roles.manage') },
+        { title: "Software Setup", href: "/settings", icon: Settings, show: hasPerm('settings.view') },
       ]
     }
   ];

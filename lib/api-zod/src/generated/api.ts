@@ -912,3 +912,53 @@ export const GetDashboardSummaryResponse = zod.object({
 })
 
 
+/**
+ * @summary Get global system / device-communication settings
+ */
+export const GetSettingsResponse = zod.object({
+  "deviceProtocol": zod.enum(['legacy', 'mqtt']),
+  "offlineThresholdMinutes": zod.number(),
+  "pollIntervalSeconds": zod.number(),
+  "mqttBrokerUrl": zod.string().nullish(),
+  "mqttPort": zod.number().nullish(),
+  "mqttUsername": zod.string().nullish(),
+  "mqttPasswordSet": zod.boolean(),
+  "mqttBaseTopic": zod.string().nullish(),
+  "mqttUseTls": zod.boolean(),
+  "updatedAt": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary Update global system / device-communication settings
+ */
+
+
+
+
+export const UpdateSettingsBody = zod.object({
+  "deviceProtocol": zod.enum(['legacy', 'mqtt']).optional(),
+  "offlineThresholdMinutes": zod.number().min(1).optional(),
+  "pollIntervalSeconds": zod.number().min(1).optional(),
+  "mqttBrokerUrl": zod.string().nullish(),
+  "mqttPort": zod.number().nullish(),
+  "mqttUsername": zod.string().nullish(),
+  "mqttPassword": zod.string().nullish(),
+  "mqttBaseTopic": zod.string().nullish(),
+  "mqttUseTls": zod.boolean().optional()
+})
+
+export const UpdateSettingsResponse = zod.object({
+  "deviceProtocol": zod.enum(['legacy', 'mqtt']),
+  "offlineThresholdMinutes": zod.number(),
+  "pollIntervalSeconds": zod.number(),
+  "mqttBrokerUrl": zod.string().nullish(),
+  "mqttPort": zod.number().nullish(),
+  "mqttUsername": zod.string().nullish(),
+  "mqttPasswordSet": zod.boolean(),
+  "mqttBaseTopic": zod.string().nullish(),
+  "mqttUseTls": zod.boolean(),
+  "updatedAt": zod.coerce.date().optional()
+})
+
+

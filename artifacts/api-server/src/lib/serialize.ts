@@ -19,16 +19,21 @@ export function serializeProperty(p: PropertyRow) {
   };
 }
 
-const ONLINE_THRESHOLD_MS = 2 * 60 * 1000;
-
-export function isDeviceOnline(lastSeenAt: Date | null): boolean {
+export function isDeviceOnline(
+  lastSeenAt: Date | null,
+  thresholdMinutes = 2,
+): boolean {
   if (!lastSeenAt) return false;
-  return Date.now() - lastSeenAt.getTime() < ONLINE_THRESHOLD_MS;
+  return Date.now() - lastSeenAt.getTime() < thresholdMinutes * 60 * 1000;
 }
 
 export function serializeDevice(
   d: DeviceRow,
-  extra: { floorName: string | null; channelCount: number },
+  extra: {
+    floorName: string | null;
+    channelCount: number;
+    onlineThresholdMinutes?: number;
+  },
 ) {
   return {
     id: d.id,
@@ -39,7 +44,7 @@ export function serializeDevice(
     floorId: d.floorId,
     floorName: extra.floorName,
     active: d.active,
-    online: isDeviceOnline(d.lastSeenAt),
+    online: isDeviceOnline(d.lastSeenAt, extra.onlineThresholdMinutes),
     lastSeenAt: d.lastSeenAt ? d.lastSeenAt.toISOString() : null,
     channelCount: extra.channelCount,
   };

@@ -21,6 +21,7 @@ import { DeviceDetail } from '@/pages/masters/DeviceDetail';
 import { ProcessTypes } from '@/pages/masters/ProcessTypes';
 import { Users } from '@/pages/masters/Users';
 import { Roles } from '@/pages/masters/Roles';
+import { Settings } from '@/pages/Settings';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -212,6 +213,7 @@ function ClerkProviderWithRoutes() {
             <Route path="/process-types"><ProtectedRoute component={ProcessTypes} /></Route>
             <Route path="/users"><ProtectedRoute component={Users} /></Route>
             <Route path="/roles"><ProtectedRoute component={Roles} /></Route>
+            <Route path="/settings"><ProtectedRoute component={Settings} /></Route>
             
             <Route component={NotFound} />
           </Switch>

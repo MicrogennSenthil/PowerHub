@@ -314,6 +314,58 @@ export interface ProcessTypeUpdate {
   active?: boolean;
 }
 
+export type SystemSettingsDeviceProtocol = typeof SystemSettingsDeviceProtocol[keyof typeof SystemSettingsDeviceProtocol];
+
+
+export const SystemSettingsDeviceProtocol = {
+  legacy: 'legacy',
+  mqtt: 'mqtt',
+} as const;
+
+export interface SystemSettings {
+  deviceProtocol: SystemSettingsDeviceProtocol;
+  offlineThresholdMinutes: number;
+  pollIntervalSeconds: number;
+  /** @nullable */
+  mqttBrokerUrl?: string | null;
+  /** @nullable */
+  mqttPort?: number | null;
+  /** @nullable */
+  mqttUsername?: string | null;
+  mqttPasswordSet: boolean;
+  /** @nullable */
+  mqttBaseTopic?: string | null;
+  mqttUseTls: boolean;
+  updatedAt?: string;
+}
+
+export type SystemSettingsUpdateDeviceProtocol = typeof SystemSettingsUpdateDeviceProtocol[keyof typeof SystemSettingsUpdateDeviceProtocol];
+
+
+export const SystemSettingsUpdateDeviceProtocol = {
+  legacy: 'legacy',
+  mqtt: 'mqtt',
+} as const;
+
+export interface SystemSettingsUpdate {
+  deviceProtocol?: SystemSettingsUpdateDeviceProtocol;
+  /** @minimum 1 */
+  offlineThresholdMinutes?: number;
+  /** @minimum 1 */
+  pollIntervalSeconds?: number;
+  /** @nullable */
+  mqttBrokerUrl?: string | null;
+  /** @nullable */
+  mqttPort?: number | null;
+  /** @nullable */
+  mqttUsername?: string | null;
+  /** @nullable */
+  mqttPassword?: string | null;
+  /** @nullable */
+  mqttBaseTopic?: string | null;
+  mqttUseTls?: boolean;
+}
+
 export interface Role {
   id: number;
   name: string;
