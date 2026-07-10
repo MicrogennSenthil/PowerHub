@@ -1,15 +1,26 @@
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { SignInButton } from '@clerk/react';
 import { Zap, ShieldCheck, Cpu, Building2 } from 'lucide-react';
+import { useGetBranding, getGetBrandingQueryKey } from '@workspace/api-client-react';
 
 export function Landing() {
+  const { data: branding } = useGetBranding({
+    query: { queryKey: getGetBrandingQueryKey() },
+  });
+  const brandName = branding?.brandName || 'PowerHub';
+
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
       <header className="flex h-16 items-center justify-between border-b bg-white px-6 md:px-12">
         <div className="flex items-center gap-2 text-primary">
-          <Zap className="h-6 w-6 fill-current" />
-          <span className="text-xl font-bold tracking-tight text-slate-900">PowerHub</span>
+          {branding?.brandLogoUrl ? (
+            <img src={branding.brandLogoUrl} alt={brandName} className="h-9 w-auto max-w-[200px] object-contain" />
+          ) : (
+            <>
+              <Zap className="h-6 w-6 fill-current" />
+              <span className="text-xl font-bold tracking-tight text-slate-900">{brandName}</span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-4">
           <Link href="/sign-in" className="text-sm font-medium text-slate-600 hover:text-slate-900">

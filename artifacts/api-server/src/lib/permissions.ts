@@ -49,6 +49,13 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
     label: "Manage software setup",
     group: "System",
   },
+
+  { key: "smartTv.view", label: "View Smart TV branding", group: "Smart TV" },
+  {
+    key: "smartTv.manage",
+    label: "Manage Smart TV branding",
+    group: "Smart TV",
+  },
 ];
 
 export const ALL_PERMISSION_KEYS: string[] = PERMISSION_CATALOG.map(

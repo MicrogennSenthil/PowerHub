@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'wouter';
-import { CurrentUser } from '@workspace/api-client-react';
+import { CurrentUser, useGetBranding, getGetBrandingQueryKey } from '@workspace/api-client-react';
 import { 
   LayoutDashboard, 
   Building, 
@@ -12,7 +12,8 @@ import {
   Timer, 
   Users, 
   ShieldAlert,
-  Settings
+  Settings,
+  Tv
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -23,6 +24,9 @@ interface SidebarProps {
 
 export function Sidebar({ me }: SidebarProps) {
   const [location] = useLocation();
+  const { data: branding } = useGetBranding({
+    query: { queryKey: getGetBrandingQueryKey() },
+  });
 
   const hasPerm = (perm: string) => me.isSuperAdmin || me.permissions.includes(perm);
 
@@ -58,16 +62,28 @@ export function Sidebar({ me }: SidebarProps) {
         { title: "Roles", href: "/roles", icon: ShieldAlert, show: hasPerm('roles.view') || hasPerm('roles.manage') },
         { title: "Software Setup", href: "/settings", icon: Settings, show: hasPerm('settings.view') },
       ]
+    },
+    {
+      title: "Smart TV",
+      items: [
+        { title: "Smart TV", href: "/smart-tv", icon: Tv, show: hasPerm('smartTv.view') },
+      ]
     }
   ];
 
   return (
     <div className="flex w-64 flex-col border-r bg-white">
       <div className="flex h-16 items-center gap-2 border-b px-6">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary">
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor" stroke="none" />
-        </svg>
-        <span className="text-lg font-bold tracking-tight text-gray-900">PowerHub</span>
+        {branding?.brandLogoUrl ? (
+          <img src={branding.brandLogoUrl} alt={branding.brandName ?? 'Logo'} className="h-8 w-auto max-w-[160px] object-contain" />
+        ) : (
+          <>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor" stroke="none" />
+            </svg>
+            <span className="text-lg font-bold tracking-tight text-gray-900">{branding?.brandName || 'PowerHub'}</span>
+          </>
+        )}
       </div>
       
       <ScrollArea className="flex-1 py-4">

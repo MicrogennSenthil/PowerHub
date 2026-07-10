@@ -40,6 +40,8 @@ tags:
     description: Static catalogs
   - name: settings
     description: Global software / device-communication setup
+  - name: branding
+    description: Smart TV / app branding (logo, name, colour)
 
 paths:
   /healthz:
@@ -858,6 +860,38 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
 
+  /branding:
+    get:
+      operationId: getBranding
+      tags: [branding]
+      summary: Get public branding (logo, name, colour) — no auth required
+      responses:
+        "200":
+          description: Branding
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branding"
+    put:
+      operationId: updateBranding
+      tags: [branding]
+      summary: Update branding (requires smartTv.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BrandingUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branding"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
 components:
   parameters:
     IdPath:
@@ -1220,6 +1254,20 @@ components:
         mqttPassword: { type: ["string", "null"] }
         mqttBaseTopic: { type: ["string", "null"] }
         mqttUseTls: { type: boolean }
+
+    Branding:
+      type: object
+      required: [brandName, brandColor, brandLogoUrl]
+      properties:
+        brandName: { type: ["string", "null"] }
+        brandColor: { type: ["string", "null"] }
+        brandLogoUrl: { type: ["string", "null"] }
+    BrandingUpdate:
+      type: object
+      properties:
+        brandName: { type: ["string", "null"] }
+        brandColor: { type: ["string", "null"] }
+        brandLogoUrl: { type: ["string", "null"] }
 
     Role:
       type: object

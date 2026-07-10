@@ -25,6 +25,7 @@ import rolesRouter from "./roles";
 import usersRouter from "./users";
 import dashboardRouter from "./dashboard";
 import settingsRouter from "./settings";
+import { brandingPublicRouter, brandingRouter } from "./branding";
 import { makeSimpleMasterRouter } from "./simpleMaster";
 import { requireAuth } from "../lib/auth";
 
@@ -32,6 +33,9 @@ const router: IRouter = Router();
 
 // Public
 router.use(healthRouter);
+// Branding is read publicly (login/splash + castable TV welcome page render
+// without an authenticated session). Writes remain authenticated below.
+router.use("/branding", brandingPublicRouter);
 
 // Everything below requires an authenticated (and provisioned) user.
 router.use(requireAuth);
@@ -75,5 +79,6 @@ router.use("/roles", rolesRouter);
 router.use("/users", usersRouter);
 router.use("/dashboard", dashboardRouter);
 router.use("/settings", settingsRouter);
+router.use("/branding", brandingRouter);
 
 export default router;

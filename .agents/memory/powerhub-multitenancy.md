@@ -42,6 +42,22 @@ The API is multi-tenant, keyed by `propertyId`. Access is gated by `canAccessPro
   `offlineThresholdMinutes` (via `getOfflineThresholdMinutes`), not a hardcoded
   default — otherwise endpoints disagree on the same device's status.
 
+## Branding / Smart TV (no-hardware TV logo)
+- Consumer smart TVs (Samsung/LG/Sony) **cannot** have their power-on boot logo
+  changed by any third-party software/USB — it's in signed manufacturer firmware.
+  Only hospitality TVs (Samsung Hospitality/LYNK, LG Pro:Centric) support a USB
+  welcome-logo, or a media box per room. User declined hardware, so we ship:
+  in-app branding + a castable `/welcome` page + a client-generated 1920×1080 USB
+  image. None auto-shows at power-on; that limit is inherent, not a bug.
+- Branding (logo/name/colour) lives in the `system_settings` singleton and is
+  read via a **public** `GET /branding` (mounted before `requireAuth`) because the
+  login screen and castable TV page render unauthenticated. **Rule:** that public
+  serializer must expose ONLY brandName/brandColor/brandLogoUrl — never spread the
+  whole settings row, or you leak mqtt secrets. Writes gated by `smartTv.manage`.
+- Logos are stored as **downscaled PNG data URLs** in the DB (no object storage).
+  This requires raising `express.json({ limit })` above the 100kb default (set to
+  2mb) or uploads 413. Downscale client-side (~320px) + cap/validate server-side.
+
 ## Device communication protocol (config-switchable)
 - Direction agreed with user: **run legacy HTTP-poll now, keep MQTT as a stored,
   UI-switchable setting** (global singleton `system_settings`, super-admin/

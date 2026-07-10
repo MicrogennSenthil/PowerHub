@@ -962,3 +962,29 @@ export const UpdateSettingsResponse = zod.object({
 })
 
 
+/**
+ * @summary Get public branding (logo, name, colour) — no auth required
+ */
+export const GetBrandingResponse = zod.object({
+  "brandName": zod.string().nullable(),
+  "brandColor": zod.string().nullable(),
+  "brandLogoUrl": zod.string().nullable()
+})
+
+
+/**
+ * @summary Update branding (requires smartTv.manage)
+ */
+export const UpdateBrandingBody = zod.object({
+  "brandName": zod.string().nullish(),
+  "brandColor": zod.string().nullish(),
+  "brandLogoUrl": zod.string().nullish()
+})
+
+export const UpdateBrandingResponse = zod.object({
+  "brandName": zod.string().nullable(),
+  "brandColor": zod.string().nullable(),
+  "brandLogoUrl": zod.string().nullable()
+})
+
+

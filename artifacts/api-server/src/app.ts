@@ -38,7 +38,9 @@ app.use(
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
 app.use(cors({ credentials: true, origin: true }));
-app.use(express.json());
+// 2mb accommodates small logo data URLs stored via the branding endpoint while
+// still bounding request size.
+app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // Resolve the publishable key from the incoming request host so the same

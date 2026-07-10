@@ -13,6 +13,8 @@ export * from './badRequestResponse';
 export * from './block';
 export * from './blockInput';
 export * from './blockUpdate';
+export * from './branding';
+export * from './brandingUpdate';
 export * from './control';
 export * from './controlType';
 export * from './controlTypeInput';

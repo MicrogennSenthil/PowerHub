@@ -27,6 +27,8 @@ import type {
   Block,
   BlockInput,
   BlockUpdate,
+  Branding,
+  BrandingUpdate,
   Control,
   ControlType,
   ControlTypeInput,
@@ -3602,5 +3604,153 @@ export const useUpdateSettings = <TError = ErrorType<BadRequestResponse>,
         TContext
       > => {
       return useMutation(getUpdateSettingsMutationOptions(options));
+    }
+
+export const getGetBrandingUrl = () => {
+
+
+
+
+  return `/api/branding`
+}
+
+/**
+ * @summary Get public branding (logo, name, colour) — no auth required
+ */
+export const getBranding = async ( options?: RequestInit): Promise<Branding> => {
+
+  return customFetch<Branding>(getGetBrandingUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBrandingQueryKey = () => {
+    return [
+    `/api/branding`
+    ] as const;
+    }
+
+
+export const getGetBrandingQueryOptions = <TData = Awaited<ReturnType<typeof getBranding>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBranding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBrandingQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBranding>>> = ({ signal }) => getBranding({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBranding>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBrandingQueryResult = NonNullable<Awaited<ReturnType<typeof getBranding>>>
+export type GetBrandingQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get public branding (logo, name, colour) — no auth required
+ */
+
+export function useGetBranding<TData = Awaited<ReturnType<typeof getBranding>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBranding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBrandingQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateBrandingUrl = () => {
+
+
+
+
+  return `/api/branding`
+}
+
+/**
+ * @summary Update branding (requires smartTv.manage)
+ */
+export const updateBranding = async (brandingUpdate: BrandingUpdate, options?: RequestInit): Promise<Branding> => {
+
+  return customFetch<Branding>(getUpdateBrandingUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(brandingUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateBrandingMutationOptions = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBranding>>, TError,{data: BodyType<BrandingUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateBranding>>, TError,{data: BodyType<BrandingUpdate>}, TContext> => {
+
+const mutationKey = ['updateBranding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateBranding>>, {data: BodyType<BrandingUpdate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateBranding(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateBrandingMutationResult = NonNullable<Awaited<ReturnType<typeof updateBranding>>>
+    export type UpdateBrandingMutationBody = BodyType<BrandingUpdate>
+    export type UpdateBrandingMutationError = ErrorType<BadRequestResponse>
+
+    /**
+ * @summary Update branding (requires smartTv.manage)
+ */
+export const useUpdateBranding = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBranding>>, TError,{data: BodyType<BrandingUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateBranding>>,
+        TError,
+        {data: BodyType<BrandingUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateBrandingMutationOptions(options));
     }
 

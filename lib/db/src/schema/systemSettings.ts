@@ -22,6 +22,12 @@ export const systemSettingsTable = pgTable("system_settings", {
   mqttPassword: text("mqtt_password"),
   mqttBaseTopic: text("mqtt_base_topic"),
   mqttUseTls: boolean("mqtt_use_tls").notNull().default(false),
+  // Branding shown on the login/splash screen and the castable TV welcome page.
+  // brandLogoUrl holds a data URL (small, downscaled PNG) so no object storage
+  // is needed; brandColor is the background for the welcome screen.
+  brandName: text("brand_name"),
+  brandColor: text("brand_color"),
+  brandLogoUrl: text("brand_logo_url"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

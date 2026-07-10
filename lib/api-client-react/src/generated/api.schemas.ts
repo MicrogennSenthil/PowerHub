@@ -366,6 +366,24 @@ export interface SystemSettingsUpdate {
   mqttUseTls?: boolean;
 }
 
+export interface Branding {
+  /** @nullable */
+  brandName: string | null;
+  /** @nullable */
+  brandColor: string | null;
+  /** @nullable */
+  brandLogoUrl: string | null;
+}
+
+export interface BrandingUpdate {
+  /** @nullable */
+  brandName?: string | null;
+  /** @nullable */
+  brandColor?: string | null;
+  /** @nullable */
+  brandLogoUrl?: string | null;
+}
+
 export interface Role {
   id: number;
   name: string;

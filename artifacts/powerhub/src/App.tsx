@@ -22,6 +22,8 @@ import { ProcessTypes } from '@/pages/masters/ProcessTypes';
 import { Users } from '@/pages/masters/Users';
 import { Roles } from '@/pages/masters/Roles';
 import { Settings } from '@/pages/Settings';
+import { SmartTv } from '@/pages/SmartTv';
+import { Welcome } from '@/pages/Welcome';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -214,7 +216,11 @@ function ClerkProviderWithRoutes() {
             <Route path="/users"><ProtectedRoute component={Users} /></Route>
             <Route path="/roles"><ProtectedRoute component={Roles} /></Route>
             <Route path="/settings"><ProtectedRoute component={Settings} /></Route>
-            
+            <Route path="/smart-tv"><ProtectedRoute component={SmartTv} /></Route>
+
+            {/* Public full-screen page for casting to a TV */}
+            <Route path="/welcome" component={Welcome} />
+
             <Route component={NotFound} />
           </Switch>
           <Toaster />
