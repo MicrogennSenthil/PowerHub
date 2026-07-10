@@ -3,13 +3,42 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: PowerHub — multi-tenant hotel power/relay automation control system
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Current user / session
+  - name: properties
+    description: Property (hotel) master
+  - name: blocks
+    description: Block master
+  - name: floors
+    description: Floor master
+  - name: room-types
+    description: Room type master
+  - name: rooms
+    description: Room master
+  - name: control-types
+    description: Control (load) type master
+  - name: devices
+    description: Relay device (box) master
+  - name: controls
+    description: Individual relay channels
+  - name: process-types
+    description: Process type + auto-cutoff master
+  - name: roles
+    description: Roles and permissions
+  - name: users
+    description: Application users and property allocation
+  - name: dashboard
+    description: Dashboard summaries
+  - name: meta
+    description: Static catalogs
+
 paths:
   /healthz:
     get:
@@ -24,7 +53,808 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Current authenticated user with role, permissions and allocated properties
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /permissions:
+    get:
+      operationId: listPermissions
+      tags: [meta]
+      summary: Catalog of assignable permissions (for building the rights UI without hardcoding)
+      responses:
+        "200":
+          description: Permission catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PermissionDef"
+
+  /properties:
+    get:
+      operationId: listProperties
+      tags: [properties]
+      summary: List properties the current user can access
+      responses:
+        "200":
+          description: Properties
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Property"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createProperty
+      tags: [properties]
+      summary: Create a property
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /properties/{id}:
+    get:
+      operationId: getProperty
+      tags: [properties]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Property
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateProperty
+      tags: [properties]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteProperty
+      tags: [properties]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /blocks:
+    get:
+      operationId: listBlocks
+      tags: [blocks]
+      parameters:
+        - $ref: "#/components/parameters/PropertyIdQuery"
+      responses:
+        "200":
+          description: Blocks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Block"
+    post:
+      operationId: createBlock
+      tags: [blocks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BlockInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Block"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /blocks/{id}:
+    patch:
+      operationId: updateBlock
+      tags: [blocks]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BlockUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Block"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteBlock
+      tags: [blocks]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /floors:
+    get:
+      operationId: listFloors
+      tags: [floors]
+      parameters:
+        - $ref: "#/components/parameters/PropertyIdQuery"
+      responses:
+        "200":
+          description: Floors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Floor"
+    post:
+      operationId: createFloor
+      tags: [floors]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FloorInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Floor"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /floors/{id}:
+    patch:
+      operationId: updateFloor
+      tags: [floors]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FloorUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Floor"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteFloor
+      tags: [floors]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /room-types:
+    get:
+      operationId: listRoomTypes
+      tags: [room-types]
+      parameters:
+        - $ref: "#/components/parameters/PropertyIdQuery"
+      responses:
+        "200":
+          description: Room types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoomType"
+    post:
+      operationId: createRoomType
+      tags: [room-types]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomTypeInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomType"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /room-types/{id}:
+    patch:
+      operationId: updateRoomType
+      tags: [room-types]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomTypeUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomType"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteRoomType
+      tags: [room-types]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /rooms:
+    get:
+      operationId: listRooms
+      tags: [rooms]
+      parameters:
+        - $ref: "#/components/parameters/PropertyIdQuery"
+      responses:
+        "200":
+          description: Rooms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Room"
+    post:
+      operationId: createRoom
+      tags: [rooms]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /rooms/{id}:
+    patch:
+      operationId: updateRoom
+      tags: [rooms]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteRoom
+      tags: [rooms]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /control-types:
+    get:
+      operationId: listControlTypes
+      tags: [control-types]
+      parameters:
+        - $ref: "#/components/parameters/PropertyIdQuery"
+      responses:
+        "200":
+          description: Control types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ControlType"
+    post:
+      operationId: createControlType
+      tags: [control-types]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ControlTypeInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ControlType"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /control-types/{id}:
+    patch:
+      operationId: updateControlType
+      tags: [control-types]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ControlTypeUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ControlType"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteControlType
+      tags: [control-types]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /devices:
+    get:
+      operationId: listDevices
+      tags: [devices]
+      parameters:
+        - $ref: "#/components/parameters/PropertyIdQuery"
+      responses:
+        "200":
+          description: Devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Device"
+    post:
+      operationId: createDevice
+      tags: [devices]
+      summary: Create a relay box (auto-provisions 16 relay channels)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /devices/{id}:
+    get:
+      operationId: getDevice
+      tags: [devices]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Device
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateDevice
+      tags: [devices]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteDevice
+      tags: [devices]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /controls:
+    get:
+      operationId: listControls
+      tags: [controls]
+      summary: List relay channels for a device
+      parameters:
+        - name: deviceId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Controls
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Control"
+  /controls/{id}:
+    patch:
+      operationId: updateControl
+      tags: [controls]
+      summary: Assign a relay channel to a room / load type and label it
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ControlUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Control"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /process-types:
+    get:
+      operationId: listProcessTypes
+      tags: [process-types]
+      parameters:
+        - $ref: "#/components/parameters/PropertyIdQuery"
+      responses:
+        "200":
+          description: Process types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProcessType"
+    post:
+      operationId: createProcessType
+      tags: [process-types]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProcessTypeInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessType"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /process-types/{id}:
+    patch:
+      operationId: updateProcessType
+      tags: [process-types]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProcessTypeUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessType"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteProcessType
+      tags: [process-types]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /roles:
+    get:
+      operationId: listRoles
+      tags: [roles]
+      responses:
+        "200":
+          description: Roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Role"
+    post:
+      operationId: createRole
+      tags: [roles]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /roles/{id}:
+    patch:
+      operationId: updateRole
+      tags: [roles]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteRole
+      tags: [roles]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AppUser"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Register an application user (by email) with role and property allocation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppUserInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /users/{id}:
+    patch:
+      operationId: updateUser
+      tags: [users]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppUserUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppUser"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Aggregate counts and device health for a property
+      parameters:
+        - $ref: "#/components/parameters/PropertyIdQuery"
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
 components:
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    PropertyIdQuery:
+      name: propertyId
+      in: query
+      required: true
+      schema:
+        type: integer
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +863,386 @@ components:
           type: string
       required:
         - status
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
 
+    PermissionDef:
+      type: object
+      required: [key, label, group]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        group: { type: string }
+
+    CurrentUser:
+      type: object
+      required: [id, email, name, isSuperAdmin, permissions, properties]
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        name: { type: string }
+        isSuperAdmin: { type: boolean }
+        roleId: { type: ["integer", "null"] }
+        roleName: { type: ["string", "null"] }
+        permissions:
+          type: array
+          items: { type: string }
+        properties:
+          type: array
+          items:
+            $ref: "#/components/schemas/Property"
+
+    Property:
+      type: object
+      required: [id, name, code, currency, tariffPerKwh, timezone, active, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        code: { type: string }
+        address: { type: ["string", "null"] }
+        city: { type: ["string", "null"] }
+        pincode: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        phone: { type: ["string", "null"] }
+        currency: { type: string }
+        tariffPerKwh: { type: number }
+        timezone: { type: string }
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    PropertyInput:
+      type: object
+      required: [name, code]
+      properties:
+        name: { type: string, minLength: 1 }
+        code: { type: string, minLength: 1 }
+        address: { type: string }
+        city: { type: string }
+        pincode: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        currency: { type: string }
+        tariffPerKwh: { type: number, minimum: 0 }
+        timezone: { type: string }
+        active: { type: boolean }
+    PropertyUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        code: { type: string, minLength: 1 }
+        address: { type: string }
+        city: { type: string }
+        pincode: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        currency: { type: string }
+        tariffPerKwh: { type: number, minimum: 0 }
+        timezone: { type: string }
+        active: { type: boolean }
+
+    Block:
+      type: object
+      required: [id, propertyId, name, active]
+      properties:
+        id: { type: integer }
+        propertyId: { type: integer }
+        name: { type: string }
+        active: { type: boolean }
+    BlockInput:
+      type: object
+      required: [propertyId, name]
+      properties:
+        propertyId: { type: integer }
+        name: { type: string, minLength: 1 }
+        active: { type: boolean }
+    BlockUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        active: { type: boolean }
+
+    Floor:
+      type: object
+      required: [id, propertyId, name, active]
+      properties:
+        id: { type: integer }
+        propertyId: { type: integer }
+        name: { type: string }
+        active: { type: boolean }
+    FloorInput:
+      type: object
+      required: [propertyId, name]
+      properties:
+        propertyId: { type: integer }
+        name: { type: string, minLength: 1 }
+        active: { type: boolean }
+    FloorUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        active: { type: boolean }
+
+    RoomType:
+      type: object
+      required: [id, propertyId, name, active]
+      properties:
+        id: { type: integer }
+        propertyId: { type: integer }
+        name: { type: string }
+        active: { type: boolean }
+    RoomTypeInput:
+      type: object
+      required: [propertyId, name]
+      properties:
+        propertyId: { type: integer }
+        name: { type: string, minLength: 1 }
+        active: { type: boolean }
+    RoomTypeUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        active: { type: boolean }
+
+    Room:
+      type: object
+      required: [id, propertyId, roomNo, active]
+      properties:
+        id: { type: integer }
+        propertyId: { type: integer }
+        roomNo: { type: string }
+        blockId: { type: ["integer", "null"] }
+        floorId: { type: ["integer", "null"] }
+        roomTypeId: { type: ["integer", "null"] }
+        blockName: { type: ["string", "null"] }
+        floorName: { type: ["string", "null"] }
+        roomTypeName: { type: ["string", "null"] }
+        active: { type: boolean }
+    RoomInput:
+      type: object
+      required: [propertyId, roomNo]
+      properties:
+        propertyId: { type: integer }
+        roomNo: { type: string, minLength: 1 }
+        blockId: { type: integer }
+        floorId: { type: integer }
+        roomTypeId: { type: integer }
+        active: { type: boolean }
+    RoomUpdate:
+      type: object
+      properties:
+        roomNo: { type: string, minLength: 1 }
+        blockId: { type: ["integer", "null"] }
+        floorId: { type: ["integer", "null"] }
+        roomTypeId: { type: ["integer", "null"] }
+        active: { type: boolean }
+
+    ControlType:
+      type: object
+      required: [id, propertyId, name, powerRatingWatts, active]
+      properties:
+        id: { type: integer }
+        propertyId: { type: integer }
+        name: { type: string }
+        powerRatingWatts: { type: number }
+        active: { type: boolean }
+    ControlTypeInput:
+      type: object
+      required: [propertyId, name, powerRatingWatts]
+      properties:
+        propertyId: { type: integer }
+        name: { type: string, minLength: 1 }
+        powerRatingWatts: { type: number, minimum: 0 }
+        active: { type: boolean }
+    ControlTypeUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        powerRatingWatts: { type: number, minimum: 0 }
+        active: { type: boolean }
+
+    Device:
+      type: object
+      required: [id, propertyId, code, active, online, channelCount]
+      properties:
+        id: { type: integer }
+        propertyId: { type: integer }
+        code: { type: string }
+        ipAddress: { type: ["string", "null"] }
+        description: { type: ["string", "null"] }
+        floorId: { type: ["integer", "null"] }
+        floorName: { type: ["string", "null"] }
+        active: { type: boolean }
+        online: { type: boolean }
+        lastSeenAt: { type: ["string", "null"], format: date-time }
+        channelCount: { type: integer }
+    DeviceInput:
+      type: object
+      required: [propertyId, code]
+      properties:
+        propertyId: { type: integer }
+        code: { type: string, minLength: 1 }
+        ipAddress: { type: string }
+        description: { type: string }
+        floorId: { type: integer }
+        active: { type: boolean }
+    DeviceUpdate:
+      type: object
+      properties:
+        code: { type: string, minLength: 1 }
+        ipAddress: { type: string }
+        description: { type: string }
+        floorId: { type: ["integer", "null"] }
+        active: { type: boolean }
+
+    Control:
+      type: object
+      required: [id, deviceId, propertyId, slate, channel, state]
+      properties:
+        id: { type: integer }
+        deviceId: { type: integer }
+        propertyId: { type: integer }
+        slate: { type: integer }
+        channel: { type: integer }
+        label: { type: ["string", "null"] }
+        roomId: { type: ["integer", "null"] }
+        roomNo: { type: ["string", "null"] }
+        controlTypeId: { type: ["integer", "null"] }
+        controlTypeName: { type: ["string", "null"] }
+        state: { type: integer }
+    ControlUpdate:
+      type: object
+      properties:
+        label: { type: ["string", "null"] }
+        roomId: { type: ["integer", "null"] }
+        controlTypeId: { type: ["integer", "null"] }
+
+    ProcessType:
+      type: object
+      required: [id, propertyId, name, cutoffMinutes, isAuto, active]
+      properties:
+        id: { type: integer }
+        propertyId: { type: integer }
+        name: { type: string }
+        description: { type: ["string", "null"] }
+        cutoffMinutes: { type: integer }
+        isAuto: { type: boolean }
+        active: { type: boolean }
+    ProcessTypeInput:
+      type: object
+      required: [propertyId, name, cutoffMinutes, isAuto]
+      properties:
+        propertyId: { type: integer }
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+        cutoffMinutes: { type: integer, minimum: 0 }
+        isAuto: { type: boolean }
+        active: { type: boolean }
+    ProcessTypeUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        description: { type: ["string", "null"] }
+        cutoffMinutes: { type: integer, minimum: 0 }
+        isAuto: { type: boolean }
+        active: { type: boolean }
+
+    Role:
+      type: object
+      required: [id, name, permissions, isSystem]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: ["string", "null"] }
+        permissions:
+          type: array
+          items: { type: string }
+        isSystem: { type: boolean }
+    RoleInput:
+      type: object
+      required: [name, permissions]
+      properties:
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+        permissions:
+          type: array
+          items: { type: string }
+    RoleUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        description: { type: ["string", "null"] }
+        permissions:
+          type: array
+          items: { type: string }
+
+    AppUser:
+      type: object
+      required: [id, email, name, isSuperAdmin, active, propertyIds]
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        name: { type: string }
+        isSuperAdmin: { type: boolean }
+        active: { type: boolean }
+        roleId: { type: ["integer", "null"] }
+        roleName: { type: ["string", "null"] }
+        propertyIds:
+          type: array
+          items: { type: integer }
+        createdAt: { type: string, format: date-time }
+    AppUserInput:
+      type: object
+      required: [email, name]
+      properties:
+        email: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        roleId: { type: integer }
+        isSuperAdmin: { type: boolean }
+        active: { type: boolean }
+        propertyIds:
+          type: array
+          items: { type: integer }
+    AppUserUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        roleId: { type: ["integer", "null"] }
+        isSuperAdmin: { type: boolean }
+        active: { type: boolean }
+        propertyIds:
+          type: array
+          items: { type: integer }
+
+    DashboardSummary:
+      type: object
+      required:
+        - propertyId
+        - blocks
+        - floors
+        - rooms
+        - devices
+        - devicesOnline
+        - devicesOffline
+        - controls
+        - controlsOn
+        - processTypes
+      properties:
+        propertyId: { type: integer }
+        blocks: { type: integer }
+        floors: { type: integer }
+        rooms: { type: integer }
+        devices: { type: integer }
+        devicesOnline: { type: integer }
+        devicesOffline: { type: integer }
+        controls: { type: integer }
+        controlsOn: { type: integer }
+        processTypes: { type: integer }
+        devicesList:
+          type: array
+          items:
+            $ref: "#/components/schemas/Device"

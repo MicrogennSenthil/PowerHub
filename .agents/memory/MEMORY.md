@@ -1,1 +1,2 @@
 - [Legacy PHP power-automation system](legacy-power-system.md) — reverse-engineered MSSQL/CodeIgniter hotel relay-control app we're rebuilding in Node/React/Postgres; device protocol, masters, and the auto-cutoff gap.
+- [PowerHub multi-tenant integrity](powerhub-multitenancy.md) — isolation/RBAC invariants: validate cross-property FKs, super-admin-only isSuperAdmin, atomic first-user bootstrap, zod z.infer wrapper gotcha.

@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "PowerHub"
+version = "1.0.0"
+id = "artifacts/powerhub"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25408
+
+[services.development]
+run = "pnpm --filter @workspace/powerhub run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/powerhub", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/powerhub/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25408"
+BASE_PATH = "/"
