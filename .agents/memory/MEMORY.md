@@ -1,0 +1,1 @@
+- [Legacy PHP power-automation system](legacy-power-system.md) — reverse-engineered MSSQL/CodeIgniter hotel relay-control app we're rebuilding in Node/React/Postgres; device protocol, masters, and the auto-cutoff gap.
