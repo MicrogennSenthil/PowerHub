@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "ZpLQceNy7g01b_EgguKRg"
+uri = "file://artifacts/powerhub/public/PRCB-16-Design.md"
+type = "text"
+title = "PRCB-16 — Full Design Document & BOM"
