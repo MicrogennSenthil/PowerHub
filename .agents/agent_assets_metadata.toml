@@ -24,3 +24,27 @@ id = "3xCv0-VMGeLSkp-f3gMvs"
 uri = "file://artifacts/powerhub/public/PRCB-16-BOM.csv"
 type = "table"
 title = "PRCB-16 — BOM (CSV, procurement/EDA import)"
+
+[[outputs]]
+id = "C3N65_df0-lIkQdJMkVeV"
+uri = "file://artifacts/powerhub/public/PRCB-16-TwoBoard-package.zip"
+type = "unspecified"
+title = "PRCB-16 Two-Board Split — Complete Package (ZIP)"
+
+[[outputs]]
+id = "poEtoukeln5f1qnTQ50Ds"
+uri = "file://artifacts/powerhub/public/PRCB-16-Motherboard.net"
+type = "unspecified"
+title = "Board 1 — Motherboard (WiFi/MCU) KiCad netlist"
+
+[[outputs]]
+id = "HOr6qHxy5Lfv0KVodloVI"
+uri = "file://artifacts/powerhub/public/PRCB-16-RelayBoard.net"
+type = "unspecified"
+title = "Board 2 — Relay Board (mains/relays) KiCad netlist"
+
+[[outputs]]
+id = "ZLvvdCfDZ3G3s_7Ue48ui"
+uri = "file://artifacts/powerhub/public/PRCB-16-TwoBoard-README.md"
+type = "text"
+title = "Two-Board README + inter-board connector pinout"
