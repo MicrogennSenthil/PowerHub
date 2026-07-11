@@ -30,6 +30,7 @@ import type {
   Branding,
   BrandingUpdate,
   Control,
+  ControlBulkUpdate,
   ControlType,
   ControlTypeInput,
   ControlTypeUpdate,
@@ -2638,6 +2639,77 @@ export const useUpdateControl = <TError = ErrorType<NotFoundResponse>,
         TContext
       > => {
       return useMutation(getUpdateControlMutationOptions(options));
+    }
+
+export const getBulkUpdateControlsUrl = () => {
+
+
+
+
+  return `/api/controls/bulk`
+}
+
+/**
+ * @summary Assign multiple relay channels to rooms / load types in one batch
+ */
+export const bulkUpdateControls = async (controlBulkUpdate: ControlBulkUpdate, options?: RequestInit): Promise<Control[]> => {
+
+  return customFetch<Control[]>(getBulkUpdateControlsUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(controlBulkUpdate)
+  }
+);}
+
+
+
+
+
+export const getBulkUpdateControlsMutationOptions = <TError = ErrorType<BadRequestResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkUpdateControls>>, TError,{data: BodyType<ControlBulkUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkUpdateControls>>, TError,{data: BodyType<ControlBulkUpdate>}, TContext> => {
+
+const mutationKey = ['bulkUpdateControls'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkUpdateControls>>, {data: BodyType<ControlBulkUpdate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  bulkUpdateControls(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BulkUpdateControlsMutationResult = NonNullable<Awaited<ReturnType<typeof bulkUpdateControls>>>
+    export type BulkUpdateControlsMutationBody = BodyType<ControlBulkUpdate>
+    export type BulkUpdateControlsMutationError = ErrorType<BadRequestResponse | NotFoundResponse>
+
+    /**
+ * @summary Assign multiple relay channels to rooms / load types in one batch
+ */
+export const useBulkUpdateControls = <TError = ErrorType<BadRequestResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkUpdateControls>>, TError,{data: BodyType<ControlBulkUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bulkUpdateControls>>,
+        TError,
+        {data: BodyType<ControlBulkUpdate>},
+        TContext
+      > => {
+      return useMutation(getBulkUpdateControlsMutationOptions(options));
     }
 
 export const getListProcessTypesUrl = (params: ListProcessTypesParams,) => {

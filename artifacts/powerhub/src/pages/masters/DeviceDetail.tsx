@@ -5,6 +5,7 @@ import {
   useGetDevice,
   useListControls,
   useUpdateControl,
+  useBulkUpdateControls,
   getListControlsQueryKey,
   getGetDeviceQueryKey,
   getListRoomsQueryKey,
@@ -17,9 +18,10 @@ import { useProperty } from '@/contexts/PropertyContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Loader2, Save, Wifi, WifiOff, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, Wifi, WifiOff, X, ListChecks } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { BulkAssignDialog, BulkAssignItem } from './BulkAssignControls';
 
 function ChannelRow({ 
   control, 
@@ -124,6 +126,8 @@ export function DeviceDetail() {
   const { data: controlTypes } = useListControlTypes({ propertyId: selectedPropertyId! }, { query: { enabled: !!selectedPropertyId, queryKey: getListControlTypesQueryKey({ propertyId: selectedPropertyId! }) } });
 
   const updateControl = useUpdateControl();
+  const bulkUpdate = useBulkUpdateControls();
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const handleUpdateChannel = async (id: number, data: any) => {
     try {
@@ -132,6 +136,17 @@ export function DeviceDetail() {
       toast({ title: 'Channel configured' });
     } catch (err: any) {
       toast({ title: 'Error saving channel', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const handleBulkSave = async (items: BulkAssignItem[]) => {
+    try {
+      await bulkUpdate.mutateAsync({ data: { items } });
+      queryClient.invalidateQueries({ queryKey: getListControlsQueryKey({ deviceId }) });
+      toast({ title: 'Channels updated', description: `${items.length} channels saved.` });
+    } catch (err: any) {
+      toast({ title: 'Error saving channels', description: err.message, variant: 'destructive' });
+      throw err;
     }
   };
 
@@ -167,7 +182,22 @@ export function DeviceDetail() {
           </h1>
           <p className="text-sm text-gray-500">Channel configuration ({device.description || 'No description'})</p>
         </div>
+        <div className="ml-auto">
+          <Button variant="outline" onClick={() => setBulkOpen(true)}>
+            <ListChecks className="mr-2 h-4 w-4" /> Bulk assign
+          </Button>
+        </div>
       </div>
+
+      <BulkAssignDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        controls={controls || []}
+        rooms={rooms || []}
+        controlTypes={controlTypes || []}
+        deviceCode={device.code}
+        onSave={handleBulkSave}
+      />
 
       <div className="grid md:grid-cols-2 gap-8">
         <div className="rounded-md border bg-white shadow-sm overflow-hidden">

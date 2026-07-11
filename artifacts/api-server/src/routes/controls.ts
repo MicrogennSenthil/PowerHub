@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, inArray } from "drizzle-orm";
 import {
   db,
   controlsTable,
@@ -7,7 +7,7 @@ import {
   roomsTable,
   controlTypesTable,
 } from "@workspace/db";
-import { UpdateControlBody } from "@workspace/api-zod";
+import { UpdateControlBody, BulkUpdateControlsBody } from "@workspace/api-zod";
 import { requirePermission, canAccessProperty } from "../lib/auth";
 import { parseId, validateBody } from "../lib/http";
 import { refBelongsToProperty } from "../lib/integrity";
@@ -61,6 +61,79 @@ router.get("/", requirePermission("devices.view"), async (req, res) => {
   }
   const rows = await withJoins()
     .where(eq(controlsTable.deviceId, deviceId))
+    .orderBy(asc(controlsTable.slate), asc(controlsTable.channel));
+  res.json(rows);
+});
+
+// Bulk-assign many channels to rooms / load types in one atomic batch. Declared
+// before "/:id" so the literal "bulk" path is not parsed as an id.
+router.patch("/bulk", requirePermission("controls.manage"), async (req, res) => {
+  const body = validateBody(BulkUpdateControlsBody, req, res);
+  if (!body) return;
+  if (body.items.length === 0) {
+    res.json([]);
+    return;
+  }
+
+  const ids = [...new Set(body.items.map((i) => i.id))];
+  const existing = await db
+    .select()
+    .from(controlsTable)
+    .where(inArray(controlsTable.id, ids));
+  if (existing.length !== ids.length) {
+    res.status(404).json({ error: "One or more controls not found" });
+    return;
+  }
+
+  const byId = new Map(existing.map((c) => [c.id, c]));
+  for (const c of existing) {
+    if (!canAccessProperty(req.currentUser!, c.propertyId)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+  }
+
+  // Validate every referenced room / control type belongs to the same property
+  // as its control (tenant isolation — see integrity rules).
+  for (const item of body.items) {
+    const pid = byId.get(item.id)!.propertyId;
+    if (
+      item.roomId != null &&
+      !(await refBelongsToProperty(roomsTable, item.roomId, pid))
+    ) {
+      res
+        .status(400)
+        .json({ error: `roomId ${item.roomId} does not belong to this property` });
+      return;
+    }
+    if (
+      item.controlTypeId != null &&
+      !(await refBelongsToProperty(controlTypesTable, item.controlTypeId, pid))
+    ) {
+      res.status(400).json({
+        error: `controlTypeId ${item.controlTypeId} does not belong to this property`,
+      });
+      return;
+    }
+  }
+
+  await db.transaction(async (tx) => {
+    for (const item of body.items) {
+      await tx
+        .update(controlsTable)
+        .set({
+          ...(item.label !== undefined ? { label: item.label } : {}),
+          ...(item.roomId !== undefined ? { roomId: item.roomId } : {}),
+          ...(item.controlTypeId !== undefined
+            ? { controlTypeId: item.controlTypeId }
+            : {}),
+        })
+        .where(eq(controlsTable.id, item.id));
+    }
+  });
+
+  const rows = await withJoins()
+    .where(inArray(controlsTable.id, ids))
     .orderBy(asc(controlsTable.slate), asc(controlsTable.channel));
   res.json(rows);
 });

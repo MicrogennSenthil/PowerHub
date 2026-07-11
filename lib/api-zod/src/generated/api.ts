@@ -696,6 +696,34 @@ export const UpdateControlResponse = zod.object({
 })
 
 
+/**
+ * @summary Assign multiple relay channels to rooms / load types in one batch
+ */
+export const BulkUpdateControlsBody = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "label": zod.string().nullish(),
+  "roomId": zod.number().nullish(),
+  "controlTypeId": zod.number().nullish()
+}))
+})
+
+export const BulkUpdateControlsResponseItem = zod.object({
+  "id": zod.number(),
+  "deviceId": zod.number(),
+  "propertyId": zod.number(),
+  "slate": zod.number(),
+  "channel": zod.number(),
+  "label": zod.string().nullish(),
+  "roomId": zod.number().nullish(),
+  "roomNo": zod.string().nullish(),
+  "controlTypeId": zod.number().nullish(),
+  "controlTypeName": zod.string().nullish(),
+  "state": zod.number()
+})
+export const BulkUpdateControlsResponse = zod.array(BulkUpdateControlsResponseItem)
+
+
 export const ListProcessTypesQueryParams = zod.object({
   "propertyId": zod.coerce.number()
 })

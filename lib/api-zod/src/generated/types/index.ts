@@ -16,6 +16,8 @@ export * from './blockUpdate';
 export * from './branding';
 export * from './brandingUpdate';
 export * from './control';
+export * from './controlBulkUpdate';
+export * from './controlBulkUpdateItem';
 export * from './controlType';
 export * from './controlTypeInput';
 export * from './controlTypeUpdate';

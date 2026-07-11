@@ -633,6 +633,30 @@ paths:
                 $ref: "#/components/schemas/Control"
         "404":
           $ref: "#/components/responses/NotFound"
+  /controls/bulk:
+    patch:
+      operationId: bulkUpdateControls
+      tags: [controls]
+      summary: Assign multiple relay channels to rooms / load types in one batch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ControlBulkUpdate"
+      responses:
+        "200":
+          description: Updated controls
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Control"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /process-types:
     get:
@@ -1236,6 +1260,22 @@ components:
         label: { type: ["string", "null"] }
         roomId: { type: ["integer", "null"] }
         controlTypeId: { type: ["integer", "null"] }
+    ControlBulkUpdateItem:
+      type: object
+      required: [id]
+      properties:
+        id: { type: integer }
+        label: { type: ["string", "null"] }
+        roomId: { type: ["integer", "null"] }
+        controlTypeId: { type: ["integer", "null"] }
+    ControlBulkUpdate:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ControlBulkUpdateItem"
 
     ProcessType:
       type: object

@@ -316,6 +316,20 @@ export interface ControlUpdate {
   controlTypeId?: number | null;
 }
 
+export interface ControlBulkUpdateItem {
+  id: number;
+  /** @nullable */
+  label?: string | null;
+  /** @nullable */
+  roomId?: number | null;
+  /** @nullable */
+  controlTypeId?: number | null;
+}
+
+export interface ControlBulkUpdate {
+  items: ControlBulkUpdateItem[];
+}
+
 export interface ProcessType {
   id: number;
   propertyId: number;
