@@ -43,6 +43,7 @@ import type {
   FloorInput,
   FloorUpdate,
   GetDashboardSummaryParams,
+  GetRoomChartParams,
   HealthStatus,
   ListBlocksParams,
   ListControlTypesParams,
@@ -64,6 +65,7 @@ import type {
   RoleInput,
   RoleUpdate,
   Room,
+  RoomChartRoom,
   RoomInput,
   RoomType,
   RoomTypeInput,
@@ -1504,6 +1506,84 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getDeleteRoomTypeMutationOptions(options));
     }
+
+export const getGetRoomChartUrl = (params: GetRoomChartParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/rooms/chart?${stringifiedParams}` : `/api/rooms/chart`
+}
+
+export const getRoomChart = async (params: GetRoomChartParams, options?: RequestInit): Promise<RoomChartRoom[]> => {
+
+  return customFetch<RoomChartRoom[]>(getGetRoomChartUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRoomChartQueryKey = (params?: GetRoomChartParams,) => {
+    return [
+    `/api/rooms/chart`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetRoomChartQueryOptions = <TData = Awaited<ReturnType<typeof getRoomChart>>, TError = ErrorType<unknown>>(params: GetRoomChartParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRoomChart>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRoomChartQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRoomChart>>> = ({ signal }) => getRoomChart(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRoomChart>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRoomChartQueryResult = NonNullable<Awaited<ReturnType<typeof getRoomChart>>>
+export type GetRoomChartQueryError = ErrorType<unknown>
+
+
+
+export function useGetRoomChart<TData = Awaited<ReturnType<typeof getRoomChart>>, TError = ErrorType<unknown>>(
+ params: GetRoomChartParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRoomChart>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRoomChartQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListRoomsUrl = (params: ListRoomsParams,) => {
   const normalizedParams = new URLSearchParams();

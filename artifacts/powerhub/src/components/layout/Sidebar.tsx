@@ -13,7 +13,8 @@ import {
   Users, 
   ShieldAlert,
   Settings,
-  Tv
+  Tv,
+  LayoutGrid
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -35,6 +36,7 @@ export function Sidebar({ me }: SidebarProps) {
       title: "Dashboard",
       items: [
         { title: "Overview", href: "/dashboard", icon: LayoutDashboard, show: true },
+        { title: "Room Chart", href: "/room-chart", icon: LayoutGrid, show: hasPerm('rooms.view') },
       ]
     },
     {

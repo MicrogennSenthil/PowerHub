@@ -366,6 +366,21 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /rooms/chart:
+    get:
+      operationId: getRoomChart
+      tags: [rooms]
+      parameters:
+        - $ref: "#/components/parameters/PropertyIdQuery"
+      responses:
+        "200":
+          description: Room chart with per-room control status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoomChartRoom"
   /rooms:
     get:
       operationId: listRooms
@@ -1078,6 +1093,37 @@ components:
         name: { type: string, minLength: 1 }
         active: { type: boolean }
 
+    RoomChartControl:
+      type: object
+      required: [id, state, on, deviceId, deviceOnline]
+      properties:
+        id: { type: integer }
+        controlTypeId: { type: ["integer", "null"] }
+        controlTypeName: { type: ["string", "null"] }
+        label: { type: ["string", "null"] }
+        state: { type: integer }
+        on: { type: boolean }
+        deviceId: { type: integer }
+        deviceCode: { type: ["string", "null"] }
+        deviceOnline: { type: boolean }
+    RoomChartRoom:
+      type: object
+      required: [id, propertyId, roomNo, active, controls]
+      properties:
+        id: { type: integer }
+        propertyId: { type: integer }
+        roomNo: { type: string }
+        blockId: { type: ["integer", "null"] }
+        floorId: { type: ["integer", "null"] }
+        roomTypeId: { type: ["integer", "null"] }
+        blockName: { type: ["string", "null"] }
+        floorName: { type: ["string", "null"] }
+        roomTypeName: { type: ["string", "null"] }
+        active: { type: boolean }
+        controls:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoomChartControl"
     Room:
       type: object
       required: [id, propertyId, roomNo, active]

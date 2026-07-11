@@ -147,6 +147,42 @@ export interface RoomTypeUpdate {
   active?: boolean;
 }
 
+export interface RoomChartControl {
+  id: number;
+  /** @nullable */
+  controlTypeId?: number | null;
+  /** @nullable */
+  controlTypeName?: string | null;
+  /** @nullable */
+  label?: string | null;
+  state: number;
+  on: boolean;
+  deviceId: number;
+  /** @nullable */
+  deviceCode?: string | null;
+  deviceOnline: boolean;
+}
+
+export interface RoomChartRoom {
+  id: number;
+  propertyId: number;
+  roomNo: string;
+  /** @nullable */
+  blockId?: number | null;
+  /** @nullable */
+  floorId?: number | null;
+  /** @nullable */
+  roomTypeId?: number | null;
+  /** @nullable */
+  blockName?: string | null;
+  /** @nullable */
+  floorName?: string | null;
+  /** @nullable */
+  roomTypeName?: string | null;
+  active: boolean;
+  controls: RoomChartControl[];
+}
+
 export interface Room {
   id: number;
   propertyId: number;
@@ -503,6 +539,10 @@ propertyId: PropertyIdQueryParameter;
 };
 
 export type ListRoomTypesParams = {
+propertyId: PropertyIdQueryParameter;
+};
+
+export type GetRoomChartParams = {
 propertyId: PropertyIdQueryParameter;
 };
 

@@ -1,16 +1,21 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import {
   db,
   roomsTable,
   blocksTable,
   floorsTable,
   roomTypesTable,
+  controlsTable,
+  controlTypesTable,
+  devicesTable,
 } from "@workspace/db";
 import { CreateRoomBody, UpdateRoomBody } from "@workspace/api-zod";
 import { requirePermission, canAccessProperty } from "../lib/auth";
 import { parseId, parsePropertyIdQuery, validateBody } from "../lib/http";
 import { refBelongsToProperty } from "../lib/integrity";
+import { getOfflineThresholdMinutes } from "../lib/settings";
+import { isDeviceOnline } from "../lib/serialize";
 import type { Response } from "express";
 
 const router: IRouter = Router();
@@ -82,6 +87,66 @@ router.get("/", requirePermission("rooms.view"), async (req, res) => {
   }
   const rows = await withJoins().where(eq(roomsTable.propertyId, propertyId));
   res.json(rows);
+});
+
+// Room chart: every room (with block/floor/type) plus its mapped controls and
+// each control's live on/off state and whether the driving device is online.
+// Powers the visual room-status board grouped by block/floor/room number.
+router.get("/chart", requirePermission("rooms.view"), async (req, res) => {
+  const propertyId = parsePropertyIdQuery(req);
+  if (propertyId === null) {
+    res.status(400).json({ error: "propertyId query param is required" });
+    return;
+  }
+  if (!canAccessProperty(req.currentUser!, propertyId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const [roomRows, controlRows, threshold] = await Promise.all([
+    withJoins().where(eq(roomsTable.propertyId, propertyId)),
+    db
+      .select({
+        id: controlsTable.id,
+        roomId: controlsTable.roomId,
+        controlTypeId: controlsTable.controlTypeId,
+        controlTypeName: controlTypesTable.name,
+        label: controlsTable.label,
+        state: controlsTable.state,
+        deviceId: controlsTable.deviceId,
+        deviceCode: devicesTable.code,
+        lastSeenAt: devicesTable.lastSeenAt,
+      })
+      .from(controlsTable)
+      .leftJoin(
+        controlTypesTable,
+        eq(controlsTable.controlTypeId, controlTypesTable.id),
+      )
+      .leftJoin(devicesTable, eq(controlsTable.deviceId, devicesTable.id))
+      .where(eq(controlsTable.propertyId, propertyId))
+      .orderBy(asc(controlsTable.slate), asc(controlsTable.channel)),
+    getOfflineThresholdMinutes(),
+  ]);
+
+  const byRoom = new Map<number, unknown[]>();
+  for (const c of controlRows) {
+    if (c.roomId == null) continue;
+    const list = byRoom.get(c.roomId) ?? [];
+    list.push({
+      id: c.id,
+      controlTypeId: c.controlTypeId,
+      controlTypeName: c.controlTypeName,
+      label: c.label,
+      state: c.state,
+      on: c.state !== 0,
+      deviceId: c.deviceId,
+      deviceCode: c.deviceCode,
+      deviceOnline: isDeviceOnline(c.lastSeenAt, threshold),
+    });
+    byRoom.set(c.roomId, list);
+  }
+
+  res.json(roomRows.map((r) => ({ ...r, controls: byRoom.get(r.id) ?? [] })));
 });
 
 router.post("/", requirePermission("rooms.manage"), async (req, res) => {

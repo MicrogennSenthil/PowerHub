@@ -362,6 +362,36 @@ export const DeleteRoomTypeParams = zod.object({
 export const DeleteRoomTypeResponse = zod.void()
 
 
+export const GetRoomChartQueryParams = zod.object({
+  "propertyId": zod.coerce.number()
+})
+
+export const GetRoomChartResponseItem = zod.object({
+  "id": zod.number(),
+  "propertyId": zod.number(),
+  "roomNo": zod.string(),
+  "blockId": zod.number().nullish(),
+  "floorId": zod.number().nullish(),
+  "roomTypeId": zod.number().nullish(),
+  "blockName": zod.string().nullish(),
+  "floorName": zod.string().nullish(),
+  "roomTypeName": zod.string().nullish(),
+  "active": zod.boolean(),
+  "controls": zod.array(zod.object({
+  "id": zod.number(),
+  "controlTypeId": zod.number().nullish(),
+  "controlTypeName": zod.string().nullish(),
+  "label": zod.string().nullish(),
+  "state": zod.number(),
+  "on": zod.boolean(),
+  "deviceId": zod.number(),
+  "deviceCode": zod.string().nullish(),
+  "deviceOnline": zod.boolean()
+}))
+})
+export const GetRoomChartResponse = zod.array(GetRoomChartResponseItem)
+
+
 export const ListRoomsQueryParams = zod.object({
   "propertyId": zod.coerce.number()
 })

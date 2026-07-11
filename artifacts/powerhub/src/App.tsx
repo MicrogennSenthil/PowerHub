@@ -15,6 +15,7 @@ import { Blocks } from '@/pages/masters/Blocks';
 import { Floors } from '@/pages/masters/Floors';
 import { RoomTypes } from '@/pages/masters/RoomTypes';
 import { Rooms } from '@/pages/masters/Rooms';
+import { RoomChart } from '@/pages/RoomChart';
 import { ControlTypes } from '@/pages/masters/ControlTypes';
 import { Devices } from '@/pages/masters/Devices';
 import { DeviceDetail } from '@/pages/masters/DeviceDetail';
@@ -204,6 +205,7 @@ function ClerkProviderWithRoutes() {
             
             {/* Protected Routes inside AppShell */}
             <Route path="/dashboard"><ProtectedRoute component={Dashboard} /></Route>
+            <Route path="/room-chart"><ProtectedRoute component={RoomChart} /></Route>
             <Route path="/properties"><ProtectedRoute component={Properties} /></Route>
             <Route path="/blocks"><ProtectedRoute component={Blocks} /></Route>
             <Route path="/floors"><ProtectedRoute component={Floors} /></Route>

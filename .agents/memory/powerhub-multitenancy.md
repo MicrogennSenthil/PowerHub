@@ -67,6 +67,16 @@ The API is multi-tenant, keyed by `propertyId`. Access is gated by `canAccessPro
   must **retry on 23505** (concurrent inserts race the guess); never trust a
   scan-and-increment alone.
 
+## Room occupancy / power status is derived, not stored
+- There is **no** occupancy or per-room power column. The Room Chart and any
+  "room is occupied / powered on" indicator derive status from control state:
+  a room is "power on" when any of its mapped `controls.state != 0`, and a
+  control indicator is green=on / red=off / muted when its driving device is
+  offline (device `last_seen_at` vs `offlineThresholdMinutes`).
+  **Why:** legacy relay hardware reports channel state, not guest occupancy.
+  **How to apply:** don't invent an `occupied` field; join controls→control_types
+  →devices and compute. Controls with `room_id IS NULL` aren't shown per-room.
+
 ## Device communication protocol (config-switchable)
 - Direction agreed with user: **run legacy HTTP-poll now, keep MQTT as a stored,
   UI-switchable setting** (global singleton `system_settings`, super-admin/
