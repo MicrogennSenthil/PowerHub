@@ -17,7 +17,7 @@ import { useProperty } from '@/contexts/PropertyContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Loader2, Save, Wifi, WifiOff } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, Wifi, WifiOff, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -55,7 +55,7 @@ function ChannelRow({
     return (
       <div className="grid grid-cols-12 items-center gap-4 py-3 border-b px-4 bg-gray-50/80">
         <div className="col-span-1 text-sm font-medium text-gray-500">Ch {control.channel}</div>
-        <div className="col-span-3">
+        <div className="col-span-3 min-w-0">
           <Input 
             value={formData.label} 
             onChange={(e) => setFormData({ ...formData, label: e.target.value })} 
@@ -63,7 +63,7 @@ function ChannelRow({
             className="h-8"
           />
         </div>
-        <div className="col-span-3">
+        <div className="col-span-3 min-w-0">
           <Select value={formData.roomId} onValueChange={(v) => setFormData({ ...formData, roomId: v })}>
             <SelectTrigger className="h-8"><SelectValue placeholder="Assign Room" /></SelectTrigger>
             <SelectContent>
@@ -72,19 +72,22 @@ function ChannelRow({
             </SelectContent>
           </Select>
         </div>
-        <div className="col-span-3">
+        <div className="col-span-2 min-w-0">
           <Select value={formData.controlTypeId} onValueChange={(v) => setFormData({ ...formData, controlTypeId: v })}>
-            <SelectTrigger className="h-8"><SelectValue placeholder="Load Type" /></SelectTrigger>
+            <SelectTrigger className="h-8"><SelectValue placeholder="Type" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="0">Unassigned (None)</SelectItem>
               {controlTypes.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
-        <div className="col-span-2 flex justify-end gap-2">
-          <Button variant="ghost" size="sm" className="h-8" onClick={() => setIsEditing(false)}>Cancel</Button>
-          <Button size="sm" className="h-8" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+        <div className="col-span-1" />
+        <div className="col-span-2 flex justify-end gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500" onClick={() => setIsEditing(false)} disabled={isSaving} title="Cancel">
+            <X className="h-4 w-4" />
+          </Button>
+          <Button size="icon" className="h-8 w-8" onClick={handleSave} disabled={isSaving} title="Save">
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           </Button>
         </div>
       </div>
