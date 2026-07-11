@@ -6,3 +6,21 @@ id = "ZpLQceNy7g01b_EgguKRg"
 uri = "file://artifacts/powerhub/public/PRCB-16-Design.md"
 type = "text"
 title = "PRCB-16 — Full Design Document & BOM"
+
+[[outputs]]
+id = "icHoqWRaKmP7Eg8lXfndZ"
+uri = "file://artifacts/powerhub/public/PRCB-16-design-package.zip"
+type = "unspecified"
+title = "PRCB-16 — Complete PCB Design Package (ZIP)"
+
+[[outputs]]
+id = "OMtALa0zQxbTpQPy7Y97G"
+uri = "file://artifacts/powerhub/public/PRCB-16.net"
+type = "unspecified"
+title = "PRCB-16 — KiCad Netlist (design file)"
+
+[[outputs]]
+id = "3xCv0-VMGeLSkp-f3gMvs"
+uri = "file://artifacts/powerhub/public/PRCB-16-BOM.csv"
+type = "table"
+title = "PRCB-16 — BOM (CSV, procurement/EDA import)"
