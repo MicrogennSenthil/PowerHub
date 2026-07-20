@@ -14,7 +14,9 @@ export const devicesTable = pgTable("devices", {
   propertyId: integer("property_id")
     .notNull()
     .references(() => propertiesTable.id, { onDelete: "cascade" }),
-  code: text("code").notNull(),
+  // Globally unique — unauthenticated relay boxes identify themselves solely
+  // by this code, so a collision across properties would break isolation.
+  code: text("code").notNull().unique(),
   ipAddress: text("ip_address"),
   description: text("description"),
   floorId: integer("floor_id").references(() => floorsTable.id, {

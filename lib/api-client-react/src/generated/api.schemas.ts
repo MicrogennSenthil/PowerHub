@@ -305,6 +305,8 @@ export interface Control {
   /** @nullable */
   controlTypeName?: string | null;
   state: number;
+  /** @nullable */
+  wattage?: number | null;
 }
 
 export interface ControlUpdate {
@@ -314,6 +316,8 @@ export interface ControlUpdate {
   roomId?: number | null;
   /** @nullable */
   controlTypeId?: number | null;
+  /** @nullable */
+  wattage?: number | null;
 }
 
 export interface ControlBulkUpdateItem {
@@ -324,6 +328,8 @@ export interface ControlBulkUpdateItem {
   roomId?: number | null;
   /** @nullable */
   controlTypeId?: number | null;
+  /** @nullable */
+  wattage?: number | null;
 }
 
 export interface ControlBulkUpdate {
@@ -527,6 +533,119 @@ export interface DashboardSummary {
   devicesList?: Device[];
 }
 
+export interface ApiKey {
+  id: number;
+  propertyId: number;
+  name: string;
+  prefix: string;
+  active: boolean;
+  createdAt: string;
+  /** @nullable */
+  lastUsedAt?: string | null;
+}
+
+export type ApiKeyCreated = ApiKey & {
+  key: string;
+};
+
+export interface ApiKeyInput {
+  propertyId: number;
+  /** @minLength 1 */
+  name: string;
+}
+
+export interface ApiKeyUpdate {
+  /** @minLength 1 */
+  name?: string;
+  active?: boolean;
+}
+
+export interface PowerLog {
+  id: number;
+  propertyId: number;
+  deviceId: number;
+  deviceCode: string;
+  /** @nullable */
+  roomId?: number | null;
+  /** @nullable */
+  roomNo?: string | null;
+  /** @nullable */
+  controlId?: number | null;
+  /** @nullable */
+  controlLabel?: string | null;
+  /** @nullable */
+  processTypeId?: number | null;
+  /** @nullable */
+  processName?: string | null;
+  state: number;
+  controlPush: string;
+  controlPull: string;
+  flag: number;
+  source: string;
+  /** @nullable */
+  grcNo?: string | null;
+  /** @nullable */
+  billNo?: string | null;
+  /** @nullable */
+  guestName?: string | null;
+  /** @nullable */
+  requestedBy?: string | null;
+  rdate: string;
+  /** @nullable */
+  receivedAt?: string | null;
+  /** @nullable */
+  closedAt?: string | null;
+}
+
+export interface PowerUsageSession {
+  id: number;
+  /** @nullable */
+  roomId?: number | null;
+  /** @nullable */
+  roomNo?: string | null;
+  /** @nullable */
+  blockName?: string | null;
+  controlId: number;
+  /** @nullable */
+  controlLabel?: string | null;
+  /** @nullable */
+  controlTypeName?: string | null;
+  /** @nullable */
+  processName?: string | null;
+  /** @nullable */
+  grcNo?: string | null;
+  /** @nullable */
+  billNo?: string | null;
+  /** @nullable */
+  guestName?: string | null;
+  /** @nullable */
+  requestedBy?: string | null;
+  /** @nullable */
+  wattage?: number | null;
+  startedAt: string;
+  /** @nullable */
+  endedAt?: string | null;
+  /** @nullable */
+  endReason?: string | null;
+  hours: number;
+  kwh: number;
+  cost: number;
+}
+
+export type PowerUsageReportTotals = {
+  sessions: number;
+  hours: number;
+  kwh: number;
+  cost: number;
+};
+
+export interface PowerUsageReport {
+  sessions: PowerUsageSession[];
+  totals: PowerUsageReportTotals;
+  tariffPerKwh: number;
+  currency: string;
+}
+
 /**
  * Unauthorized
  */
@@ -582,5 +701,26 @@ propertyId: PropertyIdQueryParameter;
 
 export type GetDashboardSummaryParams = {
 propertyId: PropertyIdQueryParameter;
+};
+
+export type ListApiKeysParams = {
+propertyId: PropertyIdQueryParameter;
+};
+
+export type ListPowerLogsParams = {
+propertyId: PropertyIdQueryParameter;
+flag?: number;
+limit?: number;
+};
+
+export type GetPowerUsageReportParams = {
+propertyId: PropertyIdQueryParameter;
+from?: string;
+to?: string;
+roomId?: number;
+guest?: string;
+billNo?: string;
+grcNo?: string;
+username?: string;
 };
 

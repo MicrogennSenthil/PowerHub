@@ -14,7 +14,9 @@ import {
   ShieldAlert,
   Settings,
   Tv,
-  LayoutGrid
+  LayoutGrid,
+  Plug,
+  BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -55,6 +57,18 @@ export function Sidebar({ me }: SidebarProps) {
         { title: "Control Types", href: "/control-types", icon: Settings2, show: hasPerm('controlTypes.view') },
         { title: "Process Types", href: "/process-types", icon: Timer, show: hasPerm('processTypes.view') },
         { title: "Devices", href: "/devices", icon: Cpu, show: hasPerm('devices.view') },
+      ]
+    },
+    {
+      title: "Integration",
+      items: [
+        { title: "Power Automation", href: "/integration/power-automation", icon: Plug, show: hasPerm('integration.view') },
+      ]
+    },
+    {
+      title: "Reports",
+      items: [
+        { title: "Power Usage", href: "/reports/power-usage", icon: BarChart3, show: hasPerm('reports.view') },
       ]
     },
     {

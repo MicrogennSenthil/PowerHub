@@ -42,6 +42,10 @@ tags:
     description: Global software / device-communication setup
   - name: branding
     description: Smart TV / app branding (logo, name, colour)
+  - name: integration
+    description: Power Automation integration (MHMS API keys, command queue)
+  - name: reports
+    description: Usage / consumption reports
 
 paths:
   /healthz:
@@ -931,6 +935,131 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
 
+  /integration/api-keys:
+    get:
+      operationId: listApiKeys
+      tags: [integration]
+      parameters:
+        - $ref: "#/components/parameters/PropertyIdQuery"
+      responses:
+        "200":
+          description: API keys
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiKey"
+    post:
+      operationId: createApiKey
+      tags: [integration]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiKeyInput"
+      responses:
+        "201":
+          description: Created (plaintext key returned only once)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyCreated"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /integration/api-keys/{id}:
+    patch:
+      operationId: updateApiKey
+      tags: [integration]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiKeyUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKey"
+    delete:
+      operationId: deleteApiKey
+      tags: [integration]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Deleted
+  /power-logs:
+    get:
+      operationId: listPowerLogs
+      tags: [integration]
+      parameters:
+        - $ref: "#/components/parameters/PropertyIdQuery"
+        - name: flag
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Power log entries (newest first)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PowerLog"
+  /reports/power-usage:
+    get:
+      operationId: getPowerUsageReport
+      tags: [reports]
+      parameters:
+        - $ref: "#/components/parameters/PropertyIdQuery"
+        - name: from
+          in: query
+          required: false
+          schema: { type: string }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string }
+        - name: roomId
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: guest
+          in: query
+          required: false
+          schema: { type: string }
+        - name: billNo
+          in: query
+          required: false
+          schema: { type: string }
+        - name: grcNo
+          in: query
+          required: false
+          schema: { type: string }
+        - name: username
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Room-wise power usage report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PowerUsageReport"
+
 components:
   parameters:
     IdPath:
@@ -1254,12 +1383,14 @@ components:
         controlTypeId: { type: ["integer", "null"] }
         controlTypeName: { type: ["string", "null"] }
         state: { type: integer }
+        wattage: { type: ["integer", "null"] }
     ControlUpdate:
       type: object
       properties:
         label: { type: ["string", "null"] }
         roomId: { type: ["integer", "null"] }
         controlTypeId: { type: ["integer", "null"] }
+        wattage: { type: ["integer", "null"] }
     ControlBulkUpdateItem:
       type: object
       required: [id]
@@ -1268,6 +1399,7 @@ components:
         label: { type: ["string", "null"] }
         roomId: { type: ["integer", "null"] }
         controlTypeId: { type: ["integer", "null"] }
+        wattage: { type: ["integer", "null"] }
     ControlBulkUpdate:
       type: object
       required: [items]
@@ -1454,3 +1586,101 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Device"
+
+    ApiKey:
+      type: object
+      required: [id, propertyId, name, prefix, active, createdAt]
+      properties:
+        id: { type: integer }
+        propertyId: { type: integer }
+        name: { type: string }
+        prefix: { type: string }
+        active: { type: boolean }
+        createdAt: { type: string }
+        lastUsedAt: { type: ["string", "null"] }
+    ApiKeyCreated:
+      allOf:
+        - $ref: "#/components/schemas/ApiKey"
+        - type: object
+          required: [key]
+          properties:
+            key: { type: string }
+    ApiKeyInput:
+      type: object
+      required: [propertyId, name]
+      properties:
+        propertyId: { type: integer }
+        name: { type: string, minLength: 1 }
+    ApiKeyUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        active: { type: boolean }
+    PowerLog:
+      type: object
+      required:
+        [id, propertyId, deviceId, deviceCode, state, controlPush, controlPull, flag, source, rdate]
+      properties:
+        id: { type: integer }
+        propertyId: { type: integer }
+        deviceId: { type: integer }
+        deviceCode: { type: string }
+        roomId: { type: ["integer", "null"] }
+        roomNo: { type: ["string", "null"] }
+        controlId: { type: ["integer", "null"] }
+        controlLabel: { type: ["string", "null"] }
+        processTypeId: { type: ["integer", "null"] }
+        processName: { type: ["string", "null"] }
+        state: { type: integer }
+        controlPush: { type: string }
+        controlPull: { type: string }
+        flag: { type: integer }
+        source: { type: string }
+        grcNo: { type: ["string", "null"] }
+        billNo: { type: ["string", "null"] }
+        guestName: { type: ["string", "null"] }
+        requestedBy: { type: ["string", "null"] }
+        rdate: { type: string }
+        receivedAt: { type: ["string", "null"] }
+        closedAt: { type: ["string", "null"] }
+    PowerUsageSession:
+      type: object
+      required: [id, controlId, startedAt, hours, kwh, cost]
+      properties:
+        id: { type: integer }
+        roomId: { type: ["integer", "null"] }
+        roomNo: { type: ["string", "null"] }
+        blockName: { type: ["string", "null"] }
+        controlId: { type: integer }
+        controlLabel: { type: ["string", "null"] }
+        controlTypeName: { type: ["string", "null"] }
+        processName: { type: ["string", "null"] }
+        grcNo: { type: ["string", "null"] }
+        billNo: { type: ["string", "null"] }
+        guestName: { type: ["string", "null"] }
+        requestedBy: { type: ["string", "null"] }
+        wattage: { type: ["integer", "null"] }
+        startedAt: { type: string }
+        endedAt: { type: ["string", "null"] }
+        endReason: { type: ["string", "null"] }
+        hours: { type: number }
+        kwh: { type: number }
+        cost: { type: number }
+    PowerUsageReport:
+      type: object
+      required: [sessions, totals, tariffPerKwh, currency]
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PowerUsageSession"
+        totals:
+          type: object
+          required: [sessions, hours, kwh, cost]
+          properties:
+            sessions: { type: integer }
+            hours: { type: number }
+            kwh: { type: number }
+            cost: { type: number }
+        tariffPerKwh: { type: number }
+        currency: { type: string }

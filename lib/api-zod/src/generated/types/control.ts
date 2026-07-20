@@ -23,4 +23,6 @@ export interface Control {
   /** @nullable */
   controlTypeName?: string | null;
   state: number;
+  /** @nullable */
+  wattage?: number | null;
 }

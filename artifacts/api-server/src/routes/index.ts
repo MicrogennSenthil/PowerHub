@@ -26,6 +26,10 @@ import usersRouter from "./users";
 import dashboardRouter from "./dashboard";
 import settingsRouter from "./settings";
 import { brandingPublicRouter, brandingRouter } from "./branding";
+import apiKeysRouter from "./apiKeys";
+import powerLogsRouter from "./powerLogs";
+import reportsRouter from "./reports";
+import { mhmsRouter, deviceRouter } from "./integrationPower";
 import { makeSimpleMasterRouter } from "./simpleMaster";
 import { requireAuth } from "../lib/auth";
 
@@ -33,6 +37,11 @@ const router: IRouter = Router();
 
 // Public
 router.use(healthRouter);
+// Relay-box poll/ack — no session auth; the box only knows its device code
+// (legacy firmware contract, plain HTTP).
+router.use(deviceRouter);
+// MHMS command API — authenticated by per-property API key, not Clerk.
+router.use("/integration/power", mhmsRouter);
 // Branding is read publicly (login/splash + castable TV welcome page render
 // without an authenticated session). Writes remain authenticated below.
 router.use("/branding", brandingPublicRouter);
@@ -80,5 +89,8 @@ router.use("/users", usersRouter);
 router.use("/dashboard", dashboardRouter);
 router.use("/settings", settingsRouter);
 router.use("/branding", brandingRouter);
+router.use("/integration/api-keys", apiKeysRouter);
+router.use("/power-logs", powerLogsRouter);
+router.use("/reports", reportsRouter);
 
 export default router;

@@ -20,6 +20,10 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ApiKey,
+  ApiKeyCreated,
+  ApiKeyInput,
+  ApiKeyUpdate,
   AppUser,
   AppUserInput,
   AppUserUpdate,
@@ -44,18 +48,23 @@ import type {
   FloorInput,
   FloorUpdate,
   GetDashboardSummaryParams,
+  GetPowerUsageReportParams,
   GetRoomChartParams,
   HealthStatus,
+  ListApiKeysParams,
   ListBlocksParams,
   ListControlTypesParams,
   ListControlsParams,
   ListDevicesParams,
   ListFloorsParams,
+  ListPowerLogsParams,
   ListProcessTypesParams,
   ListRoomTypesParams,
   ListRoomsParams,
   NotFoundResponse,
   PermissionDef,
+  PowerLog,
+  PowerUsageReport,
   ProcessType,
   ProcessTypeInput,
   ProcessTypeUpdate,
@@ -3905,4 +3914,434 @@ export const useUpdateBranding = <TError = ErrorType<BadRequestResponse>,
       > => {
       return useMutation(getUpdateBrandingMutationOptions(options));
     }
+
+export const getListApiKeysUrl = (params: ListApiKeysParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/integration/api-keys?${stringifiedParams}` : `/api/integration/api-keys`
+}
+
+export const listApiKeys = async (params: ListApiKeysParams, options?: RequestInit): Promise<ApiKey[]> => {
+
+  return customFetch<ApiKey[]>(getListApiKeysUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListApiKeysQueryKey = (params?: ListApiKeysParams,) => {
+    return [
+    `/api/integration/api-keys`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListApiKeysQueryOptions = <TData = Awaited<ReturnType<typeof listApiKeys>>, TError = ErrorType<unknown>>(params: ListApiKeysParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listApiKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListApiKeysQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listApiKeys>>> = ({ signal }) => listApiKeys(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listApiKeys>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListApiKeysQueryResult = NonNullable<Awaited<ReturnType<typeof listApiKeys>>>
+export type ListApiKeysQueryError = ErrorType<unknown>
+
+
+
+export function useListApiKeys<TData = Awaited<ReturnType<typeof listApiKeys>>, TError = ErrorType<unknown>>(
+ params: ListApiKeysParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listApiKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListApiKeysQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateApiKeyUrl = () => {
+
+
+
+
+  return `/api/integration/api-keys`
+}
+
+export const createApiKey = async (apiKeyInput: ApiKeyInput, options?: RequestInit): Promise<ApiKeyCreated> => {
+
+  return customFetch<ApiKeyCreated>(getCreateApiKeyUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(apiKeyInput)
+  }
+);}
+
+
+
+
+
+export const getCreateApiKeyMutationOptions = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApiKey>>, TError,{data: BodyType<ApiKeyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createApiKey>>, TError,{data: BodyType<ApiKeyInput>}, TContext> => {
+
+const mutationKey = ['createApiKey'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createApiKey>>, {data: BodyType<ApiKeyInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createApiKey(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateApiKeyMutationResult = NonNullable<Awaited<ReturnType<typeof createApiKey>>>
+    export type CreateApiKeyMutationBody = BodyType<ApiKeyInput>
+    export type CreateApiKeyMutationError = ErrorType<BadRequestResponse>
+
+    export const useCreateApiKey = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApiKey>>, TError,{data: BodyType<ApiKeyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createApiKey>>,
+        TError,
+        {data: BodyType<ApiKeyInput>},
+        TContext
+      > => {
+      return useMutation(getCreateApiKeyMutationOptions(options));
+    }
+
+export const getUpdateApiKeyUrl = (id: number,) => {
+
+
+
+
+  return `/api/integration/api-keys/${id}`
+}
+
+export const updateApiKey = async (id: number,
+    apiKeyUpdate: ApiKeyUpdate, options?: RequestInit): Promise<ApiKey> => {
+
+  return customFetch<ApiKey>(getUpdateApiKeyUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(apiKeyUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateApiKeyMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateApiKey>>, TError,{id: number;data: BodyType<ApiKeyUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateApiKey>>, TError,{id: number;data: BodyType<ApiKeyUpdate>}, TContext> => {
+
+const mutationKey = ['updateApiKey'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateApiKey>>, {id: number;data: BodyType<ApiKeyUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateApiKey(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateApiKeyMutationResult = NonNullable<Awaited<ReturnType<typeof updateApiKey>>>
+    export type UpdateApiKeyMutationBody = BodyType<ApiKeyUpdate>
+    export type UpdateApiKeyMutationError = ErrorType<unknown>
+
+    export const useUpdateApiKey = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateApiKey>>, TError,{id: number;data: BodyType<ApiKeyUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateApiKey>>,
+        TError,
+        {id: number;data: BodyType<ApiKeyUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateApiKeyMutationOptions(options));
+    }
+
+export const getDeleteApiKeyUrl = (id: number,) => {
+
+
+
+
+  return `/api/integration/api-keys/${id}`
+}
+
+export const deleteApiKey = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteApiKeyUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteApiKeyMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteApiKey>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteApiKey>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteApiKey'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteApiKey>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteApiKey(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteApiKeyMutationResult = NonNullable<Awaited<ReturnType<typeof deleteApiKey>>>
+
+    export type DeleteApiKeyMutationError = ErrorType<unknown>
+
+    export const useDeleteApiKey = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteApiKey>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteApiKey>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteApiKeyMutationOptions(options));
+    }
+
+export const getListPowerLogsUrl = (params: ListPowerLogsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/power-logs?${stringifiedParams}` : `/api/power-logs`
+}
+
+export const listPowerLogs = async (params: ListPowerLogsParams, options?: RequestInit): Promise<PowerLog[]> => {
+
+  return customFetch<PowerLog[]>(getListPowerLogsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPowerLogsQueryKey = (params?: ListPowerLogsParams,) => {
+    return [
+    `/api/power-logs`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPowerLogsQueryOptions = <TData = Awaited<ReturnType<typeof listPowerLogs>>, TError = ErrorType<unknown>>(params: ListPowerLogsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPowerLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPowerLogsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPowerLogs>>> = ({ signal }) => listPowerLogs(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPowerLogs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPowerLogsQueryResult = NonNullable<Awaited<ReturnType<typeof listPowerLogs>>>
+export type ListPowerLogsQueryError = ErrorType<unknown>
+
+
+
+export function useListPowerLogs<TData = Awaited<ReturnType<typeof listPowerLogs>>, TError = ErrorType<unknown>>(
+ params: ListPowerLogsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPowerLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPowerLogsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPowerUsageReportUrl = (params: GetPowerUsageReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/reports/power-usage?${stringifiedParams}` : `/api/reports/power-usage`
+}
+
+export const getPowerUsageReport = async (params: GetPowerUsageReportParams, options?: RequestInit): Promise<PowerUsageReport> => {
+
+  return customFetch<PowerUsageReport>(getGetPowerUsageReportUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPowerUsageReportQueryKey = (params?: GetPowerUsageReportParams,) => {
+    return [
+    `/api/reports/power-usage`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetPowerUsageReportQueryOptions = <TData = Awaited<ReturnType<typeof getPowerUsageReport>>, TError = ErrorType<unknown>>(params: GetPowerUsageReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPowerUsageReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPowerUsageReportQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPowerUsageReport>>> = ({ signal }) => getPowerUsageReport(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPowerUsageReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPowerUsageReportQueryResult = NonNullable<Awaited<ReturnType<typeof getPowerUsageReport>>>
+export type GetPowerUsageReportQueryError = ErrorType<unknown>
+
+
+
+export function useGetPowerUsageReport<TData = Awaited<ReturnType<typeof getPowerUsageReport>>, TError = ErrorType<unknown>>(
+ params: GetPowerUsageReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPowerUsageReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPowerUsageReportQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

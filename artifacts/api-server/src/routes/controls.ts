@@ -26,6 +26,7 @@ const selection = {
   controlTypeId: controlsTable.controlTypeId,
   controlTypeName: controlTypesTable.name,
   state: controlsTable.state,
+  wattage: controlsTable.wattage,
 };
 
 function withJoins() {
@@ -127,6 +128,7 @@ router.patch("/bulk", requirePermission("controls.manage"), async (req, res) => 
           ...(item.controlTypeId !== undefined
             ? { controlTypeId: item.controlTypeId }
             : {}),
+          ...(item.wattage !== undefined ? { wattage: item.wattage } : {}),
         })
         .where(eq(controlsTable.id, item.id));
     }
@@ -184,6 +186,7 @@ router.patch("/:id", requirePermission("controls.manage"), async (req, res) => {
       ...(body.controlTypeId !== undefined
         ? { controlTypeId: body.controlTypeId }
         : {}),
+      ...(body.wattage !== undefined ? { wattage: body.wattage } : {}),
     })
     .where(eq(controlsTable.id, id));
   const rows = await withJoins().where(eq(controlsTable.id, id));

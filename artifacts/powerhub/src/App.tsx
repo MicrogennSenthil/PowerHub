@@ -24,6 +24,8 @@ import { Users } from '@/pages/masters/Users';
 import { Roles } from '@/pages/masters/Roles';
 import { Settings } from '@/pages/Settings';
 import { SmartTv } from '@/pages/SmartTv';
+import { PowerAutomation } from '@/pages/integration/PowerAutomation';
+import { PowerUsageReport } from '@/pages/reports/PowerUsageReport';
 import { Welcome } from '@/pages/Welcome';
 
 const queryClient = new QueryClient({
@@ -219,6 +221,8 @@ function ClerkProviderWithRoutes() {
             <Route path="/roles"><ProtectedRoute component={Roles} /></Route>
             <Route path="/settings"><ProtectedRoute component={Settings} /></Route>
             <Route path="/smart-tv"><ProtectedRoute component={SmartTv} /></Route>
+            <Route path="/integration/power-automation"><ProtectedRoute component={PowerAutomation} /></Route>
+            <Route path="/reports/power-usage"><ProtectedRoute component={PowerUsageReport} /></Route>
 
             {/* Public full-screen page for casting to a TV */}
             <Route path="/welcome" component={Welcome} />

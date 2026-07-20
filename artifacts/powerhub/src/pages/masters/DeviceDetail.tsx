@@ -39,7 +39,8 @@ function ChannelRow({
   const [formData, setFormData] = useState({
     label: control.label || '',
     roomId: control.roomId?.toString() || '0',
-    controlTypeId: control.controlTypeId?.toString() || '0'
+    controlTypeId: control.controlTypeId?.toString() || '0',
+    wattage: control.wattage?.toString() || ''
   });
 
   const handleSave = async () => {
@@ -48,6 +49,7 @@ function ChannelRow({
       label: formData.label || null,
       roomId: formData.roomId !== '0' ? parseInt(formData.roomId, 10) : null,
       controlTypeId: formData.controlTypeId !== '0' ? parseInt(formData.controlTypeId, 10) : null,
+      wattage: formData.wattage !== '' ? parseInt(formData.wattage, 10) || null : null,
     });
     setIsSaving(false);
     setIsEditing(false);
@@ -65,7 +67,7 @@ function ChannelRow({
             className="h-8"
           />
         </div>
-        <div className="col-span-3 min-w-0">
+        <div className="col-span-2 min-w-0">
           <Select value={formData.roomId} onValueChange={(v) => setFormData({ ...formData, roomId: v })}>
             <SelectTrigger className="h-8"><SelectValue placeholder="Assign Room" /></SelectTrigger>
             <SelectContent>
@@ -82,6 +84,17 @@ function ChannelRow({
               {controlTypes.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
+        </div>
+        <div className="col-span-1 min-w-0">
+          <Input
+            type="number"
+            min={0}
+            value={formData.wattage}
+            onChange={(e) => setFormData({ ...formData, wattage: e.target.value })}
+            placeholder="W"
+            className="h-8"
+            title="Rated wattage (for consumption reports)"
+          />
         </div>
         <div className="col-span-1" />
         <div className="col-span-2 flex justify-end gap-1">
@@ -100,8 +113,9 @@ function ChannelRow({
     <div className="grid grid-cols-12 items-center gap-4 py-3 border-b px-4 hover:bg-gray-50">
       <div className="col-span-1 text-sm font-medium text-gray-500">Ch {control.channel}</div>
       <div className="col-span-3 font-medium">{control.label || <span className="text-gray-400 italic">Unlabeled</span>}</div>
-      <div className="col-span-3 text-sm">{control.roomNo ? `Room ${control.roomNo}` : <span className="text-gray-400">—</span>}</div>
+      <div className="col-span-2 text-sm">{control.roomNo ? `Room ${control.roomNo}` : <span className="text-gray-400">—</span>}</div>
       <div className="col-span-2 text-sm">{control.controlTypeName || <span className="text-gray-400">—</span>}</div>
+      <div className="col-span-1 text-sm">{control.wattage != null ? `${control.wattage} W` : <span className="text-gray-400">—</span>}</div>
       <div className="col-span-1">
         <div className={`h-3 w-3 rounded-full ${control.state ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-gray-300'}`} title={control.state ? 'ON' : 'OFF'} />
       </div>
@@ -207,8 +221,9 @@ export function DeviceDetail() {
           <div className="grid grid-cols-12 gap-4 px-4 py-2 border-b bg-gray-50/50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
             <div className="col-span-1">Ch</div>
             <div className="col-span-3">Label</div>
-            <div className="col-span-3">Room</div>
+            <div className="col-span-2">Room</div>
             <div className="col-span-2">Type</div>
+            <div className="col-span-1">Watts</div>
             <div className="col-span-1">State</div>
             <div className="col-span-2"></div>
           </div>
@@ -232,8 +247,9 @@ export function DeviceDetail() {
           <div className="grid grid-cols-12 gap-4 px-4 py-2 border-b bg-gray-50/50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
             <div className="col-span-1">Ch</div>
             <div className="col-span-3">Label</div>
-            <div className="col-span-3">Room</div>
+            <div className="col-span-2">Room</div>
             <div className="col-span-2">Type</div>
+            <div className="col-span-1">Watts</div>
             <div className="col-span-1">State</div>
             <div className="col-span-2"></div>
           </div>

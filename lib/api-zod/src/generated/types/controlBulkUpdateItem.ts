@@ -14,4 +14,6 @@ export interface ControlBulkUpdateItem {
   roomId?: number | null;
   /** @nullable */
   controlTypeId?: number | null;
+  /** @nullable */
+  wattage?: number | null;
 }

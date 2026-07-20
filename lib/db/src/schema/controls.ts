@@ -25,6 +25,8 @@ export const controlsTable = pgTable("controls", {
     { onDelete: "set null" },
   ),
   state: integer("state").notNull().default(0),
+  // Rated load in watts; used to compute consumption (kWh) in usage reports.
+  wattage: integer("wattage"),
 });
 
 export type ControlRow = typeof controlsTable.$inferSelect;

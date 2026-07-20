@@ -43,6 +43,18 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   { key: "roles.view", label: "View roles", group: "Administration" },
   { key: "roles.manage", label: "Manage roles", group: "Administration" },
 
+  {
+    key: "integration.view",
+    label: "View power automation integration",
+    group: "Integration",
+  },
+  {
+    key: "integration.manage",
+    label: "Manage power automation integration",
+    group: "Integration",
+  },
+  { key: "reports.view", label: "View reports", group: "Reports" },
+
   { key: "settings.view", label: "View software setup", group: "System" },
   {
     key: "settings.manage",

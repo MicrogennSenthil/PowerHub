@@ -663,7 +663,8 @@ export const ListControlsResponseItem = zod.object({
   "roomNo": zod.string().nullish(),
   "controlTypeId": zod.number().nullish(),
   "controlTypeName": zod.string().nullish(),
-  "state": zod.number()
+  "state": zod.number(),
+  "wattage": zod.number().nullish()
 })
 export const ListControlsResponse = zod.array(ListControlsResponseItem)
 
@@ -678,7 +679,8 @@ export const UpdateControlParams = zod.object({
 export const UpdateControlBody = zod.object({
   "label": zod.string().nullish(),
   "roomId": zod.number().nullish(),
-  "controlTypeId": zod.number().nullish()
+  "controlTypeId": zod.number().nullish(),
+  "wattage": zod.number().nullish()
 })
 
 export const UpdateControlResponse = zod.object({
@@ -692,7 +694,8 @@ export const UpdateControlResponse = zod.object({
   "roomNo": zod.string().nullish(),
   "controlTypeId": zod.number().nullish(),
   "controlTypeName": zod.string().nullish(),
-  "state": zod.number()
+  "state": zod.number(),
+  "wattage": zod.number().nullish()
 })
 
 
@@ -704,7 +707,8 @@ export const BulkUpdateControlsBody = zod.object({
   "id": zod.number(),
   "label": zod.string().nullish(),
   "roomId": zod.number().nullish(),
-  "controlTypeId": zod.number().nullish()
+  "controlTypeId": zod.number().nullish(),
+  "wattage": zod.number().nullish()
 }))
 })
 
@@ -719,7 +723,8 @@ export const BulkUpdateControlsResponseItem = zod.object({
   "roomNo": zod.string().nullish(),
   "controlTypeId": zod.number().nullish(),
   "controlTypeName": zod.string().nullish(),
-  "state": zod.number()
+  "state": zod.number(),
+  "wattage": zod.number().nullish()
 })
 export const BulkUpdateControlsResponse = zod.array(BulkUpdateControlsResponseItem)
 
@@ -1049,6 +1054,150 @@ export const UpdateBrandingResponse = zod.object({
   "brandName": zod.string().nullable(),
   "brandColor": zod.string().nullable(),
   "brandLogoUrl": zod.string().nullable()
+})
+
+
+export const ListApiKeysQueryParams = zod.object({
+  "propertyId": zod.coerce.number()
+})
+
+export const ListApiKeysResponseItem = zod.object({
+  "id": zod.number(),
+  "propertyId": zod.number(),
+  "name": zod.string(),
+  "prefix": zod.string(),
+  "active": zod.boolean(),
+  "createdAt": zod.string(),
+  "lastUsedAt": zod.string().nullish()
+})
+export const ListApiKeysResponse = zod.array(ListApiKeysResponseItem)
+
+
+
+
+
+export const CreateApiKeyBody = zod.object({
+  "propertyId": zod.number(),
+  "name": zod.string().min(1)
+})
+
+export const CreateApiKeyResponse = zod.object({
+  "id": zod.number(),
+  "propertyId": zod.number(),
+  "name": zod.string(),
+  "prefix": zod.string(),
+  "active": zod.boolean(),
+  "createdAt": zod.string(),
+  "lastUsedAt": zod.string().nullish()
+}).and(zod.object({
+  "key": zod.string()
+}))
+
+
+export const UpdateApiKeyParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateApiKeyBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "active": zod.boolean().optional()
+})
+
+export const UpdateApiKeyResponse = zod.object({
+  "id": zod.number(),
+  "propertyId": zod.number(),
+  "name": zod.string(),
+  "prefix": zod.string(),
+  "active": zod.boolean(),
+  "createdAt": zod.string(),
+  "lastUsedAt": zod.string().nullish()
+})
+
+
+export const DeleteApiKeyParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteApiKeyResponse = zod.void()
+
+
+export const ListPowerLogsQueryParams = zod.object({
+  "propertyId": zod.coerce.number(),
+  "flag": zod.coerce.number().optional(),
+  "limit": zod.coerce.number().optional()
+})
+
+export const ListPowerLogsResponseItem = zod.object({
+  "id": zod.number(),
+  "propertyId": zod.number(),
+  "deviceId": zod.number(),
+  "deviceCode": zod.string(),
+  "roomId": zod.number().nullish(),
+  "roomNo": zod.string().nullish(),
+  "controlId": zod.number().nullish(),
+  "controlLabel": zod.string().nullish(),
+  "processTypeId": zod.number().nullish(),
+  "processName": zod.string().nullish(),
+  "state": zod.number(),
+  "controlPush": zod.string(),
+  "controlPull": zod.string(),
+  "flag": zod.number(),
+  "source": zod.string(),
+  "grcNo": zod.string().nullish(),
+  "billNo": zod.string().nullish(),
+  "guestName": zod.string().nullish(),
+  "requestedBy": zod.string().nullish(),
+  "rdate": zod.string(),
+  "receivedAt": zod.string().nullish(),
+  "closedAt": zod.string().nullish()
+})
+export const ListPowerLogsResponse = zod.array(ListPowerLogsResponseItem)
+
+
+export const GetPowerUsageReportQueryParams = zod.object({
+  "propertyId": zod.coerce.number(),
+  "from": zod.coerce.string().optional(),
+  "to": zod.coerce.string().optional(),
+  "roomId": zod.coerce.number().optional(),
+  "guest": zod.coerce.string().optional(),
+  "billNo": zod.coerce.string().optional(),
+  "grcNo": zod.coerce.string().optional(),
+  "username": zod.coerce.string().optional()
+})
+
+export const GetPowerUsageReportResponse = zod.object({
+  "sessions": zod.array(zod.object({
+  "id": zod.number(),
+  "roomId": zod.number().nullish(),
+  "roomNo": zod.string().nullish(),
+  "blockName": zod.string().nullish(),
+  "controlId": zod.number(),
+  "controlLabel": zod.string().nullish(),
+  "controlTypeName": zod.string().nullish(),
+  "processName": zod.string().nullish(),
+  "grcNo": zod.string().nullish(),
+  "billNo": zod.string().nullish(),
+  "guestName": zod.string().nullish(),
+  "requestedBy": zod.string().nullish(),
+  "wattage": zod.number().nullish(),
+  "startedAt": zod.string(),
+  "endedAt": zod.string().nullish(),
+  "endReason": zod.string().nullish(),
+  "hours": zod.number(),
+  "kwh": zod.number(),
+  "cost": zod.number()
+})),
+  "totals": zod.object({
+  "sessions": zod.number(),
+  "hours": zod.number(),
+  "kwh": zod.number(),
+  "cost": zod.number()
+}),
+  "tariffPerKwh": zod.number(),
+  "currency": zod.string()
 })
 
 
