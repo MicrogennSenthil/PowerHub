@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { seedSystemRoles } from "./lib/seed";
 import { startAutoCutoffEngine } from "./lib/autoCutoff";
+import { startDeviceMonitor } from "./jobs/deviceMonitor";
 
 const rawPort = process.env["PORT"];
 
@@ -22,6 +23,7 @@ seedSystemRoles().catch((err) => {
 });
 
 startAutoCutoffEngine();
+startDeviceMonitor();
 
 app.listen(port, (err) => {
   if (err) {

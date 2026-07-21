@@ -1075,6 +1075,13 @@ export const GetSettingsResponse = zod.object({
   "mqttUseTls": zod.boolean(),
   "propertyCodeMode": zod.enum(['manual', 'auto']).optional(),
   "propertyCodePrefix": zod.string().optional(),
+  "smtpHost": zod.string().nullish(),
+  "smtpPort": zod.number().nullish(),
+  "smtpUser": zod.string().nullish(),
+  "smtpPasswordSet": zod.boolean().optional(),
+  "smtpFrom": zod.string().nullish(),
+  "alertEmailEnabled": zod.boolean().optional(),
+  "alertOfflineMinutes": zod.number().optional(),
   "updatedAt": zod.coerce.date().optional()
 })
 
@@ -1082,6 +1089,7 @@ export const GetSettingsResponse = zod.object({
 /**
  * @summary Update global system / device-communication settings
  */
+
 
 
 
@@ -1098,7 +1106,14 @@ export const UpdateSettingsBody = zod.object({
   "mqttBaseTopic": zod.string().nullish(),
   "mqttUseTls": zod.boolean().optional(),
   "propertyCodeMode": zod.enum(['manual', 'auto']).optional(),
-  "propertyCodePrefix": zod.string().min(1).optional()
+  "propertyCodePrefix": zod.string().min(1).optional(),
+  "smtpHost": zod.string().nullish(),
+  "smtpPort": zod.number().nullish(),
+  "smtpUser": zod.string().nullish(),
+  "smtpPassword": zod.string().nullish(),
+  "smtpFrom": zod.string().nullish(),
+  "alertEmailEnabled": zod.boolean().optional(),
+  "alertOfflineMinutes": zod.number().min(1).optional()
 })
 
 export const UpdateSettingsResponse = zod.object({
@@ -1113,6 +1128,13 @@ export const UpdateSettingsResponse = zod.object({
   "mqttUseTls": zod.boolean(),
   "propertyCodeMode": zod.enum(['manual', 'auto']).optional(),
   "propertyCodePrefix": zod.string().optional(),
+  "smtpHost": zod.string().nullish(),
+  "smtpPort": zod.number().nullish(),
+  "smtpUser": zod.string().nullish(),
+  "smtpPasswordSet": zod.boolean().optional(),
+  "smtpFrom": zod.string().nullish(),
+  "alertEmailEnabled": zod.boolean().optional(),
+  "alertOfflineMinutes": zod.number().optional(),
   "updatedAt": zod.coerce.date().optional()
 })
 

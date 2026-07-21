@@ -32,6 +32,14 @@ export const systemSettingsTable = pgTable("system_settings", {
   // generates a unique sequential code from propertyCodePrefix on create.
   propertyCodeMode: text("property_code_mode").notNull().default("manual"),
   propertyCodePrefix: text("property_code_prefix").notNull().default("PROP"),
+  // Email alert configuration — used to notify admins when a device goes offline.
+  smtpHost: text("smtp_host"),
+  smtpPort: integer("smtp_port").default(587),
+  smtpUser: text("smtp_user"),
+  smtpPassword: text("smtp_password"),
+  smtpFrom: text("smtp_from"),
+  alertEmailEnabled: boolean("alert_email_enabled").notNull().default(false),
+  alertOfflineMinutes: integer("alert_offline_minutes").notNull().default(10),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -15,6 +15,56 @@ const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const { spawn } = require("child_process");
+
+// ---------------------------------------------------------------------------
+// System-tray icon (Windows only) — spawns tray.ps1 as a hidden PowerShell
+// process. Double-click the tray icon for status; right-click to stop.
+// ---------------------------------------------------------------------------
+function startTray(powerhubUrl) {
+  if (process.platform !== "win32") return;
+  const ps1 = path.join(__dirname, "tray.ps1");
+  if (!fs.existsSync(ps1)) return;
+  const child = spawn(
+    "powershell.exe",
+    [
+      "-WindowStyle", "Hidden",
+      "-NonInteractive",
+      "-ExecutionPolicy", "Bypass",
+      "-File", ps1,
+      "-BridgePid", String(process.pid),
+      "-PowerhubUrl", powerhubUrl,
+    ],
+    { detached: true, stdio: "ignore" }
+  );
+  child.unref();
+}
+
+// ---------------------------------------------------------------------------
+// Auto-startup registration (Windows only) — writes a registry key so the
+// bridge launches automatically on login. Runs once per install location.
+// ---------------------------------------------------------------------------
+function registerAutoStartup() {
+  if (process.platform !== "win32") return;
+  const vbs = path.join(__dirname, "start.vbs");
+  if (!fs.existsSync(vbs)) return;
+  const regVal = `wscript.exe "${vbs}"`;
+  const { execFile } = require("child_process");
+  execFile(
+    "reg",
+    [
+      "add",
+      "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+      "/v", "PowerHubBridge",
+      "/t", "REG_SZ",
+      "/d", regVal,
+      "/f",
+    ],
+    (err) => {
+      if (!err) console.log("  Auto-startup: registered (runs on Windows login).");
+    }
+  );
+}
 
 const cfgPath = path.join(__dirname, "config.json");
 let cfg;
@@ -177,4 +227,9 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`    http://${ips[0] || "<this-pc-ip>"}:${PORT}/api/PowerDeviceApi/000010`);
   console.log("  (should show NOCMD or a command string)");
   console.log("==========================================================");
+
+  // Start tray icon (Windows only — hides console when launched via start.vbs)
+  startTray(TARGET);
+  // Register auto-startup in Windows registry so bridge runs on every login
+  registerAutoStartup();
 });

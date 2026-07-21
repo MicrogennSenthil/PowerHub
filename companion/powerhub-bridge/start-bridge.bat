@@ -1,14 +1,12 @@
 @echo off
-title PowerHub Companion Bridge
-cd /d "%~dp0"
-where node >nul 2>nul
-if errorlevel 1 (
-  echo Node.js is not installed. Download the LTS version from https://nodejs.org
-  pause
-  exit /b 1
-)
-:loop
+title PowerHub Bridge (Debug Mode)
+echo ==========================================================
+echo   PowerHub Bridge - DEBUG / VISIBLE MODE
+echo   (This window shows logs. For background mode, run
+echo    install.bat or double-click start.vbs instead.)
+echo ==========================================================
+echo.
 node bridge.js
-echo Bridge stopped. Restarting in 5 seconds... (Ctrl+C to quit)
-timeout /t 5 >nul
-goto loop
+echo.
+echo Bridge stopped. Press any key to close.
+pause >nul

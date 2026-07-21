@@ -435,6 +435,17 @@ export interface SystemSettings {
   mqttUseTls: boolean;
   propertyCodeMode?: SystemSettingsPropertyCodeMode;
   propertyCodePrefix?: string;
+  /** @nullable */
+  smtpHost?: string | null;
+  /** @nullable */
+  smtpPort?: number | null;
+  /** @nullable */
+  smtpUser?: string | null;
+  smtpPasswordSet?: boolean;
+  /** @nullable */
+  smtpFrom?: string | null;
+  alertEmailEnabled?: boolean;
+  alertOfflineMinutes?: number;
   updatedAt?: string;
 }
 
@@ -474,6 +485,19 @@ export interface SystemSettingsUpdate {
   propertyCodeMode?: SystemSettingsUpdatePropertyCodeMode;
   /** @minLength 1 */
   propertyCodePrefix?: string;
+  /** @nullable */
+  smtpHost?: string | null;
+  /** @nullable */
+  smtpPort?: number | null;
+  /** @nullable */
+  smtpUser?: string | null;
+  /** @nullable */
+  smtpPassword?: string | null;
+  /** @nullable */
+  smtpFrom?: string | null;
+  alertEmailEnabled?: boolean;
+  /** @minimum 1 */
+  alertOfflineMinutes?: number;
 }
 
 export interface Branding {

@@ -28,4 +28,17 @@ export interface SystemSettingsUpdate {
   propertyCodeMode?: SystemSettingsUpdatePropertyCodeMode;
   /** @minLength 1 */
   propertyCodePrefix?: string;
+  /** @nullable */
+  smtpHost?: string | null;
+  /** @nullable */
+  smtpPort?: number | null;
+  /** @nullable */
+  smtpUser?: string | null;
+  /** @nullable */
+  smtpPassword?: string | null;
+  /** @nullable */
+  smtpFrom?: string | null;
+  alertEmailEnabled?: boolean;
+  /** @minimum 1 */
+  alertOfflineMinutes?: number;
 }

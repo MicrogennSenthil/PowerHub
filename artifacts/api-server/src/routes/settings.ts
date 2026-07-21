@@ -18,13 +18,18 @@ function serialize(r: SystemSettingsRow) {
     mqttBrokerUrl: r.mqttBrokerUrl,
     mqttPort: r.mqttPort,
     mqttUsername: r.mqttUsername,
-    // Never disclose the stored secret; expose only whether one is set so the
-    // UI can render a placeholder without leaking broker credentials.
     mqttPasswordSet: !!r.mqttPassword,
     mqttBaseTopic: r.mqttBaseTopic,
     mqttUseTls: r.mqttUseTls,
     propertyCodeMode: r.propertyCodeMode,
     propertyCodePrefix: r.propertyCodePrefix,
+    smtpHost: r.smtpHost,
+    smtpPort: r.smtpPort,
+    smtpUser: r.smtpUser,
+    smtpPasswordSet: !!r.smtpPassword,
+    smtpFrom: r.smtpFrom,
+    alertEmailEnabled: r.alertEmailEnabled,
+    alertOfflineMinutes: r.alertOfflineMinutes,
     updatedAt: r.updatedAt.toISOString(),
   };
 }
@@ -90,6 +95,13 @@ router.put("/", requirePermission("settings.manage"), async (req, res) => {
       ...(body.propertyCodePrefix !== undefined && body.propertyCodePrefix
         ? { propertyCodePrefix: body.propertyCodePrefix.trim() }
         : {}),
+      ...(body.smtpHost !== undefined ? { smtpHost: body.smtpHost } : {}),
+      ...(body.smtpPort !== undefined ? { smtpPort: body.smtpPort } : {}),
+      ...(body.smtpUser !== undefined ? { smtpUser: body.smtpUser } : {}),
+      ...(body.smtpPassword ? { smtpPassword: body.smtpPassword } : {}),
+      ...(body.smtpFrom !== undefined ? { smtpFrom: body.smtpFrom } : {}),
+      ...(body.alertEmailEnabled !== undefined ? { alertEmailEnabled: body.alertEmailEnabled } : {}),
+      ...(body.alertOfflineMinutes !== undefined ? { alertOfflineMinutes: body.alertOfflineMinutes } : {}),
       updatedAt: new Date(),
     })
     .where(eq(systemSettingsTable.id, SETTINGS_ID))

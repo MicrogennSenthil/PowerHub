@@ -1592,6 +1592,13 @@ components:
         mqttUseTls: { type: boolean }
         propertyCodeMode: { type: string, enum: [manual, auto] }
         propertyCodePrefix: { type: string }
+        smtpHost: { type: ["string", "null"] }
+        smtpPort: { type: ["integer", "null"] }
+        smtpUser: { type: ["string", "null"] }
+        smtpPasswordSet: { type: boolean }
+        smtpFrom: { type: ["string", "null"] }
+        alertEmailEnabled: { type: boolean }
+        alertOfflineMinutes: { type: integer }
         updatedAt: { type: string, format: date-time }
     SystemSettingsUpdate:
       type: object
@@ -1607,6 +1614,13 @@ components:
         mqttUseTls: { type: boolean }
         propertyCodeMode: { type: string, enum: [manual, auto] }
         propertyCodePrefix: { type: string, minLength: 1 }
+        smtpHost: { type: ["string", "null"] }
+        smtpPort: { type: ["integer", "null"] }
+        smtpUser: { type: ["string", "null"] }
+        smtpPassword: { type: ["string", "null"] }
+        smtpFrom: { type: ["string", "null"] }
+        alertEmailEnabled: { type: boolean }
+        alertOfflineMinutes: { type: integer, minimum: 1 }
 
     Branding:
       type: object

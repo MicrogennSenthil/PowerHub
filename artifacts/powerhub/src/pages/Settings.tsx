@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Radio, Wifi, Save, ShieldCheck, Hash, Download } from 'lucide-react';
+import { Loader2, Radio, Wifi, Save, ShieldCheck, Hash, Download, Bell, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type ProtocolKind = 'legacy' | 'mqtt';
@@ -30,6 +30,13 @@ interface FormState {
   mqttUseTls: boolean;
   propertyCodeMode: 'manual' | 'auto';
   propertyCodePrefix: string;
+  smtpHost: string;
+  smtpPort: string;
+  smtpUser: string;
+  smtpPassword: string;
+  smtpFrom: string;
+  alertEmailEnabled: boolean;
+  alertOfflineMinutes: string;
 }
 
 const EMPTY: FormState = {
@@ -44,6 +51,13 @@ const EMPTY: FormState = {
   mqttUseTls: false,
   propertyCodeMode: 'manual',
   propertyCodePrefix: 'PROP',
+  smtpHost: '',
+  smtpPort: '587',
+  smtpUser: '',
+  smtpPassword: '',
+  smtpFrom: '',
+  alertEmailEnabled: false,
+  alertOfflineMinutes: '10',
 };
 
 export function Settings() {
@@ -74,6 +88,13 @@ export function Settings() {
       propertyCodeMode:
         (settings.propertyCodeMode as 'manual' | 'auto') ?? 'manual',
       propertyCodePrefix: settings.propertyCodePrefix ?? 'PROP',
+      smtpHost: (settings as any).smtpHost ?? '',
+      smtpPort: String((settings as any).smtpPort ?? 587),
+      smtpUser: (settings as any).smtpUser ?? '',
+      smtpPassword: '',
+      smtpFrom: (settings as any).smtpFrom ?? '',
+      alertEmailEnabled: (settings as any).alertEmailEnabled ?? false,
+      alertOfflineMinutes: String((settings as any).alertOfflineMinutes ?? 10),
     });
   }, [settings]);
 
@@ -111,6 +132,13 @@ export function Settings() {
           mqttUseTls: form.mqttUseTls,
           propertyCodeMode: form.propertyCodeMode,
           propertyCodePrefix: form.propertyCodePrefix.trim() || 'PROP',
+          smtpHost: form.smtpHost.trim() || null,
+          smtpPort: form.smtpPort.trim() ? parseInt(form.smtpPort, 10) : null,
+          smtpUser: form.smtpUser.trim() || null,
+          ...(form.smtpPassword ? { smtpPassword: form.smtpPassword } : {}),
+          smtpFrom: form.smtpFrom.trim() || null,
+          alertEmailEnabled: form.alertEmailEnabled,
+          alertOfflineMinutes: parseInt(form.alertOfflineMinutes, 10) || 10,
         },
       });
       queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
@@ -341,6 +369,70 @@ export function Settings() {
               <p className="text-xs text-gray-500">Used as the prefix for auto-generated codes.</p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Email alerts */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2"><Bell className="h-4 w-4" /> Device Offline Email Alerts</CardTitle>
+          <CardDescription>
+            Send an email to property admins and superadmins when a relay box goes offline.
+            Requires an outgoing SMTP account (e.g. Gmail, Outlook, or your domain mail).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Switch id="alertEnabled" checked={form.alertEmailEnabled} onCheckedChange={(c) => set('alertEmailEnabled', c)} />
+            <div>
+              <Label htmlFor="alertEnabled">Enable email alerts</Label>
+              <p className="text-xs text-gray-500">When on, an alert is sent once per offline event.</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="alertMins">Alert after offline (minutes)</Label>
+              <Input id="alertMins" type="number" min={1} value={form.alertOfflineMinutes}
+                onChange={(e) => set('alertOfflineMinutes', e.target.value)} />
+              <p className="text-xs text-gray-500">How long the device must be offline before an alert fires.</p>
+            </div>
+          </div>
+
+          <Separator className="my-2" />
+          <p className="text-sm font-medium flex items-center gap-1 text-gray-700"><Mail className="h-4 w-4" /> SMTP Settings</p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="smtpFrom">From address</Label>
+              <Input id="smtpFrom" type="email" placeholder="powerhub@microgenn.com" value={form.smtpFrom}
+                onChange={(e) => set('smtpFrom', e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="smtpHost">SMTP Host</Label>
+              <Input id="smtpHost" placeholder="smtp.gmail.com" value={form.smtpHost}
+                onChange={(e) => set('smtpHost', e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="smtpPort">Port</Label>
+              <Input id="smtpPort" type="number" placeholder="587" value={form.smtpPort}
+                onChange={(e) => set('smtpPort', e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="smtpUser">Username / Email</Label>
+              <Input id="smtpUser" autoComplete="off" value={form.smtpUser}
+                onChange={(e) => set('smtpUser', e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="smtpPass">Password</Label>
+              <Input id="smtpPass" type="password" autoComplete="new-password" value={form.smtpPassword}
+                placeholder={(settings as any)?.smtpPasswordSet ? '•••••••• (unchanged)' : ''}
+                onChange={(e) => set('smtpPassword', e.target.value)} />
+              {(settings as any)?.smtpPasswordSet && (
+                <p className="text-xs text-gray-500">Password saved. Leave blank to keep it.</p>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
 

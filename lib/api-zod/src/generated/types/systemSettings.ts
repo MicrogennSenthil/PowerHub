@@ -24,5 +24,16 @@ export interface SystemSettings {
   mqttUseTls: boolean;
   propertyCodeMode?: SystemSettingsPropertyCodeMode;
   propertyCodePrefix?: string;
+  /** @nullable */
+  smtpHost?: string | null;
+  /** @nullable */
+  smtpPort?: number | null;
+  /** @nullable */
+  smtpUser?: string | null;
+  smtpPasswordSet?: boolean;
+  /** @nullable */
+  smtpFrom?: string | null;
+  alertEmailEnabled?: boolean;
+  alertOfflineMinutes?: number;
   updatedAt?: Date;
 }
