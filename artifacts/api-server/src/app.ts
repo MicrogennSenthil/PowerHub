@@ -55,6 +55,16 @@ app.use(
   })),
 );
 
+// Legacy ESP32 relay firmware polls paths prefixed with "/index.php" (a
+// leftover from the old CodeIgniter server). Strip the prefix so those
+// requests hit the same /api routes.
+app.use((req, _res, next) => {
+  if (req.url.startsWith("/index.php/")) {
+    req.url = req.url.slice("/index.php".length);
+  }
+  next();
+});
+
 app.use("/api", router);
 
 export default app;

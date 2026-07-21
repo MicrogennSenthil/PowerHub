@@ -34,6 +34,11 @@ if (!TARGET.startsWith("https://")) {
 const targetHost = new URL(TARGET).host;
 
 const server = http.createServer((req, res) => {
+  // Legacy firmware prefixes paths with "/index.php" (old PHP server).
+  // Strip it so requests hit PowerHub's /api routes.
+  if (req.url.startsWith("/index.php/")) {
+    req.url = req.url.slice("/index.php".length);
+  }
   const opts = {
     hostname: targetHost,
     port: 443,
