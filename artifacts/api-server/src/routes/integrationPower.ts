@@ -196,6 +196,14 @@ deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
       ? req.headers["x-device-ip"]
       : undefined;
   const ipChanged = !!reportedIp && reportedIp !== device.reportedIp;
+  // Bridge also reports the chip's setup-hotspot config-page IP it detected
+  // while the operator's PC was on the config WiFi (x-setup-ip header).
+  const setupIpHeader = req.headers["x-setup-ip"];
+  const setupIp =
+    typeof setupIpHeader === "string" &&
+    /^(?:\d{1,3}\.){3}\d{1,3}$/.test(setupIpHeader)
+      ? setupIpHeader
+      : undefined;
   await db
     .update(devicesTable)
     .set({
@@ -204,6 +212,7 @@ deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
       ...(ipChanged && device.reportedIp
         ? { previousReportedIp: device.reportedIp }
         : {}),
+      ...(setupIp && setupIp !== device.setupIp ? { setupIp } : {}),
     })
     .where(eq(devicesTable.id, device.id));
 

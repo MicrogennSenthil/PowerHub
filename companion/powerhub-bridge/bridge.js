@@ -33,6 +33,50 @@ if (!TARGET.startsWith("https://")) {
 }
 const targetHost = new URL(TARGET).host;
 
+// ---------------------------------------------------------------------------
+// Setup-hotspot watcher (Windows): when this PC joins the chip's config WiFi
+// (SSID containing "powerconfig"), detect the gateway IP — that IS the chip's
+// config page address. Remember it, print it big, and report it to PowerHub
+// on the next device poll after the box comes online (x-setup-ip header).
+// ---------------------------------------------------------------------------
+const { execFile } = require("child_process");
+let lastSetupIp = null; // { ip, at }
+const SETUP_IP_FILE = path.join(__dirname, "last-setup-ip.json");
+try {
+  lastSetupIp = JSON.parse(fs.readFileSync(SETUP_IP_FILE, "utf8"));
+} catch (_) {}
+
+function checkSetupNetwork() {
+  if (process.platform !== "win32") return;
+  execFile("netsh", ["wlan", "show", "interfaces"], (err, out) => {
+    if (err || !out) return;
+    const ssidLine = out.split("\n").find((l) => /^\s*SSID\s*:/.test(l));
+    const ssid = ssidLine ? ssidLine.split(":").slice(1).join(":").trim() : "";
+    if (!/powerconfig/i.test(ssid)) return;
+    execFile("ipconfig", (e2, out2) => {
+      if (e2 || !out2) return;
+      const m = out2.match(/Default Gateway[ .:]*((?:\d{1,3}\.){3}\d{1,3})/);
+      if (!m) return;
+      const ip = m[1];
+      if (!lastSetupIp || lastSetupIp.ip !== ip) {
+        console.log("");
+        console.log("  ********************************************************");
+        console.log("  CHIP SETUP MODE DETECTED (WiFi: " + ssid + ")");
+        console.log("  Config page address:  http://" + ip);
+        console.log("  (saved - will be reported to PowerHub automatically)");
+        console.log("  ********************************************************");
+        console.log("");
+      }
+      lastSetupIp = { ip, at: Date.now() };
+      try {
+        fs.writeFileSync(SETUP_IP_FILE, JSON.stringify(lastSetupIp));
+      } catch (_) {}
+    });
+  });
+}
+setInterval(checkSetupNetwork, 10_000);
+checkSetupNetwork();
+
 const server = http.createServer((req, res) => {
   // Legacy firmware prefixes paths with "/index.php" (old PHP server).
   // Strip it so requests hit PowerHub's /api routes.
@@ -49,6 +93,12 @@ const server = http.createServer((req, res) => {
     method: req.method,
     headers: { ...req.headers, host: targetHost, "x-device-ip": deviceIp },
   };
+  // Report the most recently seen setup-page IP (detected while this PC was
+  // on the chip's config hotspot within the last hour) so PowerHub can store
+  // it against the box that starts polling right after configuration.
+  if (lastSetupIp && Date.now() - lastSetupIp.at < 60 * 60 * 1000) {
+    opts.headers["x-setup-ip"] = lastSetupIp.ip;
+  }
   const upstream = https.request(opts, (up) => {
     res.writeHead(up.statusCode || 502, up.headers);
     up.pipe(res);
