@@ -90,3 +90,9 @@ The API is multi-tenant, keyed by `propertyId`. Access is gated by `canAccessPro
 - `validateBody` and any generic wrapper over `@workspace/api-zod` schemas must use
   `<T extends z.ZodTypeAny>` + `z.infer<T>`, NOT `ZodType<T>` — positional generic
   inference collapses the body type to `{}` across package boundaries.
+
+## Production deployment (power.microgenn.com) — July 2026
+- Custom domain at BigRock DNS: CNAME → replit.app, TXT → replit-verify=..., plus 5 Clerk CNAMEs for auth on custom domain.
+- SUPER_ADMIN_EMAILS env var (production) set to senthil@microgenn.com — guarantees superadmin regardless of DB flag, needed because JIT provisioning created a second app_users row with a different Clerk ID.
+- Dev DB copied to prod via Replit Publish "overwrite data" option.
+- Bridge config.json powerhubUrl = https://power.microgenn.com — only line to change when moving to VPS.
