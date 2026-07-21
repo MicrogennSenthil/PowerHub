@@ -17,6 +17,8 @@ export interface Device {
   /** @nullable */
   previousReportedIp?: string | null;
   /** @nullable */
+  setupIp?: string | null;
+  /** @nullable */
   description?: string | null;
   /** @nullable */
   floorId?: number | null;

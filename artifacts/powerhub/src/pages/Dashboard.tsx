@@ -171,7 +171,7 @@ export function Dashboard() {
                     <td className="px-4 py-3 font-medium">{device.code}</td>
                     <td className="px-4 py-3 text-gray-500">{device.reportedIp || '—'}</td>
                     <td className="px-4 py-3 text-gray-500">{device.previousReportedIp || '—'}</td>
-                    <td className="px-4 py-3 text-gray-500">{device.ipAddress || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500">{device.setupIp || '—'}</td>
                     <td className="px-4 py-3 text-gray-500">{device.floorName || '—'}</td>
                     <td className="px-4 py-3 text-gray-500">
                       {device.lastSeenAt ? formatDistanceToNow(new Date(device.lastSeenAt), { addSuffix: true }) : 'Never'}

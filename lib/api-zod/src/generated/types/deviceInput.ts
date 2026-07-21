@@ -11,6 +11,7 @@ export interface DeviceInput {
   /** @minLength 1 */
   code: string;
   ipAddress?: string;
+  setupIp?: string;
   description?: string;
   floorId?: number;
   active?: boolean;

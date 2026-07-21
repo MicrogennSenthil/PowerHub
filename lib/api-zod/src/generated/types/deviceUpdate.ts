@@ -10,6 +10,7 @@ export interface DeviceUpdate {
   /** @minLength 1 */
   code?: string;
   ipAddress?: string;
+  setupIp?: string;
   description?: string;
   /** @nullable */
   floorId?: number | null;

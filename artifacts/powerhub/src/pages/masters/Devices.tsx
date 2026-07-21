@@ -49,6 +49,7 @@ export function Devices() {
   const [formData, setFormData] = useState({ 
     code: '', 
     ipAddress: '', 
+    setupIp: '',
     description: '', 
     floorId: '0', 
     active: true 
@@ -56,7 +57,7 @@ export function Devices() {
 
   const openNew = () => {
     setEditingRecord(null);
-    setFormData({ code: '', ipAddress: '', description: '', floorId: '0', active: true });
+    setFormData({ code: '', ipAddress: '', setupIp: '', description: '', floorId: '0', active: true });
     setIsEditorOpen(true);
   };
 
@@ -65,6 +66,7 @@ export function Devices() {
     setFormData({ 
       code: device.code, 
       ipAddress: device.ipAddress || '', 
+      setupIp: device.setupIp || '',
       description: device.description || '', 
       floorId: device.floorId?.toString() || '0', 
       active: device.active 
@@ -88,6 +90,7 @@ export function Devices() {
       const payload = {
         code: formData.code,
         ipAddress: formData.ipAddress || undefined,
+        setupIp: formData.setupIp || undefined,
         description: formData.description || undefined,
         floorId: formData.floorId !== '0' ? parseInt(formData.floorId, 10) : undefined,
         active: formData.active,
@@ -142,6 +145,7 @@ export function Devices() {
               <TableHead>Status</TableHead>
               <TableHead>Code</TableHead>
               <TableHead>IP Address</TableHead>
+              <TableHead>Setup IP</TableHead>
               <TableHead>Location</TableHead>
               <TableHead>Last Seen</TableHead>
               <TableHead className="w-[140px]"></TableHead>
@@ -167,6 +171,7 @@ export function Devices() {
                     <p className="text-xs text-gray-500 mt-0.5">{device.channelCount} channels</p>
                   </TableCell>
                   <TableCell>{device.ipAddress || '—'}</TableCell>
+                  <TableCell>{device.setupIp || '—'}</TableCell>
                   <TableCell>{device.floorName || '—'}</TableCell>
                   <TableCell className="text-sm text-gray-500">
                     {device.lastSeenAt ? formatDistanceToNow(new Date(device.lastSeenAt), { addSuffix: true }) : 'Never'}
@@ -186,7 +191,7 @@ export function Devices() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-gray-500">No devices found.</TableCell>
+                <TableCell colSpan={7} className="h-24 text-center text-gray-500">No devices found.</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -206,6 +211,12 @@ export function Devices() {
                 <Label htmlFor="ip">IP Address (Static)</Label>
                 <Input id="ip" value={formData.ipAddress} onChange={(e) => setFormData({ ...formData, ipAddress: e.target.value })} placeholder="192.168.1.100" />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="setupIp">ESP32 Setup IP (config hotspot)</Label>
+              <Input id="setupIp" value={formData.setupIp} onChange={(e) => setFormData({ ...formData, setupIp: e.target.value })} placeholder="192.168.250.217" />
+              <p className="text-xs text-gray-500">The config page address shown when connected to the chip's setup WiFi. Update it after each chip reset.</p>
             </div>
             
             <div className="space-y-2">

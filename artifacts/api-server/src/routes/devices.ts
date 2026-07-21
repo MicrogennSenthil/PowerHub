@@ -129,6 +129,7 @@ router.post("/", requirePermission("devices.manage"), async (req, res) => {
         propertyId: body.propertyId,
         code: body.code,
         ipAddress: body.ipAddress,
+        setupIp: body.setupIp,
         description: body.description,
         floorId: body.floorId ?? null,
         active: body.active ?? true,
@@ -190,6 +191,7 @@ router.patch("/:id", requirePermission("devices.manage"), async (req, res) => {
     .set({
       ...(body.code !== undefined ? { code: body.code } : {}),
       ...(body.ipAddress !== undefined ? { ipAddress: body.ipAddress } : {}),
+      ...(body.setupIp !== undefined ? { setupIp: body.setupIp } : {}),
       ...(body.description !== undefined
         ? { description: body.description }
         : {}),

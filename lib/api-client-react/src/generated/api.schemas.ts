@@ -268,6 +268,8 @@ export interface Device {
   /** @nullable */
   previousReportedIp?: string | null;
   /** @nullable */
+  setupIp?: string | null;
+  /** @nullable */
   description?: string | null;
   /** @nullable */
   floorId?: number | null;
@@ -285,6 +287,7 @@ export interface DeviceInput {
   /** @minLength 1 */
   code: string;
   ipAddress?: string;
+  setupIp?: string;
   description?: string;
   floorId?: number;
   active?: boolean;
@@ -294,6 +297,7 @@ export interface DeviceUpdate {
   /** @minLength 1 */
   code?: string;
   ipAddress?: string;
+  setupIp?: string;
   description?: string;
   /** @nullable */
   floorId?: number | null;
