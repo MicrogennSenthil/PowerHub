@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import {
   useGetRoomChart,
   getGetRoomChartQueryKey,
+  useListDevices,
+  getListDevicesQueryKey,
   RoomChartRoom,
   RoomChartControl,
 } from '@workspace/api-client-react';
@@ -19,9 +21,69 @@ import {
   RefreshCw,
   Loader2,
   DoorClosed,
+  Wifi,
   WifiOff,
   Search,
 } from 'lucide-react';
+
+// Compact "how long ago" for device last-seen times.
+function timeAgo(iso: string | null | undefined) {
+  if (!iso) return 'never seen';
+  const secs = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (secs < 60) return `${secs}s ago`;
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+// One chip per relay box: green = polling the server, red = silent.
+function DeviceStatusStrip({ propertyId }: { propertyId: number }) {
+  const { data: devices } = useListDevices(
+    { propertyId },
+    {
+      query: {
+        queryKey: getListDevicesQueryKey({ propertyId }),
+        refetchInterval: 10000,
+      },
+    },
+  );
+  if (!devices || devices.length === 0) return null;
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Boxes:</span>
+      {devices.map((d) => (
+        <div
+          key={d.id}
+          className={cn(
+            'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
+            d.online
+              ? 'border-green-200 bg-green-50 text-green-700'
+              : 'border-red-200 bg-red-50 text-red-600',
+          )}
+          title={
+            d.online
+              ? `Box ${d.code} online — last poll ${timeAgo(d.lastSeenAt)}`
+              : `Box ${d.code} OFFLINE — last poll ${timeAgo(d.lastSeenAt)}`
+          }
+        >
+          {d.online ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+          <span>Box {d.code}</span>
+          <span
+            className={cn(
+              'h-2 w-2 rounded-full',
+              d.online ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.7)]' : 'bg-red-500',
+            )}
+          />
+          <span className={cn('text-[10px]', d.online ? 'text-green-500' : 'text-red-400')}>
+            {timeAgo(d.lastSeenAt)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const NO_BLOCK = '__no_block__';
 const NO_FLOOR = '__no_floor__';
@@ -225,6 +287,8 @@ export function RoomChart() {
             </Button>
           </div>
         </div>
+
+        <DeviceStatusStrip propertyId={selectedPropertyId} />
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <div className="relative">
