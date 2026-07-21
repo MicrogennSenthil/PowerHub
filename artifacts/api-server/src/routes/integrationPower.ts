@@ -164,7 +164,10 @@ deviceRouter.use("/PowerDeviceApi", (req, res, next) => {
   next();
 });
 deviceRouter.use("/PowerDeviceStatusApi", (req, res, next) => {
-  if (!deviceRateLimit(`${req.ip}:${req.path}`)) {
+  // Key by device code only (first path segment) — keying on the full path
+  // would let an attacker dodge the limiter by varying the randomNo segment.
+  const deviceCode = req.path.split("/")[1] ?? "";
+  if (!deviceRateLimit(`${req.ip}:PowerDeviceStatusApi:${deviceCode}`)) {
     res.status(429).type("text/plain").send("SLOWDOWN");
     return;
   }
@@ -197,13 +200,24 @@ deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
     .orderBy(asc(powerLogsTable.id))
     .limit(1);
   if (!pending[0]) {
-    res.type("text/plain").send("NOCMD");
+    // Legacy PHP echoed nothing when the queue was empty — the firmware
+    // treats an empty body as "no command". Do NOT send "NOCMD".
+    res.type("text/plain").send("");
     return;
   }
   const p = pending[0];
+  // Exact legacy format: Device.Controlpush.Controlpull.'#'.RRRR.'+'
+  // (no separators between fields; randomNo zero-padded to 4 digits).
+  const rand = String(p.randomNo).padStart(4, "0");
   res
     .type("text/plain")
-    .send(`${device.code}+${p.controlPush}+${p.controlPull}#${p.randomNo}+`);
+    .send(`${device.code}${p.controlPush}${p.controlPull}#${rand}+`);
+});
+
+// Some firmware states ack with an empty randomNo (e.g. after a failed parse).
+// Answer 'Succss' so the box unsticks and resumes normal polling.
+deviceRouter.get("/PowerDeviceStatusApi/:deviceCode", (_req, res) => {
+  res.type("text/plain").send("Succss");
 });
 
 // Legacy ack: box confirms it applied the command carrying this randomNo.
@@ -238,7 +252,8 @@ deviceRouter.get(
         ),
       );
     if (pendingIds.length === 0) {
-      res.type("text/plain").send("NOMATCH");
+      // Legacy PHP always echoed 'Succss' regardless of match.
+      res.type("text/plain").send("Succss");
       return;
     }
     await db
@@ -254,6 +269,7 @@ deviceRouter.get(
       .update(devicesTable)
       .set({ lastSeenAt: now })
       .where(eq(devicesTable.id, device.id));
-    res.type("text/plain").send("OK");
+    // Legacy firmware expects the literal (misspelled) 'Succss' ack response.
+    res.type("text/plain").send("Succss");
   },
 );
