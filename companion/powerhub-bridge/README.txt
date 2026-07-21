@@ -10,9 +10,14 @@ commands - keep it running 24/7 for real operation.
 SETUP (Windows)
 1. Install Node.js (LTS) from https://nodejs.org  - next, next, finish.
 2. Copy this folder anywhere, e.g. C:\powerhub-bridge
-3. Open config.json in Notepad and check "powerhubUrl" points to your
-   PowerHub server address. (When the app is published to a permanent
-   address, update this one line.)
+3. Open config.json in Notepad. Change "powerhubUrl" to wherever
+   PowerHub is hosted — this is the ONLY line you ever need to change:
+
+     Replit production  →  "https://power.microgenn.com"
+     Your VPS          →  "https://power.microgenn.com"  (or http://VPS_IP:PORT)
+     Replit dev        →  "https://xxxx.sisko.replit.dev"
+
+   listenPort (8085) stays the same regardless of where the server is.
 4. Double-click start-bridge.bat
    A black window opens and shows the exact PORT and Host IP to type
    into each relay box's WiFi CONFIGURATION page.

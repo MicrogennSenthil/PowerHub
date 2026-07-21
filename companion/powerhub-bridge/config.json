@@ -1,4 +1,10 @@
 {
-  "listenPort": 8085,
-  "powerhubUrl": "https://e1939e61-d95e-43ab-b0ad-5d056fcda428-00-270ilqhgt0aq7.sisko.replit.dev"
+  "_readme": "Change powerhubUrl whenever you move servers. That is the ONLY line you need to edit.",
+  "_examples": {
+    "replit_production" : "https://power.microgenn.com",
+    "replit_dev"        : "https://xxxx.sisko.replit.dev",
+    "your_vps"          : "https://power.microgenn.com or http://YOUR_VPS_IP:PORT"
+  },
+  "powerhubUrl": "https://power.microgenn.com",
+  "listenPort": 8085
 }
