@@ -12,14 +12,15 @@ import {
   Activity,
   Layers,
   BoxSelect,
-  Timer
+  Timer,
+  RefreshCw
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export function Dashboard() {
   const { selectedPropertyId, selectedProperty } = useProperty();
   
-  const { data: summary, isLoading, error } = useGetDashboardSummary(
+  const { data: summary, isLoading, error, refetch, isRefetching } = useGetDashboardSummary(
     { propertyId: selectedPropertyId! },
     { query: { enabled: !!selectedPropertyId, queryKey: ['getDashboardSummary', selectedPropertyId] } }
   );
@@ -125,7 +126,18 @@ export function Dashboard() {
         </Card>
       </div>
 
-      <h2 className="text-xl font-bold tracking-tight text-gray-900 mt-8">Device Health</h2>
+      <div className="mt-8 flex items-center justify-between">
+        <h2 className="text-xl font-bold tracking-tight text-gray-900">Device Health</h2>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          disabled={isRefetching}
+          className="inline-flex items-center gap-1.5 rounded-md border bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${isRefetching ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
+      </div>
       
       <div className="rounded-md border bg-white">
         <div className="overflow-x-auto">
@@ -134,7 +146,7 @@ export function Dashboard() {
               <tr>
                 <th className="px-4 py-3 font-medium text-gray-500">Status</th>
                 <th className="px-4 py-3 font-medium text-gray-500">Device Code</th>
-                <th className="px-4 py-3 font-medium text-gray-500">IP Address</th>
+                <th className="px-4 py-3 font-medium text-gray-500">Box IP (live)</th>
                 <th className="px-4 py-3 font-medium text-gray-500">Location</th>
                 <th className="px-4 py-3 font-medium text-gray-500">Last Seen</th>
               </tr>
@@ -155,7 +167,7 @@ export function Dashboard() {
                       )}
                     </td>
                     <td className="px-4 py-3 font-medium">{device.code}</td>
-                    <td className="px-4 py-3 text-gray-500">{device.ipAddress || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500">{device.reportedIp || device.ipAddress || '—'}</td>
                     <td className="px-4 py-3 text-gray-500">{device.floorName || '—'}</td>
                     <td className="px-4 py-3 text-gray-500">
                       {device.lastSeenAt ? formatDistanceToNow(new Date(device.lastSeenAt), { addSuffix: true }) : 'Never'}

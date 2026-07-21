@@ -188,9 +188,16 @@ deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
     res.status(404).type("text/plain").send("UNKNOWN");
     return;
   }
+  // Bridge forwards the box's LAN IP in x-device-ip; record it when present.
+  const reportedIp =
+    typeof req.headers["x-device-ip"] === "string" &&
+    req.headers["x-device-ip"].length > 0 &&
+    req.headers["x-device-ip"].length <= 45
+      ? req.headers["x-device-ip"]
+      : undefined;
   await db
     .update(devicesTable)
-    .set({ lastSeenAt: new Date() })
+    .set({ lastSeenAt: new Date(), ...(reportedIp ? { reportedIp } : {}) })
     .where(eq(devicesTable.id, device.id));
 
   const pending = await db

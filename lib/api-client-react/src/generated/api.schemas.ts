@@ -264,6 +264,8 @@ export interface Device {
   /** @nullable */
   ipAddress?: string | null;
   /** @nullable */
+  reportedIp?: string | null;
+  /** @nullable */
   description?: string | null;
   /** @nullable */
   floorId?: number | null;

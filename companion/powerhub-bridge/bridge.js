@@ -39,12 +39,15 @@ const server = http.createServer((req, res) => {
   if (req.url.startsWith("/index.php/")) {
     req.url = req.url.slice("/index.php".length);
   }
+  // Tell PowerHub which local IP the relay box connected from, so the
+  // dashboard can display the box's real network address.
+  const deviceIp = (req.socket.remoteAddress || "").replace(/^::ffff:/, "");
   const opts = {
     hostname: targetHost,
     port: 443,
     path: req.url,
     method: req.method,
-    headers: { ...req.headers, host: targetHost },
+    headers: { ...req.headers, host: targetHost, "x-device-ip": deviceIp },
   };
   const upstream = https.request(opts, (up) => {
     res.writeHead(up.statusCode || 502, up.headers);

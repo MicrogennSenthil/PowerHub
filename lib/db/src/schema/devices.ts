@@ -18,6 +18,9 @@ export const devicesTable = pgTable("devices", {
   // by this code, so a collision across properties would break isolation.
   code: text("code").notNull().unique(),
   ipAddress: text("ip_address"),
+  // IP the box last connected from, as reported by the companion bridge
+  // (x-device-ip header). Updated on every poll.
+  reportedIp: text("reported_ip"),
   description: text("description"),
   floorId: integer("floor_id").references(() => floorsTable.id, {
     onDelete: "set null",
