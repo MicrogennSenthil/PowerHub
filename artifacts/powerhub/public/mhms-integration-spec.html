@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>PowerHub – MHMS Integration Specification</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a1a2e; background: #fff; padding: 32px 40px; max-width: 860px; margin: auto; }
+  header { display: flex; align-items: center; gap: 14px; border-bottom: 3px solid #1e40af; padding-bottom: 16px; margin-bottom: 24px; }
+  header img { width: 36px; height: 36px; }
+  header h1 { font-size: 22px; font-weight: 700; color: #1e40af; }
+  header span { font-size: 12px; color: #64748b; margin-left: auto; }
+  h2 { font-size: 14px; font-weight: 700; color: #1e40af; margin: 20px 0 8px; text-transform: uppercase; letter-spacing: .5px; border-left: 4px solid #1e40af; padding-left: 8px; }
+  p { line-height: 1.6; margin-bottom: 8px; }
+  code { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; padding: 1px 5px; font-family: 'Consolas', monospace; font-size: 12px; color: #0f172a; }
+  pre { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 16px 18px; font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.7; overflow-x: auto; margin: 8px 0 14px; }
+  pre .key   { color: #7dd3fc; }
+  pre .val   { color: #86efac; }
+  pre .str   { color: #fde68a; }
+  pre .cmt   { color: #94a3b8; font-style: italic; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; font-size: 12px; }
+  th { background: #1e40af; color: #fff; text-align: left; padding: 7px 10px; }
+  td { padding: 6px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+  .req  { background: #fee2e2; color: #991b1b; }
+  .opt  { background: #f0fdf4; color: #166534; }
+  .note { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 14px; margin: 10px 0; font-size: 12px; color: #1e40af; }
+  .resp { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; margin: 10px 0; font-size: 12px; color: #14532d; }
+  .err  { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 14px; margin: 10px 0; font-size: 12px; color: #991b1b; }
+  footer { margin-top: 32px; border-top: 1px solid #e2e8f0; padding-top: 12px; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; }
+  @media print {
+    body { padding: 20px 28px; }
+    @page { size: A4; margin: 1.5cm; }
+    pre { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+    <rect width="36" height="36" rx="8" fill="#1e40af"/>
+    <path d="M10 18 L18 10 L26 18" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M18 10 L18 26" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="18" cy="26" r="2.5" fill="#60a5fa"/>
+  </svg>
+  <div>
+    <h1>PowerHub — MHMS Integration Specification</h1>
+    <div style="font-size:12px;color:#64748b;margin-top:2px;">Room Power Automation · REST API v1</div>
+  </div>
+  <span>Rev 1.0 · July 2026</span>
+</header>
+
+<!-- OVERVIEW -->
+<h2>1. Overview</h2>
+<p>PowerHub exposes a single REST endpoint that your MHMS (Hotel Management System) calls to switch room power on or off. PowerHub then relays the command to the physical relay box in the room within a few seconds via the device's background polling cycle.</p>
+<div class="note">🔒 All MHMS-facing calls require an <strong>API Key</strong> issued per property from <em>PowerHub → Integration → Power Automation</em>. Keys are transmitted in a request header — never in the URL.</div>
+
+<!-- AUTHENTICATION -->
+<h2>2. Authentication</h2>
+<p>Include the property API key in every request as an HTTP header:</p>
+<pre><span class="key">X-API-Key</span>: <span class="str">phk_58a4dc87f0f103596043c086b2640f9b5543f785</span></pre>
+<p>Keys are prefixed <code>phk_</code> and are 44 characters total. Each key is scoped to one property. The key is displayed <strong>only once</strong> at creation — store it securely in MHMS configuration.</p>
+
+<!-- ENDPOINT -->
+<h2>3. Command Endpoint</h2>
+<table>
+  <tr><th>Method</th><th>URL</th></tr>
+  <tr><td><code>POST</code></td><td><code>https://&lt;powerhub-domain&gt;/api/integration/power/commands</code></td></tr>
+</table>
+
+<p><strong>Content-Type:</strong> <code>application/json</code></p>
+
+<h2>4. Request Body</h2>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+  <tr><td><code>roomNo</code></td><td>string</td><td><span class="badge req">required</span></td><td>Room number exactly as stored in PowerHub (e.g. <code>"101"</code>)</td></tr>
+  <tr><td><code>state</code></td><td>string</td><td><span class="badge req">required</span></td><td><code>"on"</code> or <code>"off"</code></td></tr>
+  <tr><td><code>process</code></td><td>string</td><td><span class="badge opt">optional</span></td><td>Process name from PowerHub master: <code>"Checkin"</code>, <code>"Checkout"</code>, <code>"Cleaning"</code>, <code>"Visiting"</code>, etc. Drives auto-cutoff timer.</td></tr>
+  <tr><td><code>grcNo</code></td><td>string</td><td><span class="badge opt">optional</span></td><td>GRC / folio reference number — appears in Power Usage report</td></tr>
+  <tr><td><code>billNo</code></td><td>string</td><td><span class="badge opt">optional</span></td><td>Bill / invoice number</td></tr>
+  <tr><td><code>guestName</code></td><td>string</td><td><span class="badge opt">optional</span></td><td>Guest full name</td></tr>
+  <tr><td><code>username</code></td><td>string</td><td><span class="badge opt">optional</span></td><td>Front-office staff login who triggered the action</td></tr>
+  <tr><td><code>controlTypes</code></td><td>string[]</td><td><span class="badge opt">optional</span></td><td>Restrict to specific load types, e.g. <code>["Light","A/C"]</code>. Omit = all loads in room.</td></tr>
+</table>
+
+<!-- EXAMPLES -->
+<h2>5. Example Requests</h2>
+
+<p><strong>Check-in (power ON):</strong></p>
+<pre>POST /api/integration/power/commands
+<span class="key">X-API-Key</span>: <span class="str">phk_58a4dc87f0f103596043c086b2640f9b5543f785</span>
+<span class="key">Content-Type</span>: <span class="str">application/json</span>
+
+{
+  <span class="key">"roomNo"</span>:    <span class="str">"101"</span>,
+  <span class="key">"state"</span>:     <span class="str">"on"</span>,
+  <span class="key">"process"</span>:   <span class="str">"Checkin"</span>,
+  <span class="key">"grcNo"</span>:     <span class="str">"GRC-2026-001"</span>,
+  <span class="key">"billNo"</span>:    <span class="str">"B10042"</span>,
+  <span class="key">"guestName"</span>: <span class="str">"Mr Rahul Kumar"</span>,
+  <span class="key">"username"</span>:  <span class="str">"receptionist1"</span>
+}</pre>
+
+<p><strong>Check-out (power OFF):</strong></p>
+<pre>POST /api/integration/power/commands
+<span class="key">X-API-Key</span>: <span class="str">phk_58a4dc87f0f103596043c086b2640f9b5543f785</span>
+<span class="key">Content-Type</span>: <span class="str">application/json</span>
+
+{
+  <span class="key">"roomNo"</span>:    <span class="str">"101"</span>,
+  <span class="key">"state"</span>:     <span class="str">"off"</span>,
+  <span class="key">"process"</span>:   <span class="str">"Checkout"</span>,
+  <span class="key">"grcNo"</span>:     <span class="str">"GRC-2026-001"</span>,
+  <span class="key">"username"</span>:  <span class="str">"receptionist1"</span>
+}</pre>
+
+<!-- RESPONSE -->
+<h2>6. Response</h2>
+<div class="resp">
+<strong>202 Accepted</strong> — command queued successfully. The relay will switch within the device's next poll cycle (typically 2–5 seconds).
+</div>
+<pre>{
+  <span class="key">"queued"</span>:           <span class="val">2</span>,          <span class="cmt">// number of relay channels switched</span>
+  <span class="key">"powerLogIds"</span>:      [<span class="val">41</span>, <span class="val">42</span>],   <span class="cmt">// internal log IDs for tracing</span>
+  <span class="key">"room"</span>:             <span class="str">"101"</span>,
+  <span class="key">"state"</span>:            <span class="str">"on"</span>,
+  <span class="key">"process"</span>:          <span class="str">"Checkin"</span>,
+  <span class="key">"autoCutoffMinutes"</span>: <span class="val">null</span>,      <span class="cmt">// non-null if auto-cutoff applies</span>
+  <span class="key">"controls"</span>: [
+    { <span class="key">"id"</span>: <span class="val">3</span>, <span class="key">"label"</span>: <span class="str">"A/C-1"</span>,  <span class="key">"type"</span>: <span class="str">"A/C"</span> },
+    { <span class="key">"id"</span>: <span class="val">4</span>, <span class="key">"label"</span>: <span class="str">"Light-1"</span>, <span class="key">"type"</span>: <span class="str">"Light"</span> }
+  ]
+}</pre>
+
+<!-- ERRORS -->
+<h2>7. Error Codes</h2>
+<table>
+  <tr><th>HTTP Status</th><th>Meaning</th><th>Action</th></tr>
+  <tr><td><code>401</code></td><td>Missing or invalid API key</td><td>Check the <code>X-API-Key</code> header value</td></tr>
+  <tr><td><code>403</code></td><td>Key disabled</td><td>Re-activate or regenerate the key in PowerHub</td></tr>
+  <tr><td><code>404</code></td><td>Room number not found</td><td>Verify room number matches PowerHub room master</td></tr>
+  <tr><td><code>400</code></td><td>No controls mapped to room, or unknown process</td><td>Contact PowerHub administrator to map relay channels to the room</td></tr>
+  <tr><td><code>429</code></td><td>Rate limit exceeded</td><td>Back off and retry after 10 seconds</td></tr>
+  <tr><td><code>500</code></td><td>Server error</td><td>Retry once; if persistent contact PowerHub support</td></tr>
+</table>
+
+<!-- PROCESS NAMES -->
+<h2>8. Standard Process Names</h2>
+<table>
+  <tr><th>Process</th><th>Typical Use</th><th>Auto-Cutoff</th></tr>
+  <tr><td><code>Checkin</code></td><td>Guest arrival — full power ON</td><td>No</td></tr>
+  <tr><td><code>Checkout</code></td><td>Guest departure — full power OFF</td><td>No</td></tr>
+  <tr><td><code>Cleaning</code></td><td>Housekeeping in room</td><td>Yes (configurable, default 30 min)</td></tr>
+  <tr><td><code>Visiting</code></td><td>Short guest visit</td><td>Yes (configurable, default 10 min)</td></tr>
+</table>
+<div class="note">ℹ️ Process names and cutoff durations are managed in <em>PowerHub → Masters → Process Types</em>. The MHMS team should confirm exact names with the hotel's PowerHub administrator.</div>
+
+<!-- QUICK TEST -->
+<h2>9. Quick Integration Test (curl)</h2>
+<pre><span class="cmt"># Replace DOMAIN and KEY with actual values</span>
+curl -X POST https://DOMAIN/api/integration/power/commands \
+  -H <span class="str">"X-API-Key: phk_YOUR_KEY_HERE"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"roomNo":"101","state":"on","process":"Checkin","guestName":"Test Guest"}'</span></pre>
+<p>Expected: <code>HTTP 202</code> with a JSON body showing <code>"queued": N</code>. The room relay will switch within seconds.</p>
+
+<footer>
+  <span>PowerHub · Hotel Power Automation System</span>
+  <span>Confidential — for MHMS integration use only</span>
+  <span>Rev 1.0 · July 2026</span>
+</footer>
+
+</body>
+</html>
