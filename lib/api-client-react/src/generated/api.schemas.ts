@@ -344,6 +344,24 @@ export interface ControlBulkUpdate {
   items: ControlBulkUpdateItem[];
 }
 
+export type ControlCommandBodyState = typeof ControlCommandBodyState[keyof typeof ControlCommandBodyState];
+
+
+export const ControlCommandBodyState = {
+  on: 'on',
+  off: 'off',
+} as const;
+
+export interface ControlCommandBody {
+  state: ControlCommandBodyState;
+}
+
+export interface ControlCommandResult {
+  queued: number;
+  powerLogIds: number[];
+  control: Control;
+}
+
 export interface ProcessType {
   id: number;
   propertyId: number;

@@ -7,10 +7,15 @@ import {
   roomsTable,
   controlTypesTable,
 } from "@workspace/db";
-import { UpdateControlBody, BulkUpdateControlsBody } from "@workspace/api-zod";
+import {
+  UpdateControlBody,
+  BulkUpdateControlsBody,
+  SendControlCommandBody,
+} from "@workspace/api-zod";
 import { requirePermission, canAccessProperty } from "../lib/auth";
 import { parseId, validateBody } from "../lib/http";
 import { refBelongsToProperty } from "../lib/integrity";
+import { enqueueControlChange } from "../lib/powerQueue";
 
 const router: IRouter = Router();
 
@@ -139,6 +144,46 @@ router.patch("/bulk", requirePermission("controls.manage"), async (req, res) => 
     .orderBy(asc(controlsTable.slate), asc(controlsTable.channel));
   res.json(rows);
 });
+
+// Manual per-relay ON/OFF from the UI (wiring test / room-chart toggle).
+// Queues a command through the same pipeline the relay box already polls.
+router.post(
+  "/:id/command",
+  requirePermission("controls.manage"),
+  async (req, res) => {
+    const id = parseId(req.params.id);
+    if (id === null) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+    const body = validateBody(SendControlCommandBody, req, res);
+    if (!body) return;
+    const existing = await db
+      .select()
+      .from(controlsTable)
+      .where(eq(controlsTable.id, id))
+      .limit(1);
+    if (!existing[0]) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    if (!canAccessProperty(req.currentUser!, existing[0].propertyId)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    const state = body.state === "on" ? 1 : 0;
+    const logIds = await enqueueControlChange(existing, state as 0 | 1, {
+      source: "ui",
+      requestedBy: req.currentUser!.name || req.currentUser!.email,
+    });
+    const rows = await withJoins().where(eq(controlsTable.id, id));
+    res.status(202).json({
+      queued: logIds.length,
+      powerLogIds: logIds,
+      control: rows[0],
+    });
+  },
+);
 
 router.patch("/:id", requirePermission("controls.manage"), async (req, res) => {
   const id = parseId(req.params.id);

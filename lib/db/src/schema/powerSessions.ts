@@ -4,7 +4,9 @@ import {
   text,
   integer,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { isNull } from "drizzle-orm";
 import { propertiesTable } from "./properties";
 import { roomsTable } from "./rooms";
 import { controlsTable } from "./controls";
@@ -44,6 +46,12 @@ export const powerSessionsTable = pgTable("power_sessions", {
   cutoffDueAt: timestamp("cutoff_due_at", { withTimezone: true }),
   // 'manual' | 'mhms' | 'auto-cutoff'
   endReason: text("end_reason"),
-});
+}, (t) => [
+  // At most ONE open session per control — backstops the race where two
+  // concurrent ON commands both pass the "no open session" check.
+  uniqueIndex("power_sessions_one_open_per_control")
+    .on(t.controlId)
+    .where(isNull(t.endedAt)),
+]);
 
 export type PowerSessionRow = typeof powerSessionsTable.$inferSelect;

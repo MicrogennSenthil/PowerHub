@@ -84,7 +84,20 @@ export async function enqueueControlChange(
         .from(controlsTable)
         .where(eq(controlsTable.deviceId, deviceId));
       const first = targetControls.find((c) => c.deviceId === deviceId)!;
-      const randomNo = 1000 + Math.floor(Math.random() * 9000);
+      // randomNo must stay 4-digit (legacy firmware contract), so guarantee it
+      // doesn't collide with any still-pending command for this device —
+      // otherwise a single ack could close multiple queued commands.
+      const pendingRows = await tx
+        .select({ randomNo: powerLogsTable.randomNo })
+        .from(powerLogsTable)
+        .where(
+          and(eq(powerLogsTable.deviceId, deviceId), eq(powerLogsTable.flag, 0)),
+        );
+      const taken = new Set(pendingRows.map((r) => r.randomNo));
+      let randomNo = 1000 + Math.floor(Math.random() * 9000);
+      while (taken.has(randomNo)) {
+        randomNo = 1000 + Math.floor(Math.random() * 9000);
+      }
       const inserted = await tx
         .insert(powerLogsTable)
         .values({
@@ -128,7 +141,11 @@ export async function enqueueControlChange(
           pt && pt.isAuto && pt.cutoffMinutes > 0
             ? new Date(now.getTime() + pt.cutoffMinutes * 60_000)
             : null;
-        await tx.insert(powerSessionsTable).values({
+        // Partial unique index (control_id WHERE ended_at IS NULL) backstops
+        // the check above against concurrent ONs for the same control.
+        await tx
+          .insert(powerSessionsTable)
+          .values({
           propertyId,
           roomId: c.roomId ?? null,
           controlId: c.id,
@@ -140,7 +157,8 @@ export async function enqueueControlChange(
           wattage: c.wattage ?? null,
           startedAt: now,
           cutoffDueAt,
-        });
+        })
+          .onConflictDoNothing();
       }
     } else {
       // Close any open sessions for controls switching off.

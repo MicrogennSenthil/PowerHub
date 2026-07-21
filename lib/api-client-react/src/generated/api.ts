@@ -35,6 +35,8 @@ import type {
   BrandingUpdate,
   Control,
   ControlBulkUpdate,
+  ControlCommandBody,
+  ControlCommandResult,
   ControlType,
   ControlTypeInput,
   ControlTypeUpdate,
@@ -2654,6 +2656,78 @@ export const useUpdateControl = <TError = ErrorType<NotFoundResponse>,
         TContext
       > => {
       return useMutation(getUpdateControlMutationOptions(options));
+    }
+
+export const getSendControlCommandUrl = (id: number,) => {
+
+
+
+
+  return `/api/controls/${id}/command`
+}
+
+/**
+ * @summary Queue a manual ON/OFF command for a single relay (UI test toggle)
+ */
+export const sendControlCommand = async (id: number,
+    controlCommandBody: ControlCommandBody, options?: RequestInit): Promise<ControlCommandResult> => {
+
+  return customFetch<ControlCommandResult>(getSendControlCommandUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(controlCommandBody)
+  }
+);}
+
+
+
+
+
+export const getSendControlCommandMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendControlCommand>>, TError,{id: number;data: BodyType<ControlCommandBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendControlCommand>>, TError,{id: number;data: BodyType<ControlCommandBody>}, TContext> => {
+
+const mutationKey = ['sendControlCommand'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendControlCommand>>, {id: number;data: BodyType<ControlCommandBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  sendControlCommand(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendControlCommandMutationResult = NonNullable<Awaited<ReturnType<typeof sendControlCommand>>>
+    export type SendControlCommandMutationBody = BodyType<ControlCommandBody>
+    export type SendControlCommandMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+    /**
+ * @summary Queue a manual ON/OFF command for a single relay (UI test toggle)
+ */
+export const useSendControlCommand = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendControlCommand>>, TError,{id: number;data: BodyType<ControlCommandBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendControlCommand>>,
+        TError,
+        {id: number;data: BodyType<ControlCommandBody>},
+        TContext
+      > => {
+      return useMutation(getSendControlCommandMutationOptions(options));
     }
 
 export const getBulkUpdateControlsUrl = () => {

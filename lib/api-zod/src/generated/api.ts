@@ -730,6 +730,37 @@ export const UpdateControlResponse = zod.object({
 
 
 /**
+ * @summary Queue a manual ON/OFF command for a single relay (UI test toggle)
+ */
+export const SendControlCommandParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SendControlCommandBody = zod.object({
+  "state": zod.enum(['on', 'off'])
+})
+
+export const SendControlCommandResponse = zod.object({
+  "queued": zod.number(),
+  "powerLogIds": zod.array(zod.number()),
+  "control": zod.object({
+  "id": zod.number(),
+  "deviceId": zod.number(),
+  "propertyId": zod.number(),
+  "slate": zod.number(),
+  "channel": zod.number(),
+  "label": zod.string().nullish(),
+  "roomId": zod.number().nullish(),
+  "roomNo": zod.string().nullish(),
+  "controlTypeId": zod.number().nullish(),
+  "controlTypeName": zod.string().nullish(),
+  "state": zod.number(),
+  "wattage": zod.number().nullish()
+})
+})
+
+
+/**
  * @summary Assign multiple relay channels to rooms / load types in one batch
  */
 export const BulkUpdateControlsBody = zod.object({

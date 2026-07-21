@@ -637,6 +637,30 @@ paths:
                 $ref: "#/components/schemas/Control"
         "404":
           $ref: "#/components/responses/NotFound"
+  /controls/{id}/command:
+    post:
+      operationId: sendControlCommand
+      tags: [controls]
+      summary: Queue a manual ON/OFF command for a single relay (UI test toggle)
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ControlCommandBody"
+      responses:
+        "202":
+          description: Command queued for the relay box
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ControlCommandResult"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /controls/bulk:
     patch:
       operationId: bulkUpdateControls
@@ -1493,6 +1517,23 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ControlBulkUpdateItem"
+    ControlCommandBody:
+      type: object
+      required: [state]
+      properties:
+        state:
+          type: string
+          enum: [on, "off"]
+    ControlCommandResult:
+      type: object
+      required: [queued, powerLogIds, control]
+      properties:
+        queued: { type: integer }
+        powerLogIds:
+          type: array
+          items: { type: integer }
+        control:
+          $ref: "#/components/schemas/Control"
 
     ProcessType:
       type: object

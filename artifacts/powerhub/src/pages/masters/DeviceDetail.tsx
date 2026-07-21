@@ -12,6 +12,7 @@ import {
   getListControlTypesQueryKey,
   useListRooms,
   useListControlTypes,
+  useSendControlCommand,
   Control
 } from '@workspace/api-client-react';
 import { useProperty } from '@/contexts/PropertyContext';
@@ -21,18 +22,25 @@ import { Input } from '@/components/ui/input';
 import { ArrowLeft, Loader2, Save, Wifi, WifiOff, X, ListChecks } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { BulkAssignDialog, BulkAssignItem } from './BulkAssignControls';
 
 function ChannelRow({ 
   control, 
   rooms, 
   controlTypes, 
-  onSave 
+  onSave,
+  onToggle,
+  toggling,
+  deviceOnline
 }: { 
   control: Control; 
   rooms: any[]; 
   controlTypes: any[]; 
   onSave: (id: number, data: any) => Promise<void>;
+  onToggle: (control: Control, on: boolean) => void;
+  toggling: boolean;
+  deviceOnline: boolean;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -116,10 +124,17 @@ function ChannelRow({
       <div className="col-span-2 text-sm">{control.roomNo ? `Room ${control.roomNo}` : <span className="text-gray-400">—</span>}</div>
       <div className="col-span-2 text-sm">{control.controlTypeName || <span className="text-gray-400">—</span>}</div>
       <div className="col-span-1 text-sm">{control.wattage != null ? `${control.wattage} W` : <span className="text-gray-400">—</span>}</div>
-      <div className="col-span-1">
+      <div className="col-span-1 flex items-center gap-2">
         <div className={`h-3 w-3 rounded-full ${control.state ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-gray-300'}`} title={control.state ? 'ON' : 'OFF'} />
       </div>
-      <div className="col-span-2 flex justify-end">
+      <div className="col-span-2 flex items-center justify-end gap-2">
+        <Switch
+          checked={control.state === 1}
+          disabled={toggling}
+          onCheckedChange={(on) => onToggle(control, on)}
+          title={deviceOnline ? `Turn ${control.state ? 'off' : 'on'} relay` : 'Device offline — command will queue until the box polls'}
+          aria-label={`Toggle channel ${control.channel}`}
+        />
         <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>Edit</Button>
       </div>
     </div>
@@ -141,7 +156,27 @@ export function DeviceDetail() {
 
   const updateControl = useUpdateControl();
   const bulkUpdate = useBulkUpdateControls();
+  const sendCommand = useSendControlCommand();
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
+
+  const handleToggle = async (control: Control, on: boolean) => {
+    setTogglingId(control.id);
+    try {
+      await sendCommand.mutateAsync({ id: control.id, data: { state: on ? 'on' : 'off' } });
+      queryClient.invalidateQueries({ queryKey: getListControlsQueryKey({ deviceId }) });
+      toast({
+        title: `Relay ${on ? 'ON' : 'OFF'} command queued`,
+        description: device?.online
+          ? `Ch ${control.channel} (slate ${control.slate}) — the box will pick it up on its next poll.`
+          : `Ch ${control.channel} (slate ${control.slate}) — device is offline; command waits in the queue until it polls.`,
+      });
+    } catch (err: any) {
+      toast({ title: 'Failed to queue command', description: err.message, variant: 'destructive' });
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   const handleUpdateChannel = async (id: number, data: any) => {
     try {
@@ -235,6 +270,9 @@ export function DeviceDetail() {
                 rooms={rooms || []} 
                 controlTypes={controlTypes || []} 
                 onSave={handleUpdateChannel} 
+                onToggle={handleToggle}
+                toggling={togglingId === c.id}
+                deviceOnline={!!device.online}
               />
             ))}
           </div>
@@ -261,6 +299,9 @@ export function DeviceDetail() {
                 rooms={rooms || []} 
                 controlTypes={controlTypes || []} 
                 onSave={handleUpdateChannel} 
+                onToggle={handleToggle}
+                toggling={togglingId === c.id}
+                deviceOnline={!!device.online}
               />
             ))}
           </div>
