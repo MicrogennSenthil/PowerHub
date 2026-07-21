@@ -54,21 +54,29 @@ function checkSetupNetwork() {
     const ssid = ssidLine ? ssidLine.split(":").slice(1).join(":").trim() : "";
     if (!/powerconfig/i.test(ssid)) return;
     execFile("ipconfig", (e2, out2) => {
-      if (e2 || !out2) return;
-      // Look only at the Wireless LAN adapter section so we don't pick up an
-      // Ethernet gateway by mistake.
-      const sections = out2.split(/\r?\n(?=\S)/);
-      const wlan = sections.find((s) => /Wireless|Wi-?Fi|WLAN/i.test(s.split("\n")[0])) || out2;
-      const gw = wlan.match(/Default Gateway[^\d]*((?:\d{1,3}\.){3}\d{1,3})/);
-      const own = wlan.match(/IPv4 Address[^\d]*((?:\d{1,3}\.){3}\d{1,3})/);
-      let ip = gw && gw[1];
+      // Try the WiFi adapter's Default Gateway first.
+      let ip = null;
       let guessed = false;
-      if (!ip && own) {
-        // Hotspot gave no gateway - guess from this PC's address:
-        // chips have been seen at x.x.x.217, else try x.x.x.1.
-        const base = own[1].split(".").slice(0, 3).join(".");
-        ip = base + ".217";
-        guessed = true;
+      if (!e2 && out2) {
+        const sections = out2.split(/\r?\n(?=\S)/);
+        const wlan = sections.find((s) => /Wireless|Wi-?Fi|WLAN/i.test(s.split("\n")[0])) || out2;
+        const gw = wlan.match(/Default Gateway[^\d]*((?:\d{1,3}\.){3}\d{1,3})/);
+        if (gw) ip = gw[1];
+      }
+      if (!ip) {
+        // No gateway reported - derive from this PC's own address instead
+        // (no text parsing needed). Chips have been seen at x.x.x.217.
+        const nets = os.networkInterfaces();
+        let own = null;
+        for (const name of Object.keys(nets)) {
+          for (const n of nets[name] || []) {
+            if (n.family === "IPv4" && !n.internal) own = own || n.address;
+          }
+        }
+        if (own) {
+          ip = own.split(".").slice(0, 3).join(".") + ".217";
+          guessed = true;
+        }
       }
       if (!ip) {
         console.log("  [setup] On " + ssid + " but could not find the chip's address. Run ipconfig and open the Default Gateway IP in a browser.");
