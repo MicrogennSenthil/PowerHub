@@ -1,3 +1,4 @@
+import net from "node:net";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { and, asc, eq, inArray } from "drizzle-orm";
@@ -189,19 +190,19 @@ deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
     return;
   }
   // Bridge forwards the box's LAN IP in x-device-ip; record it when present.
+  // Strictly validate as an IP address (net.isIP) — this endpoint is
+  // unauthenticated legacy-protocol, so never persist arbitrary strings.
+  const deviceIpHeader = req.headers["x-device-ip"];
   const reportedIp =
-    typeof req.headers["x-device-ip"] === "string" &&
-    req.headers["x-device-ip"].length > 0 &&
-    req.headers["x-device-ip"].length <= 45
-      ? req.headers["x-device-ip"]
+    typeof deviceIpHeader === "string" && net.isIP(deviceIpHeader) !== 0
+      ? deviceIpHeader
       : undefined;
   const ipChanged = !!reportedIp && reportedIp !== device.reportedIp;
   // Bridge also reports the chip's setup-hotspot config-page IP it detected
   // while the operator's PC was on the config WiFi (x-setup-ip header).
   const setupIpHeader = req.headers["x-setup-ip"];
   const setupIp =
-    typeof setupIpHeader === "string" &&
-    /^(?:\d{1,3}\.){3}\d{1,3}$/.test(setupIpHeader)
+    typeof setupIpHeader === "string" && net.isIP(setupIpHeader) === 4
       ? setupIpHeader
       : undefined;
   await db

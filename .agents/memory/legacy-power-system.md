@@ -32,3 +32,8 @@ Source: CodeIgniter PHP + MSSQL (external instance). Rebuild target: Node/TS + R
 - Move device layer from HTTP-poll to **MQTT** (per-box topic, LWT for online/offline, per-relay commands instead of full-bitmask rewrites to avoid races). Keep REST for HMS-facing webhooks with per-property API keys.
 - Postgres, tenant-scoped from day one. React PWA (hybrid/installable) for front-desk.
 - User pasted the `sa` password in plain chat once — advised them to rotate it; never echo/store credentials.
+
+## Chip config-hotspot facts (confirmed on-site, July 2026)
+- In setup mode the ESP32 broadcasts SSID `mgennpowerconfig`; the config page is always at `x.x.x.217` on whatever subnet the hotspot hands out (seen: 192.168.250.217, 10.201.250.217).
+- The hotspot does NOT advertise a Default Gateway, so gateway-based detection fails; derive the address from the PC's own IPv4 (`.217` on same /24). The companion bridge does this automatically.
+- No time limit on the hotspot; bridge remembers detected setup IP for 1h and reports it via `x-setup-ip`.

@@ -111,20 +111,36 @@ const server = http.createServer((req, res) => {
   // Tell PowerHub which local IP the relay box connected from, so the
   // dashboard can display the box's real network address.
   const deviceIp = (req.socket.remoteAddress || "").replace(/^::ffff:/, "");
+  // Never pass through x-device-ip / x-setup-ip supplied by the caller —
+  // the bridge is the only authority for these values.
+  const fwdHeaders = { ...req.headers, host: targetHost };
+  delete fwdHeaders["x-device-ip"];
+  delete fwdHeaders["x-setup-ip"];
+  fwdHeaders["x-device-ip"] = deviceIp;
   const opts = {
     hostname: targetHost,
     port: 443,
     path: req.url,
     method: req.method,
-    headers: { ...req.headers, host: targetHost, "x-device-ip": deviceIp },
+    headers: fwdHeaders,
   };
   // Report the most recently seen setup-page IP (detected while this PC was
   // on the chip's config hotspot within the last hour) so PowerHub can store
   // it against the box that starts polling right after configuration.
-  if (lastSetupIp && Date.now() - lastSetupIp.at < 60 * 60 * 1000) {
+  const sendingSetupIp =
+    lastSetupIp && !lastSetupIp.reported && Date.now() - lastSetupIp.at < 60 * 60 * 1000;
+  if (sendingSetupIp) {
     opts.headers["x-setup-ip"] = lastSetupIp.ip;
   }
   const upstream = https.request(opts, (up) => {
+    // Once PowerHub has accepted a poll carrying the setup IP, stop sending it
+    // so it can't be attached to a different box that polls later.
+    if (sendingSetupIp && up.statusCode && up.statusCode < 300) {
+      lastSetupIp.reported = true;
+      try {
+        fs.writeFileSync(SETUP_IP_FILE, JSON.stringify(lastSetupIp));
+      } catch (_) {}
+    }
     res.writeHead(up.statusCode || 502, up.headers);
     up.pipe(res);
   });
