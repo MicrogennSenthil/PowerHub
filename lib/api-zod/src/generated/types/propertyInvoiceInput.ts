@@ -6,10 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface RoleInput {
-  propertyId: number;
-  /** @minLength 1 */
-  name: string;
+export interface PropertyInvoiceInput {
+  /** @minimum 0 */
+  amount: number;
+  currency?: string;
   description?: string;
-  permissions: string[];
+  /** @nullable */
+  paidAt?: Date | null;
 }

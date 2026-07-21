@@ -6,6 +6,8 @@ import { requirePermission, canAccessProperty } from "../lib/auth";
 import { parseId, validateBody } from "../lib/http";
 import { serializeProperty } from "../lib/serialize";
 import { getPropertyCodeConfig } from "../lib/settings";
+import { DEFAULT_PROPERTY_ROLES } from "../lib/permissions";
+import { rolesTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -39,6 +41,18 @@ async function nextPropertyCode(prefix: string): Promise<string> {
     }
   }
   return `${prefix}-${String(max + 1).padStart(3, "0")}`;
+}
+
+async function seedDefaultRoles(propertyId: number): Promise<void> {
+  await db.insert(rolesTable).values(
+    DEFAULT_PROPERTY_ROLES.map((r) => ({
+      propertyId,
+      name: r.name,
+      description: r.description,
+      permissions: r.permissions,
+      isSystem: r.isSystem,
+    })),
+  );
 }
 
 function requireSuperAdmin(req: Request, res: Response, next: NextFunction) {
@@ -108,8 +122,6 @@ router.post("/", requireSuperAdmin, async (req, res) => {
   const { mode, prefix } = await getPropertyCodeConfig();
 
   if (mode === "auto") {
-    // Retry a few times: nextPropertyCode is a guess and a concurrent insert
-    // could grab the same value first, tripping the unique index.
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const code = await nextPropertyCode(prefix);
       try {
@@ -117,6 +129,7 @@ router.post("/", requireSuperAdmin, async (req, res) => {
           .insert(propertiesTable)
           .values({ ...baseValues, code })
           .returning();
+        await seedDefaultRoles(inserted[0]!.id);
         res.status(201).json(serializeProperty(inserted[0]!));
         return;
       } catch (err) {
@@ -140,6 +153,7 @@ router.post("/", requireSuperAdmin, async (req, res) => {
       .insert(propertiesTable)
       .values({ ...baseValues, code })
       .returning();
+    await seedDefaultRoles(inserted[0]!.id);
     res.status(201).json(serializeProperty(inserted[0]!));
   } catch (err) {
     if (isUniqueViolation(err)) {

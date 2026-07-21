@@ -16,7 +16,8 @@ import {
   Tv,
   LayoutGrid,
   Plug,
-  BarChart3
+  BarChart3,
+  Building2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -57,6 +58,12 @@ export function Sidebar({ me }: SidebarProps) {
         { title: "Control Types", href: "/control-types", icon: Settings2, show: hasPerm('controlTypes.view') },
         { title: "Process Types", href: "/process-types", icon: Timer, show: hasPerm('processTypes.view') },
         { title: "Devices", href: "/devices", icon: Cpu, show: hasPerm('devices.view') },
+      ]
+    },
+    {
+      title: "Admin",
+      items: [
+        { title: "Property Management", href: "/admin/properties", icon: Building2, show: me.isSuperAdmin },
       ]
     },
     {

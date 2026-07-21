@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface Property {
+export interface PropertyAdmin {
   id: number;
   name: string;
   code: string;
@@ -34,4 +34,6 @@ export interface Property {
   nextBillingAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  userCount: number;
+  deviceCount: number;
 }

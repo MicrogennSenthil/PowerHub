@@ -5,11 +5,9 @@
  * PowerHub — multi-tenant hotel power/relay automation control system
  * OpenAPI spec version: 0.1.0
  */
+import type { Error } from './error';
 
-export interface RoleInput {
-  propertyId: number;
-  /** @minLength 1 */
-  name: string;
-  description?: string;
-  permissions: string[];
-}
+/**
+ * Forbidden
+ */
+export type ForbiddenResponse = Error;

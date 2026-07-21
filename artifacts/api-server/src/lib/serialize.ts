@@ -14,6 +14,12 @@ export function serializeProperty(p: PropertyRow) {
     tariffPerKwh: p.tariffPerKwh,
     timezone: p.timezone,
     active: p.active,
+    planTier: p.planTier,
+    billingStatus: p.billingStatus,
+    maxUsers: p.maxUsers,
+    maxDevices: p.maxDevices,
+    trialEndsAt: p.trialEndsAt ? p.trialEndsAt.toISOString() : null,
+    nextBillingAt: p.nextBillingAt ? p.nextBillingAt.toISOString() : null,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };

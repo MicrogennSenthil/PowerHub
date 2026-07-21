@@ -32,6 +32,7 @@ import reportsRouter from "./reports";
 import { mhmsRouter, deviceRouter } from "./integrationPower";
 import { makeSimpleMasterRouter } from "./simpleMaster";
 import { requireAuth } from "../lib/auth";
+import adminPropertiesRouter from "./adminProperties";
 
 const router: IRouter = Router();
 
@@ -92,5 +93,6 @@ router.use("/branding", brandingRouter);
 router.use("/integration/api-keys", apiKeysRouter);
 router.use("/power-logs", powerLogsRouter);
 router.use("/reports", reportsRouter);
+router.use("/admin/properties", adminPropertiesRouter);
 
 export default router;

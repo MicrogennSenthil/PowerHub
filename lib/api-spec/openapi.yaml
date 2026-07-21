@@ -731,6 +731,8 @@ paths:
     get:
       operationId: listRoles
       tags: [roles]
+      parameters:
+        - $ref: "#/components/parameters/PropertyIdQuery"
       responses:
         "200":
           description: Roles
@@ -1060,6 +1062,77 @@ paths:
               schema:
                 $ref: "#/components/schemas/PowerUsageReport"
 
+  /admin/properties:
+    get:
+      operationId: listAdminProperties
+      tags: [admin]
+      summary: Super-admin list of all properties with usage and billing info
+      responses:
+        "200":
+          description: Properties with usage
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PropertyAdmin"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /admin/properties/{id}:
+    patch:
+      operationId: updateAdminProperty
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyAdminUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyAdmin"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /admin/properties/{id}/invoices:
+    get:
+      operationId: listPropertyInvoices
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Invoice list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PropertyInvoice"
+    post:
+      operationId: createPropertyInvoice
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyInvoiceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyInvoice"
+
 components:
   parameters:
     IdPath:
@@ -1089,6 +1162,12 @@ components:
             $ref: "#/components/schemas/Error"
     NotFound:
       description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Forbidden
       content:
         application/json:
           schema:
@@ -1137,7 +1216,7 @@ components:
 
     Property:
       type: object
-      required: [id, name, code, currency, tariffPerKwh, timezone, active, createdAt, updatedAt]
+      required: [id, name, code, currency, tariffPerKwh, timezone, active, planTier, billingStatus, maxUsers, maxDevices, createdAt, updatedAt]
       properties:
         id: { type: integer }
         name: { type: string }
@@ -1151,6 +1230,12 @@ components:
         tariffPerKwh: { type: number }
         timezone: { type: string }
         active: { type: boolean }
+        planTier: { type: string }
+        billingStatus: { type: string }
+        maxUsers: { type: integer }
+        maxDevices: { type: integer }
+        trialEndsAt: { type: ["string", "null"], format: date-time }
+        nextBillingAt: { type: ["string", "null"], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     PropertyInput:
@@ -1496,6 +1581,7 @@ components:
       required: [id, name, permissions, isSystem]
       properties:
         id: { type: integer }
+        propertyId: { type: ["integer", "null"] }
         name: { type: string }
         description: { type: ["string", "null"] }
         permissions:
@@ -1504,8 +1590,9 @@ components:
         isSystem: { type: boolean }
     RoleInput:
       type: object
-      required: [name, permissions]
+      required: [name, permissions, propertyId]
       properties:
+        propertyId: { type: integer }
         name: { type: string, minLength: 1 }
         description: { type: string }
         permissions:
@@ -1684,3 +1771,60 @@ components:
             cost: { type: number }
         tariffPerKwh: { type: number }
         currency: { type: string }
+
+    PropertyAdmin:
+      type: object
+      required: [id, name, code, currency, tariffPerKwh, timezone, active, planTier, billingStatus, maxUsers, maxDevices, createdAt, updatedAt, userCount, deviceCount]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        code: { type: string }
+        address: { type: ["string", "null"] }
+        city: { type: ["string", "null"] }
+        pincode: { type: ["string", "null"] }
+        email: { type: ["string", "null"] }
+        phone: { type: ["string", "null"] }
+        currency: { type: string }
+        tariffPerKwh: { type: number }
+        timezone: { type: string }
+        active: { type: boolean }
+        planTier: { type: string }
+        billingStatus: { type: string }
+        maxUsers: { type: integer }
+        maxDevices: { type: integer }
+        trialEndsAt: { type: ["string", "null"], format: date-time }
+        nextBillingAt: { type: ["string", "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        userCount: { type: integer }
+        deviceCount: { type: integer }
+    PropertyAdminUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        active: { type: boolean }
+        planTier: { type: string }
+        billingStatus: { type: string }
+        maxUsers: { type: integer, minimum: 1 }
+        maxDevices: { type: integer, minimum: 1 }
+        trialEndsAt: { type: ["string", "null"], format: date-time }
+        nextBillingAt: { type: ["string", "null"], format: date-time }
+    PropertyInvoice:
+      type: object
+      required: [id, propertyId, amount, currency, createdAt]
+      properties:
+        id: { type: integer }
+        propertyId: { type: integer }
+        amount: { type: number }
+        currency: { type: string }
+        description: { type: ["string", "null"] }
+        paidAt: { type: ["string", "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+    PropertyInvoiceInput:
+      type: object
+      required: [amount]
+      properties:
+        amount: { type: number, minimum: 0 }
+        currency: { type: string }
+        description: { type: string }
+        paidAt: { type: ["string", "null"], format: date-time }

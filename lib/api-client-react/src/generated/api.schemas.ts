@@ -37,6 +37,14 @@ export interface Property {
   tariffPerKwh: number;
   timezone: string;
   active: boolean;
+  planTier: string;
+  billingStatus: string;
+  maxUsers: number;
+  maxDevices: number;
+  /** @nullable */
+  trialEndsAt?: string | null;
+  /** @nullable */
+  nextBillingAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -462,6 +470,8 @@ export interface BrandingUpdate {
 
 export interface Role {
   id: number;
+  /** @nullable */
+  propertyId?: number | null;
   name: string;
   /** @nullable */
   description?: string | null;
@@ -470,6 +480,7 @@ export interface Role {
 }
 
 export interface RoleInput {
+  propertyId: number;
   /** @minLength 1 */
   name: string;
   description?: string;
@@ -646,6 +657,75 @@ export interface PowerUsageReport {
   currency: string;
 }
 
+export interface PropertyAdmin {
+  id: number;
+  name: string;
+  code: string;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  pincode?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  currency: string;
+  tariffPerKwh: number;
+  timezone: string;
+  active: boolean;
+  planTier: string;
+  billingStatus: string;
+  maxUsers: number;
+  maxDevices: number;
+  /** @nullable */
+  trialEndsAt?: string | null;
+  /** @nullable */
+  nextBillingAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  userCount: number;
+  deviceCount: number;
+}
+
+export interface PropertyAdminUpdate {
+  /** @minLength 1 */
+  name?: string;
+  active?: boolean;
+  planTier?: string;
+  billingStatus?: string;
+  /** @minimum 1 */
+  maxUsers?: number;
+  /** @minimum 1 */
+  maxDevices?: number;
+  /** @nullable */
+  trialEndsAt?: string | null;
+  /** @nullable */
+  nextBillingAt?: string | null;
+}
+
+export interface PropertyInvoice {
+  id: number;
+  propertyId: number;
+  amount: number;
+  currency: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  paidAt?: string | null;
+  createdAt: string;
+}
+
+export interface PropertyInvoiceInput {
+  /** @minimum 0 */
+  amount: number;
+  currency?: string;
+  description?: string;
+  /** @nullable */
+  paidAt?: string | null;
+}
+
 /**
  * Unauthorized
  */
@@ -660,6 +740,11 @@ export type BadRequestResponse = Error;
  * Not found
  */
 export type NotFoundResponse = Error;
+
+/**
+ * Forbidden
+ */
+export type ForbiddenResponse = Error;
 
 export type PropertyIdQueryParameter = number;
 
@@ -696,6 +781,10 @@ deviceId: number;
 };
 
 export type ListProcessTypesParams = {
+propertyId: PropertyIdQueryParameter;
+};
+
+export type ListRolesParams = {
 propertyId: PropertyIdQueryParameter;
 };
 

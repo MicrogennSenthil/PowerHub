@@ -3,6 +3,7 @@ import {
   serial,
   text,
   boolean,
+  integer,
   timestamp,
   doublePrecision,
   uniqueIndex,
@@ -24,6 +25,13 @@ export const propertiesTable = pgTable(
     tariffPerKwh: doublePrecision("tariff_per_kwh").notNull().default(0),
     timezone: text("timezone").notNull().default("Asia/Kolkata"),
     active: boolean("active").notNull().default(true),
+    // SaaS billing / subscription tracking (managed by super admin)
+    planTier: text("plan_tier").notNull().default("trial"), // trial | starter | pro
+    billingStatus: text("billing_status").notNull().default("trial"), // trial | active | suspended
+    maxUsers: integer("max_users").notNull().default(10),
+    maxDevices: integer("max_devices").notNull().default(5),
+    trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+    nextBillingAt: timestamp("next_billing_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -42,3 +50,7 @@ export const propertiesTable = pgTable(
 );
 
 export type PropertyRow = typeof propertiesTable.$inferSelect;
+
+// Plan tier values
+export type PlanTier = "trial" | "starter" | "pro";
+export type BillingStatus = "trial" | "active" | "suspended";

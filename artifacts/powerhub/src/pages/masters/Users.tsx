@@ -7,10 +7,12 @@ import {
   useDeleteUser,
   getListUsersQueryKey,
   useListRoles,
+  getListRolesQueryKey,
   useListProperties,
   AppUser
 } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
+import { useProperty } from '@/contexts/PropertyContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,9 +29,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 export function Users() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { selectedPropertyId } = useProperty();
   
   const { data: users, isLoading } = useListUsers();
-  const { data: roles } = useListRoles();
+  // Roles are property-scoped — only show roles for the currently selected property.
+  const { data: roles } = useListRoles(
+    { propertyId: selectedPropertyId! },
+    { query: { enabled: !!selectedPropertyId, queryKey: getListRolesQueryKey({ propertyId: selectedPropertyId! }) } }
+  );
   const { data: properties } = useListProperties();
   
   const createMutation = useCreateUser();

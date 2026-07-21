@@ -8,6 +8,8 @@
 
 export interface Role {
   id: number;
+  /** @nullable */
+  propertyId?: number | null;
   name: string;
   /** @nullable */
   description?: string | null;

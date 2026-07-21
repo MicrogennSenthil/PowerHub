@@ -78,21 +78,69 @@ const VIEW_PERMISSION_KEYS: string[] = PERMISSION_CATALOG.map((p) => p.key).filt
   (k) => k.endsWith(".view"),
 );
 
-// System roles seeded on first boot. Marked isSystem so they cannot be edited
-// or deleted from the UI, but admins can freely create their own roles.
-export const SYSTEM_ROLES: Array<{
+// Default roles seeded per property. Marked isSystem so they cannot be edited
+// or deleted from the UI, but admins can freely create their own roles alongside.
+export const DEFAULT_PROPERTY_ROLES: Array<{
   name: string;
   description: string;
   permissions: string[];
+  isSystem: boolean;
 }> = [
   {
     name: "Administrator",
     description: "Full access to every module and setting.",
     permissions: ALL_PERMISSION_KEYS,
+    isSystem: true,
+  },
+  {
+    name: "Manager",
+    description: "Manage rooms, devices, users and view reports.",
+    permissions: [
+      "dashboard.view",
+      "properties.view",
+      "blocks.view", "blocks.manage",
+      "floors.view", "floors.manage",
+      "roomTypes.view", "roomTypes.manage",
+      "rooms.view", "rooms.manage",
+      "controlTypes.view", "controlTypes.manage",
+      "processTypes.view", "processTypes.manage",
+      "devices.view", "devices.manage",
+      "controls.manage",
+      "users.view", "users.manage",
+      "roles.view",
+      "integration.view", "integration.manage",
+      "reports.view",
+      "settings.view",
+      "smartTv.view", "smartTv.manage",
+    ],
+    isSystem: true,
+  },
+  {
+    name: "Receptionist",
+    description: "View rooms and manage guest check-in/out power commands.",
+    permissions: [
+      "dashboard.view",
+      "rooms.view",
+      "devices.view",
+      "integration.view",
+      "reports.view",
+    ],
+    isSystem: true,
+  },
+  {
+    name: "Housekeeping",
+    description: "View room status and trigger cleaning power commands.",
+    permissions: [
+      "dashboard.view",
+      "rooms.view",
+      "devices.view",
+    ],
+    isSystem: true,
   },
   {
     name: "Viewer",
     description: "Read-only access across all modules.",
     permissions: VIEW_PERMISSION_KEYS,
+    isSystem: true,
   },
 ];

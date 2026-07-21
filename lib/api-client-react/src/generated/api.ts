@@ -47,6 +47,7 @@ import type {
   Floor,
   FloorInput,
   FloorUpdate,
+  ForbiddenResponse,
   GetDashboardSummaryParams,
   GetPowerUsageReportParams,
   GetRoomChartParams,
@@ -59,6 +60,7 @@ import type {
   ListFloorsParams,
   ListPowerLogsParams,
   ListProcessTypesParams,
+  ListRolesParams,
   ListRoomTypesParams,
   ListRoomsParams,
   NotFoundResponse,
@@ -69,7 +71,11 @@ import type {
   ProcessTypeInput,
   ProcessTypeUpdate,
   Property,
+  PropertyAdmin,
+  PropertyAdminUpdate,
   PropertyInput,
+  PropertyInvoice,
+  PropertyInvoiceInput,
   PropertyUpdate,
   Role,
   RoleInput,
@@ -2995,17 +3001,24 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getDeleteProcessTypeMutationOptions(options));
     }
 
-export const getListRolesUrl = () => {
+export const getListRolesUrl = (params: ListRolesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/roles`
+  return stringifiedParams.length > 0 ? `/api/roles?${stringifiedParams}` : `/api/roles`
 }
 
-export const listRoles = async ( options?: RequestInit): Promise<Role[]> => {
+export const listRoles = async (params: ListRolesParams, options?: RequestInit): Promise<Role[]> => {
 
-  return customFetch<Role[]>(getListRolesUrl(),
+  return customFetch<Role[]>(getListRolesUrl(params),
   {
     ...options,
     method: 'GET'
@@ -3018,23 +3031,23 @@ export const listRoles = async ( options?: RequestInit): Promise<Role[]> => {
 
 
 
-export const getListRolesQueryKey = () => {
+export const getListRolesQueryKey = (params?: ListRolesParams,) => {
     return [
-    `/api/roles`
+    `/api/roles`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListRolesQueryOptions = <TData = Awaited<ReturnType<typeof listRoles>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListRolesQueryOptions = <TData = Awaited<ReturnType<typeof listRoles>>, TError = ErrorType<unknown>>(params: ListRolesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListRolesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListRolesQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRoles>>> = ({ signal }) => listRoles({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRoles>>> = ({ signal }) => listRoles(params, { signal, ...requestOptions });
 
 
 
@@ -3049,11 +3062,11 @@ export type ListRolesQueryError = ErrorType<unknown>
 
 
 export function useListRoles<TData = Awaited<ReturnType<typeof listRoles>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params: ListRolesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListRolesQueryOptions(options)
+  const queryOptions = getListRolesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -4344,4 +4357,284 @@ export function useGetPowerUsageReport<TData = Awaited<ReturnType<typeof getPowe
 
 
 
+
+export const getListAdminPropertiesUrl = () => {
+
+
+
+
+  return `/api/admin/properties`
+}
+
+/**
+ * @summary Super-admin list of all properties with usage and billing info
+ */
+export const listAdminProperties = async ( options?: RequestInit): Promise<PropertyAdmin[]> => {
+
+  return customFetch<PropertyAdmin[]>(getListAdminPropertiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminPropertiesQueryKey = () => {
+    return [
+    `/api/admin/properties`
+    ] as const;
+    }
+
+
+export const getListAdminPropertiesQueryOptions = <TData = Awaited<ReturnType<typeof listAdminProperties>>, TError = ErrorType<ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminProperties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminPropertiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminProperties>>> = ({ signal }) => listAdminProperties({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminProperties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminPropertiesQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminProperties>>>
+export type ListAdminPropertiesQueryError = ErrorType<ForbiddenResponse>
+
+
+/**
+ * @summary Super-admin list of all properties with usage and billing info
+ */
+
+export function useListAdminProperties<TData = Awaited<ReturnType<typeof listAdminProperties>>, TError = ErrorType<ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminProperties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminPropertiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateAdminPropertyUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/properties/${id}`
+}
+
+export const updateAdminProperty = async (id: number,
+    propertyAdminUpdate: PropertyAdminUpdate, options?: RequestInit): Promise<PropertyAdmin> => {
+
+  return customFetch<PropertyAdmin>(getUpdateAdminPropertyUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(propertyAdminUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminPropertyMutationOptions = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminProperty>>, TError,{id: number;data: BodyType<PropertyAdminUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminProperty>>, TError,{id: number;data: BodyType<PropertyAdminUpdate>}, TContext> => {
+
+const mutationKey = ['updateAdminProperty'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminProperty>>, {id: number;data: BodyType<PropertyAdminUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateAdminProperty(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminPropertyMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminProperty>>>
+    export type UpdateAdminPropertyMutationBody = BodyType<PropertyAdminUpdate>
+    export type UpdateAdminPropertyMutationError = ErrorType<NotFoundResponse>
+
+    export const useUpdateAdminProperty = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminProperty>>, TError,{id: number;data: BodyType<PropertyAdminUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminProperty>>,
+        TError,
+        {id: number;data: BodyType<PropertyAdminUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateAdminPropertyMutationOptions(options));
+    }
+
+export const getListPropertyInvoicesUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/properties/${id}/invoices`
+}
+
+export const listPropertyInvoices = async (id: number, options?: RequestInit): Promise<PropertyInvoice[]> => {
+
+  return customFetch<PropertyInvoice[]>(getListPropertyInvoicesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPropertyInvoicesQueryKey = (id: number,) => {
+    return [
+    `/api/admin/properties/${id}/invoices`
+    ] as const;
+    }
+
+
+export const getListPropertyInvoicesQueryOptions = <TData = Awaited<ReturnType<typeof listPropertyInvoices>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPropertyInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPropertyInvoicesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPropertyInvoices>>> = ({ signal }) => listPropertyInvoices(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPropertyInvoices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPropertyInvoicesQueryResult = NonNullable<Awaited<ReturnType<typeof listPropertyInvoices>>>
+export type ListPropertyInvoicesQueryError = ErrorType<unknown>
+
+
+
+export function useListPropertyInvoices<TData = Awaited<ReturnType<typeof listPropertyInvoices>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPropertyInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPropertyInvoicesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreatePropertyInvoiceUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/properties/${id}/invoices`
+}
+
+export const createPropertyInvoice = async (id: number,
+    propertyInvoiceInput: PropertyInvoiceInput, options?: RequestInit): Promise<PropertyInvoice> => {
+
+  return customFetch<PropertyInvoice>(getCreatePropertyInvoiceUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(propertyInvoiceInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePropertyInvoiceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPropertyInvoice>>, TError,{id: number;data: BodyType<PropertyInvoiceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPropertyInvoice>>, TError,{id: number;data: BodyType<PropertyInvoiceInput>}, TContext> => {
+
+const mutationKey = ['createPropertyInvoice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPropertyInvoice>>, {id: number;data: BodyType<PropertyInvoiceInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createPropertyInvoice(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePropertyInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof createPropertyInvoice>>>
+    export type CreatePropertyInvoiceMutationBody = BodyType<PropertyInvoiceInput>
+    export type CreatePropertyInvoiceMutationError = ErrorType<unknown>
+
+    export const useCreatePropertyInvoice = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPropertyInvoice>>, TError,{id: number;data: BodyType<PropertyInvoiceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPropertyInvoice>>,
+        TError,
+        {id: number;data: BodyType<PropertyInvoiceInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePropertyInvoiceMutationOptions(options));
+    }
 

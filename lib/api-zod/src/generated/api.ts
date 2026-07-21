@@ -41,6 +41,12 @@ export const GetMeResponse = zod.object({
   "tariffPerKwh": zod.number(),
   "timezone": zod.string(),
   "active": zod.boolean(),
+  "planTier": zod.string(),
+  "billingStatus": zod.string(),
+  "maxUsers": zod.number(),
+  "maxDevices": zod.number(),
+  "trialEndsAt": zod.coerce.date().nullish(),
+  "nextBillingAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 }))
@@ -74,6 +80,12 @@ export const ListPropertiesResponseItem = zod.object({
   "tariffPerKwh": zod.number(),
   "timezone": zod.string(),
   "active": zod.boolean(),
+  "planTier": zod.string(),
+  "billingStatus": zod.string(),
+  "maxUsers": zod.number(),
+  "maxDevices": zod.number(),
+  "trialEndsAt": zod.coerce.date().nullish(),
+  "nextBillingAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -115,6 +127,12 @@ export const CreatePropertyResponse = zod.object({
   "tariffPerKwh": zod.number(),
   "timezone": zod.string(),
   "active": zod.boolean(),
+  "planTier": zod.string(),
+  "billingStatus": zod.string(),
+  "maxUsers": zod.number(),
+  "maxDevices": zod.number(),
+  "trialEndsAt": zod.coerce.date().nullish(),
+  "nextBillingAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -137,6 +155,12 @@ export const GetPropertyResponse = zod.object({
   "tariffPerKwh": zod.number(),
   "timezone": zod.string(),
   "active": zod.boolean(),
+  "planTier": zod.string(),
+  "billingStatus": zod.string(),
+  "maxUsers": zod.number(),
+  "maxDevices": zod.number(),
+  "trialEndsAt": zod.coerce.date().nullish(),
+  "nextBillingAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -179,6 +203,12 @@ export const UpdatePropertyResponse = zod.object({
   "tariffPerKwh": zod.number(),
   "timezone": zod.string(),
   "active": zod.boolean(),
+  "planTier": zod.string(),
+  "billingStatus": zod.string(),
+  "maxUsers": zod.number(),
+  "maxDevices": zod.number(),
+  "trialEndsAt": zod.coerce.date().nullish(),
+  "nextBillingAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -805,8 +835,13 @@ export const DeleteProcessTypeParams = zod.object({
 export const DeleteProcessTypeResponse = zod.void()
 
 
+export const ListRolesQueryParams = zod.object({
+  "propertyId": zod.coerce.number()
+})
+
 export const ListRolesResponseItem = zod.object({
   "id": zod.number(),
+  "propertyId": zod.number().nullish(),
   "name": zod.string(),
   "description": zod.string().nullish(),
   "permissions": zod.array(zod.string()),
@@ -819,6 +854,7 @@ export const ListRolesResponse = zod.array(ListRolesResponseItem)
 
 
 export const CreateRoleBody = zod.object({
+  "propertyId": zod.number(),
   "name": zod.string().min(1),
   "description": zod.string().optional(),
   "permissions": zod.array(zod.string())
@@ -826,6 +862,7 @@ export const CreateRoleBody = zod.object({
 
 export const CreateRoleResponse = zod.object({
   "id": zod.number(),
+  "propertyId": zod.number().nullish(),
   "name": zod.string(),
   "description": zod.string().nullish(),
   "permissions": zod.array(zod.string()),
@@ -848,6 +885,7 @@ export const UpdateRoleBody = zod.object({
 
 export const UpdateRoleResponse = zod.object({
   "id": zod.number(),
+  "propertyId": zod.number().nullish(),
   "name": zod.string(),
   "description": zod.string().nullish(),
   "permissions": zod.array(zod.string()),
@@ -1198,6 +1236,124 @@ export const GetPowerUsageReportResponse = zod.object({
 }),
   "tariffPerKwh": zod.number(),
   "currency": zod.string()
+})
+
+
+/**
+ * @summary Super-admin list of all properties with usage and billing info
+ */
+export const ListAdminPropertiesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "code": zod.string(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "pincode": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "currency": zod.string(),
+  "tariffPerKwh": zod.number(),
+  "timezone": zod.string(),
+  "active": zod.boolean(),
+  "planTier": zod.string(),
+  "billingStatus": zod.string(),
+  "maxUsers": zod.number(),
+  "maxDevices": zod.number(),
+  "trialEndsAt": zod.coerce.date().nullish(),
+  "nextBillingAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "userCount": zod.number(),
+  "deviceCount": zod.number()
+})
+export const ListAdminPropertiesResponse = zod.array(ListAdminPropertiesResponseItem)
+
+
+export const UpdateAdminPropertyParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+
+export const UpdateAdminPropertyBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "active": zod.boolean().optional(),
+  "planTier": zod.string().optional(),
+  "billingStatus": zod.string().optional(),
+  "maxUsers": zod.number().min(1).optional(),
+  "maxDevices": zod.number().min(1).optional(),
+  "trialEndsAt": zod.coerce.date().nullish(),
+  "nextBillingAt": zod.coerce.date().nullish()
+})
+
+export const UpdateAdminPropertyResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "code": zod.string(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "pincode": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "currency": zod.string(),
+  "tariffPerKwh": zod.number(),
+  "timezone": zod.string(),
+  "active": zod.boolean(),
+  "planTier": zod.string(),
+  "billingStatus": zod.string(),
+  "maxUsers": zod.number(),
+  "maxDevices": zod.number(),
+  "trialEndsAt": zod.coerce.date().nullish(),
+  "nextBillingAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "userCount": zod.number(),
+  "deviceCount": zod.number()
+})
+
+
+export const ListPropertyInvoicesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListPropertyInvoicesResponseItem = zod.object({
+  "id": zod.number(),
+  "propertyId": zod.number(),
+  "amount": zod.number(),
+  "currency": zod.string(),
+  "description": zod.string().nullish(),
+  "paidAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListPropertyInvoicesResponse = zod.array(ListPropertyInvoicesResponseItem)
+
+
+export const CreatePropertyInvoiceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const createPropertyInvoiceBodyAmountMin = 0;
+
+
+
+export const CreatePropertyInvoiceBody = zod.object({
+  "amount": zod.number().min(createPropertyInvoiceBodyAmountMin),
+  "currency": zod.string().optional(),
+  "description": zod.string().optional(),
+  "paidAt": zod.coerce.date().nullish()
+})
+
+export const CreatePropertyInvoiceResponse = zod.object({
+  "id": zod.number(),
+  "propertyId": zod.number(),
+  "amount": zod.number(),
+  "currency": zod.string(),
+  "description": zod.string().nullish(),
+  "paidAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
 })
 
 
