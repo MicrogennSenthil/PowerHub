@@ -54,3 +54,9 @@ id = "1-VQKmI6k2VOGPO7U1lSw"
 uri = "file://companion/powerhub-bridge.zip"
 type = "unspecified"
 title = "PowerHub Bridge (updated — handles legacy /index.php paths)"
+
+[[outputs]]
+id = "6qQ86fRQAdP2EU-ju3Str"
+uri = "file://docs/PowerHub-MHMS-Front-Office-SOP.md"
+type = "text"
+title = "PowerHub × MHMS — Front Office SOP"
