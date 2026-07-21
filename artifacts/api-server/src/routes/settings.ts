@@ -100,9 +100,13 @@ router.put("/", requirePermission("settings.manage"), async (req, res) => {
 // Download the companion bridge package (any authenticated user — needed by
 // whoever sets up the on-site PC, from anywhere).
 router.get("/bridge-download", (_req, res) => {
+  // The server runs from dist/ after bundling, so resolve relative to both
+  // the bundle location and the process cwd (artifacts/api-server).
   const candidates = [
+    path.resolve(process.cwd(), "assets/powerhub-bridge.zip"),
+    path.resolve(import.meta.dirname, "../assets/powerhub-bridge.zip"),
     path.resolve(import.meta.dirname, "../../assets/powerhub-bridge.zip"),
-    path.resolve(import.meta.dirname, "../../../../companion/powerhub-bridge.zip"),
+    path.resolve(process.cwd(), "../../companion/powerhub-bridge.zip"),
   ];
   const file = candidates.find((p) => fs.existsSync(p));
   if (!file) {
