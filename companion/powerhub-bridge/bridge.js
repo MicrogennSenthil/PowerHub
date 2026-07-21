@@ -55,18 +55,35 @@ function checkSetupNetwork() {
     if (!/powerconfig/i.test(ssid)) return;
     execFile("ipconfig", (e2, out2) => {
       if (e2 || !out2) return;
-      const m = out2.match(/Default Gateway[ .:]*((?:\d{1,3}\.){3}\d{1,3})/);
-      if (!m) return;
-      const ip = m[1];
-      if (!lastSetupIp || lastSetupIp.ip !== ip) {
-        console.log("");
-        console.log("  ********************************************************");
-        console.log("  CHIP SETUP MODE DETECTED (WiFi: " + ssid + ")");
-        console.log("  Config page address:  http://" + ip);
-        console.log("  (saved - will be reported to PowerHub automatically)");
-        console.log("  ********************************************************");
-        console.log("");
+      // Look only at the Wireless LAN adapter section so we don't pick up an
+      // Ethernet gateway by mistake.
+      const sections = out2.split(/\r?\n(?=\S)/);
+      const wlan = sections.find((s) => /Wireless|Wi-?Fi|WLAN/i.test(s.split("\n")[0])) || out2;
+      const gw = wlan.match(/Default Gateway[^\d]*((?:\d{1,3}\.){3}\d{1,3})/);
+      const own = wlan.match(/IPv4 Address[^\d]*((?:\d{1,3}\.){3}\d{1,3})/);
+      let ip = gw && gw[1];
+      let guessed = false;
+      if (!ip && own) {
+        // Hotspot gave no gateway - guess from this PC's address:
+        // chips have been seen at x.x.x.217, else try x.x.x.1.
+        const base = own[1].split(".").slice(0, 3).join(".");
+        ip = base + ".217";
+        guessed = true;
       }
+      if (!ip) {
+        console.log("  [setup] On " + ssid + " but could not find the chip's address. Run ipconfig and open the Default Gateway IP in a browser.");
+        return;
+      }
+      console.log("");
+      console.log("  ********************************************************");
+      console.log("  CHIP SETUP MODE DETECTED (WiFi: " + ssid + ")");
+      console.log("  Config page address:  http://" + ip);
+      if (guessed) {
+        console.log("  (best guess - if it does not open, also try http://" + ip.split(".").slice(0, 3).join(".") + ".1)");
+      }
+      console.log("  (saved - will be reported to PowerHub automatically)");
+      console.log("  ********************************************************");
+      console.log("");
       lastSetupIp = { ip, at: Date.now() };
       try {
         fs.writeFileSync(SETUP_IP_FILE, JSON.stringify(lastSetupIp));
