@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Radio, Wifi, Save, ShieldCheck, Hash } from 'lucide-react';
+import { Loader2, Radio, Wifi, Save, ShieldCheck, Hash, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type ProtocolKind = 'legacy' | 'mqtt';
@@ -134,6 +134,28 @@ export function Settings() {
           Configure how PowerHub communicates with the relay devices in the field.
         </p>
       </div>
+
+      {/* Companion bridge download */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Companion Bridge (on-site PC)</CardTitle>
+          <CardDescription>
+            The bridge runs on an always-on computer at the property. It forwards relay-box
+            traffic to PowerHub, detects each chip&apos;s setup-page IP, and reports live box IPs.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm text-gray-600">
+            <p>1. Download &amp; unzip on the bridge PC (Node.js LTS required).</p>
+            <p>2. Edit <code className="rounded bg-gray-100 px-1">config.json</code> with your PowerHub address, then run <code className="rounded bg-gray-100 px-1">start-bridge.bat</code>.</p>
+          </div>
+          <Button asChild variant="outline">
+            <a href="/api/settings/bridge-download" download>
+              <Download className="mr-2 h-4 w-4" /> Download Bridge
+            </a>
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Protocol selector */}
       <Card>

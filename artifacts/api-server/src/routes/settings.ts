@@ -1,5 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
+import fs from "node:fs";
+import path from "node:path";
 import { db, systemSettingsTable, type SystemSettingsRow } from "@workspace/db";
 import { UpdateSettingsBody } from "@workspace/api-zod";
 import { requirePermission } from "../lib/auth";
@@ -93,6 +95,21 @@ router.put("/", requirePermission("settings.manage"), async (req, res) => {
     .where(eq(systemSettingsTable.id, SETTINGS_ID))
     .returning();
   res.json(serialize(updated[0]!));
+});
+
+// Download the companion bridge package (any authenticated user — needed by
+// whoever sets up the on-site PC, from anywhere).
+router.get("/bridge-download", (_req, res) => {
+  const candidates = [
+    path.resolve(import.meta.dirname, "../../assets/powerhub-bridge.zip"),
+    path.resolve(import.meta.dirname, "../../../../companion/powerhub-bridge.zip"),
+  ];
+  const file = candidates.find((p) => fs.existsSync(p));
+  if (!file) {
+    res.status(404).json({ error: "Bridge package not available" });
+    return;
+  }
+  res.download(file, "powerhub-bridge.zip");
 });
 
 export default router;
