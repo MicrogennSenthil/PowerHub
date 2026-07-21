@@ -21,6 +21,9 @@ export const devicesTable = pgTable("devices", {
   // IP the box last connected from, as reported by the companion bridge
   // (x-device-ip header). Updated on every poll.
   reportedIp: text("reported_ip"),
+  // Previous reported IP — kept when the box shows up from a new address
+  // (e.g. after a reset the router hands out a different DHCP lease).
+  previousReportedIp: text("previous_reported_ip"),
   description: text("description"),
   floorId: integer("floor_id").references(() => floorsTable.id, {
     onDelete: "set null",

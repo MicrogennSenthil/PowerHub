@@ -47,6 +47,7 @@ export function serializeDevice(
     code: d.code,
     ipAddress: d.ipAddress,
     reportedIp: d.reportedIp,
+    previousReportedIp: d.previousReportedIp,
     description: d.description,
     floorId: d.floorId,
     floorName: extra.floorName,

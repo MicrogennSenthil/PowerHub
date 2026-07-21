@@ -1452,6 +1452,7 @@ components:
         code: { type: string }
         ipAddress: { type: ["string", "null"] }
         reportedIp: { type: ["string", "null"] }
+        previousReportedIp: { type: ["string", "null"] }
         description: { type: ["string", "null"] }
         floorId: { type: ["integer", "null"] }
         floorName: { type: ["string", "null"] }

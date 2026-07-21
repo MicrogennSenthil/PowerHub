@@ -195,9 +195,16 @@ deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
     req.headers["x-device-ip"].length <= 45
       ? req.headers["x-device-ip"]
       : undefined;
+  const ipChanged = !!reportedIp && reportedIp !== device.reportedIp;
   await db
     .update(devicesTable)
-    .set({ lastSeenAt: new Date(), ...(reportedIp ? { reportedIp } : {}) })
+    .set({
+      lastSeenAt: new Date(),
+      ...(reportedIp ? { reportedIp } : {}),
+      ...(ipChanged && device.reportedIp
+        ? { previousReportedIp: device.reportedIp }
+        : {}),
+    })
     .where(eq(devicesTable.id, device.id));
 
   const pending = await db

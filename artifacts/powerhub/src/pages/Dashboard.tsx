@@ -146,7 +146,8 @@ export function Dashboard() {
               <tr>
                 <th className="px-4 py-3 font-medium text-gray-500">Status</th>
                 <th className="px-4 py-3 font-medium text-gray-500">Device Code</th>
-                <th className="px-4 py-3 font-medium text-gray-500">Box IP (live)</th>
+                <th className="px-4 py-3 font-medium text-gray-500">Box IP (current)</th>
+                <th className="px-4 py-3 font-medium text-gray-500">Previous IP</th>
                 <th className="px-4 py-3 font-medium text-gray-500">Location</th>
                 <th className="px-4 py-3 font-medium text-gray-500">Last Seen</th>
               </tr>
@@ -167,7 +168,8 @@ export function Dashboard() {
                       )}
                     </td>
                     <td className="px-4 py-3 font-medium">{device.code}</td>
-                    <td className="px-4 py-3 text-gray-500">{device.reportedIp || device.ipAddress || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500">{device.reportedIp || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500">{device.previousReportedIp || '—'}</td>
                     <td className="px-4 py-3 text-gray-500">{device.floorName || '—'}</td>
                     <td className="px-4 py-3 text-gray-500">
                       {device.lastSeenAt ? formatDistanceToNow(new Date(device.lastSeenAt), { addSuffix: true }) : 'Never'}
@@ -176,7 +178,7 @@ export function Dashboard() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                     No devices configured for this property yet.
                   </td>
                 </tr>
