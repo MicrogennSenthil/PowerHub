@@ -48,7 +48,19 @@ async function loadUserContext(user: AppUserRow): Promise<CurrentUser> {
   ]);
 
   const role = roleRow[0];
-  const permissions = user.isSuperAdmin
+
+  // Allow a comma-separated env var to grant superadmin to specific emails
+  // without a DB write — useful for the initial production bootstrap where
+  // the DB record was created before superadmin could be set.
+  const superAdminEmails = (process.env.SUPER_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const forcedSuperAdmin =
+    !!user.email && superAdminEmails.includes(user.email.toLowerCase());
+  const isSuperAdmin = user.isSuperAdmin || forcedSuperAdmin;
+
+  const permissions = isSuperAdmin
     ? ALL_PERMISSION_KEYS
     : (role?.permissions ?? []);
 
@@ -57,7 +69,7 @@ async function loadUserContext(user: AppUserRow): Promise<CurrentUser> {
     clerkUserId: user.clerkUserId,
     email: user.email,
     name: user.name,
-    isSuperAdmin: user.isSuperAdmin,
+    isSuperAdmin,
     active: user.active,
     roleId: user.roleId,
     roleName: role?.name ?? null,
