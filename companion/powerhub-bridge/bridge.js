@@ -20,30 +20,50 @@ const { spawn } = require("child_process");
 // ---------------------------------------------------------------------------
 // System-tray icon (Windows only) — spawns tray.ps1 as a hidden PowerShell
 // process. Double-click the tray icon for status; right-click to stop.
+// The tray is completely optional — any failure is silently swallowed so the
+// bridge keeps running even on systems where PowerShell is not in PATH.
 // ---------------------------------------------------------------------------
+function findPowerShell() {
+  // Try several well-known locations before falling back to bare name.
+  const candidates = [
+    process.env.SystemRoot
+      ? `${process.env.SystemRoot}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`
+      : null,
+    "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "C:\\Windows\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "powershell.exe",
+  ];
+  for (const c of candidates) {
+    if (!c) continue;
+    try { if (c === "powershell.exe" || fs.existsSync(c)) return c; } catch (_) {}
+  }
+  return "powershell.exe";
+}
+
 function startTray(powerhubUrl) {
   if (process.platform !== "win32") return;
   const ps1 = path.join(__dirname, "tray.ps1");
   if (!fs.existsSync(ps1)) return;
-  // Use full path as fallback in case PowerShell is not in PATH
-  const psExe = process.env.SystemRoot
-    ? `${process.env.SystemRoot}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`
-    : "powershell.exe";
-  const child = spawn(
-    psExe,
-    [
-      "-WindowStyle", "Hidden",
-      "-NonInteractive",
-      "-ExecutionPolicy", "Bypass",
-      "-File", ps1,
-      "-BridgePid", String(process.pid),
-      "-PowerhubUrl", powerhubUrl,
-    ],
-    { detached: true, stdio: "ignore" }
-  );
-  // Tray icon is optional — swallow errors so the bridge keeps running
-  child.on("error", () => {});
-  child.unref();
+  try {
+    const psExe = findPowerShell();
+    const child = spawn(
+      psExe,
+      [
+        "-WindowStyle", "Hidden",
+        "-NonInteractive",
+        "-ExecutionPolicy", "Bypass",
+        "-File", ps1,
+        "-BridgePid", String(process.pid),
+        "-PowerhubUrl", powerhubUrl,
+      ],
+      { detached: true, stdio: "ignore" }
+    );
+    // Tray icon is optional — swallow errors so the bridge keeps running
+    child.on("error", () => {});
+    child.unref();
+  } catch (_) {
+    // Tray failed to start — bridge continues without it
+  }
 }
 
 // ---------------------------------------------------------------------------
