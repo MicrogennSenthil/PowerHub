@@ -47,6 +47,8 @@ export const GetMeResponse = zod.object({
   "maxDevices": zod.number(),
   "trialEndsAt": zod.coerce.date().nullish(),
   "nextBillingAt": zod.coerce.date().nullish(),
+  "mhmsApiUrl": zod.string().nullish(),
+  "mhmsApiKeySet": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 }))
@@ -86,6 +88,8 @@ export const ListPropertiesResponseItem = zod.object({
   "maxDevices": zod.number(),
   "trialEndsAt": zod.coerce.date().nullish(),
   "nextBillingAt": zod.coerce.date().nullish(),
+  "mhmsApiUrl": zod.string().nullish(),
+  "mhmsApiKeySet": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -111,7 +115,9 @@ export const CreatePropertyBody = zod.object({
   "currency": zod.string().optional(),
   "tariffPerKwh": zod.number().min(createPropertyBodyTariffPerKwhMin).optional(),
   "timezone": zod.string().optional(),
-  "active": zod.boolean().optional()
+  "active": zod.boolean().optional(),
+  "mhmsApiUrl": zod.string().optional(),
+  "mhmsApiKey": zod.string().optional()
 })
 
 export const CreatePropertyResponse = zod.object({
@@ -133,6 +139,8 @@ export const CreatePropertyResponse = zod.object({
   "maxDevices": zod.number(),
   "trialEndsAt": zod.coerce.date().nullish(),
   "nextBillingAt": zod.coerce.date().nullish(),
+  "mhmsApiUrl": zod.string().nullish(),
+  "mhmsApiKeySet": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -161,6 +169,8 @@ export const GetPropertyResponse = zod.object({
   "maxDevices": zod.number(),
   "trialEndsAt": zod.coerce.date().nullish(),
   "nextBillingAt": zod.coerce.date().nullish(),
+  "mhmsApiUrl": zod.string().nullish(),
+  "mhmsApiKeySet": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -187,7 +197,9 @@ export const UpdatePropertyBody = zod.object({
   "currency": zod.string().optional(),
   "tariffPerKwh": zod.number().min(updatePropertyBodyTariffPerKwhMin).optional(),
   "timezone": zod.string().optional(),
-  "active": zod.boolean().optional()
+  "active": zod.boolean().optional(),
+  "mhmsApiUrl": zod.string().nullish(),
+  "mhmsApiKey": zod.string().nullish()
 })
 
 export const UpdatePropertyResponse = zod.object({
@@ -209,6 +221,8 @@ export const UpdatePropertyResponse = zod.object({
   "maxDevices": zod.number(),
   "trialEndsAt": zod.coerce.date().nullish(),
   "nextBillingAt": zod.coerce.date().nullish(),
+  "mhmsApiUrl": zod.string().nullish(),
+  "mhmsApiKeySet": zod.boolean().optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -465,6 +479,19 @@ export const CreateRoomResponse = zod.object({
   "roomTypeName": zod.string().nullish(),
   "active": zod.boolean()
 })
+
+
+export const GetMhmsRoomPreviewQueryParams = zod.object({
+  "propertyId": zod.coerce.number()
+})
+
+export const GetMhmsRoomPreviewResponseItem = zod.object({
+  "roomNo": zod.string(),
+  "blockName": zod.string(),
+  "floorName": zod.string(),
+  "roomTypeName": zod.string()
+})
+export const GetMhmsRoomPreviewResponse = zod.array(GetMhmsRoomPreviewResponseItem)
 
 
 

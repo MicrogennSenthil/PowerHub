@@ -21,4 +21,8 @@ export interface PropertyUpdate {
   tariffPerKwh?: number;
   timezone?: string;
   active?: boolean;
+  /** @nullable */
+  mhmsApiUrl?: string | null;
+  /** @nullable */
+  mhmsApiKey?: string | null;
 }

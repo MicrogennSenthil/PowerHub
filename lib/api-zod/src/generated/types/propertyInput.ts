@@ -20,4 +20,6 @@ export interface PropertyInput {
   tariffPerKwh?: number;
   timezone?: string;
   active?: boolean;
+  mhmsApiUrl?: string;
+  mhmsApiKey?: string;
 }

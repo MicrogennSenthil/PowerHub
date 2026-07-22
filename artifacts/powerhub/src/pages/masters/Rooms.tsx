@@ -6,6 +6,8 @@ import {
   useUpdateRoom, 
   useDeleteRoom,
   useBulkCreateRooms,
+  useGetMhmsRoomPreview,
+  getGetMhmsRoomPreviewQueryKey,
   getListRoomsQueryKey,
   getListBlocksQueryKey,
   getListFloorsQueryKey,
@@ -26,7 +28,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Plus, Edit2, Trash2, Upload, CheckCircle2, SkipForward, AlertCircle, FileText, HelpCircle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, Plus, Edit2, Trash2, Upload, CheckCircle2, SkipForward, AlertCircle, FileText, HelpCircle, Wifi, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -108,10 +111,29 @@ export function Rooms() {
 
   // ── import state ─────────────────────────────────────────────────────────
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [importTab, setImportTab] = useState<'api' | 'csv'>('api');
   const [csvText, setCsvText] = useState('');
   const [parsedRows, setParsedRows] = useState<ParsedRow[] | null>(null);
   const [showHint, setShowHint] = useState(false);
+  const [fetchEnabled, setFetchEnabled] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // MHMS API live fetch (only fires when fetchEnabled = true and dialog is open)
+  const {
+    data: mhmsRooms,
+    isFetching: mhmsFetching,
+    error: mhmsError,
+    refetch: refetchMhms,
+  } = useGetMhmsRoomPreview(
+    { propertyId: selectedPropertyId! },
+    {
+      query: {
+        enabled: !!selectedPropertyId && fetchEnabled && isImportOpen,
+        retry: false,
+        queryKey: getGetMhmsRoomPreviewQueryKey({ propertyId: selectedPropertyId! }),
+      },
+    },
+  );
 
   const invalidateRooms = () =>
     queryClient.invalidateQueries({ queryKey: getListRoomsQueryKey({ propertyId: selectedPropertyId! }) });
@@ -186,6 +208,8 @@ export function Rooms() {
     setCsvText('');
     setParsedRows(null);
     setShowHint(false);
+    setFetchEnabled(false);
+    setImportTab('api');
     setIsImportOpen(true);
   };
 
@@ -230,7 +254,31 @@ export function Rooms() {
     setParsedRows(resolved);
   };
 
-  const newRows = (parsedRows ?? []).filter((r) => !r.exists);
+  // Resolve MHMS API rows into the same ParsedRow shape as CSV
+  const resolvedMhmsRows: ParsedRow[] | null = mhmsRooms
+    ? (() => {
+        const existingNos = new Set((rooms ?? []).map((r) => r.roomNo));
+        const matchBlock = (name: string) =>
+          name ? (blocks ?? []).find((b) => b.name.toLowerCase() === name.toLowerCase())?.id ?? null : null;
+        const matchFloor = (name: string) =>
+          name ? (floors ?? []).find((f) => f.name.toLowerCase() === name.toLowerCase())?.id ?? null : null;
+        const matchType = (name: string) =>
+          name ? (roomTypes ?? []).find((t) => t.name.toLowerCase() === name.toLowerCase())?.id ?? null : null;
+        return mhmsRooms.map((r) => ({
+          roomNo: r.roomNo,
+          blockName: r.blockName,
+          floorName: r.floorName,
+          roomTypeName: r.roomTypeName,
+          blockId: matchBlock(r.blockName),
+          floorId: matchFloor(r.floorName),
+          roomTypeId: matchType(r.roomTypeName),
+          exists: existingNos.has(r.roomNo),
+        }));
+      })()
+    : null;
+
+  const activeRows = importTab === 'api' ? resolvedMhmsRows : parsedRows;
+  const newRows = (activeRows ?? []).filter((r) => !r.exists);
 
   const handleImport = async () => {
     if (!selectedPropertyId || newRows.length === 0) return;
@@ -399,137 +447,122 @@ export function Rooms() {
               Import Rooms from MHMS
             </DialogTitle>
             <DialogDescription>
-              Export your room list from MHMS and paste it here. Block, Floor, and Room Type names are matched automatically.
+              Fetch rooms directly from MHMS via API, or paste a CSV export. Block, Floor, and Room Type names are matched automatically.
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto space-y-4 py-2">
-            {/* Format hint */}
-            <div className="rounded-lg border border-blue-100 bg-blue-50 p-3">
-              <button
-                className="flex w-full items-center justify-between text-left text-sm font-medium text-blue-700"
-                onClick={() => setShowHint((v) => !v)}
-              >
-                <span className="flex items-center gap-1.5"><HelpCircle className="h-4 w-4" /> How to export from MHMS</span>
-                <span className="text-xs text-blue-500">{showHint ? 'Hide' : 'Show'}</span>
-              </button>
-              {showHint && (
-                <div className="mt-2 space-y-1.5 text-xs text-blue-700">
-                  <p>In MHMS go to <strong>Masters → Rooms</strong>, then use <strong>Export → CSV/Excel</strong>.</p>
-                  <p>The import accepts CSV or tab-separated files with columns in this order:</p>
-                  <pre className="mt-1 rounded bg-blue-100 p-2 font-mono text-[11px]">
-{`RoomNo, Block, Floor, RoomType
-101, Block A, I - Floor, Double AC
-102, Block A, I - Floor, Non AC`}
-                  </pre>
-                  <p>Only <strong>RoomNo</strong> is required. The other columns are optional — names must match what you've set up in PowerHub's Blocks, Floors, and Room Types masters. Rooms that already exist are skipped automatically.</p>
-                </div>
-              )}
-            </div>
+            <Tabs value={importTab} onValueChange={(v) => { setImportTab(v as 'api' | 'csv'); setParsedRows(null); }}>
+              <TabsList className="w-full">
+                <TabsTrigger value="api" className="flex-1">
+                  <Wifi className="mr-1.5 h-4 w-4" /> Fetch from MHMS API
+                </TabsTrigger>
+                <TabsTrigger value="csv" className="flex-1">
+                  <FileText className="mr-1.5 h-4 w-4" /> Paste / Upload CSV
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Paste area + file upload */}
-            {parsedRows === null && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="csvArea">Paste CSV data</Label>
-                  <div className="flex items-center gap-2">
-                    <input ref={fileRef} type="file" accept=".csv,.txt,.tsv,.xls,.xlsx" className="hidden" onChange={handleFileUpload} />
-                    <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-                      <FileText className="mr-1.5 h-3.5 w-3.5" /> Upload file
+              {/* ── API TAB ── */}
+              <TabsContent value="api" className="space-y-4 mt-4">
+                {!fetchEnabled ? (
+                  <div className="rounded-lg border border-blue-100 bg-blue-50 p-5 text-center space-y-3">
+                    <Wifi className="mx-auto h-8 w-8 text-blue-400" />
+                    <p className="text-sm font-medium text-blue-800">Direct MHMS Connection</p>
+                    <p className="text-xs text-blue-600">
+                      PowerHub will call your MHMS server's room list API and pull all rooms automatically.<br />
+                      Make sure the <strong>MHMS API URL and key</strong> are configured in{' '}
+                      <strong>Facility → Properties → Edit</strong> for this property first.
+                    </p>
+                    <Button onClick={() => setFetchEnabled(true)} className="mt-2">
+                      <Wifi className="mr-2 h-4 w-4" /> Connect & Fetch Rooms
                     </Button>
                   </div>
-                </div>
-                <Textarea
-                  id="csvArea"
-                  value={csvText}
-                  onChange={(e) => setCsvText(e.target.value)}
-                  placeholder={`RoomNo, Block, Floor, RoomType\n101, Block A, I - Floor, Double AC\n102, Block A, I - Floor, Non AC`}
-                  className="h-48 font-mono text-xs resize-none"
-                />
-                <Button className="w-full" onClick={handleParsePreview} disabled={!csvText.trim()}>
-                  Preview Rooms
-                </Button>
-              </div>
-            )}
+                ) : mhmsFetching ? (
+                  <div className="flex h-40 flex-col items-center justify-center gap-3 text-gray-500">
+                    <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                    <p className="text-sm">Connecting to MHMS…</p>
+                  </div>
+                ) : mhmsError ? (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4 space-y-2">
+                    <p className="text-sm font-medium text-red-700 flex items-center gap-1.5">
+                      <AlertCircle className="h-4 w-4" /> Connection failed
+                    </p>
+                    <p className="text-xs text-red-600">{(mhmsError as any)?.message ?? 'Unknown error'}</p>
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" variant="outline" onClick={() => refetchMhms()}>
+                        <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Retry
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setFetchEnabled(false)}>
+                        Change settings
+                      </Button>
+                    </div>
+                  </div>
+                ) : resolvedMhmsRows !== null ? (
+                  <PreviewTable
+                    rows={resolvedMhmsRows}
+                    onRefresh={() => refetchMhms()}
+                    showRefresh
+                  />
+                ) : null}
+              </TabsContent>
 
-            {/* Preview table */}
-            {parsedRows !== null && (
-              <div className="space-y-3">
-                {/* Summary badges */}
-                <div className="flex items-center gap-3 text-sm">
-                  <span className="flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-green-700 font-medium border border-green-200">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> {newRows.length} to import
-                  </span>
-                  {parsedRows.filter((r) => r.exists).length > 0 && (
-                    <span className="flex items-center gap-1.5 rounded-full bg-gray-50 px-3 py-1 text-gray-600 font-medium border border-gray-200">
-                      <SkipForward className="h-3.5 w-3.5" /> {parsedRows.filter((r) => r.exists).length} already exist (will skip)
-                    </span>
+              {/* ── CSV TAB ── */}
+              <TabsContent value="csv" className="space-y-4 mt-4">
+                {/* Format hint */}
+                <div className="rounded-lg border border-blue-100 bg-blue-50 p-3">
+                  <button
+                    className="flex w-full items-center justify-between text-left text-sm font-medium text-blue-700"
+                    onClick={() => setShowHint((v) => !v)}
+                  >
+                    <span className="flex items-center gap-1.5"><HelpCircle className="h-4 w-4" /> How to export from MHMS</span>
+                    <span className="text-xs text-blue-500">{showHint ? 'Hide' : 'Show'}</span>
+                  </button>
+                  {showHint && (
+                    <div className="mt-2 space-y-1.5 text-xs text-blue-700">
+                      <p>In MHMS go to <strong>Masters → Rooms</strong>, then use <strong>Export → CSV/Excel</strong>.</p>
+                      <p>Accepted column order (header row optional):</p>
+                      <pre className="mt-1 rounded bg-blue-100 p-2 font-mono text-[11px]">{`RoomNo, Block, Floor, RoomType\n101, Block A, I - Floor, Double AC\n102, Block A, I - Floor, Non AC`}</pre>
+                      <p>Only <strong>RoomNo</strong> is required. Names must match your PowerHub Blocks / Floors / Room Types masters.</p>
+                    </div>
                   )}
-                  {parsedRows.some((r) => !r.exists && (
-                    (r.blockName && !r.blockId) || (r.floorName && !r.floorId) || (r.roomTypeName && !r.roomTypeId)
-                  )) && (
-                    <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-amber-700 font-medium border border-amber-200">
-                      <AlertCircle className="h-3.5 w-3.5" /> Some names unmatched
-                    </span>
-                  )}
                 </div>
 
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gray-50">
-                        <TableHead className="text-xs">Room No</TableHead>
-                        <TableHead className="text-xs">Block</TableHead>
-                        <TableHead className="text-xs">Floor</TableHead>
-                        <TableHead className="text-xs">Room Type</TableHead>
-                        <TableHead className="text-xs w-[90px]">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {parsedRows.map((row, i) => (
-                        <TableRow key={i} className={row.exists ? 'opacity-50' : ''}>
-                          <TableCell className="font-mono text-xs font-semibold">{row.roomNo}</TableCell>
-                          <TableCell className="text-xs">
-                            <NameCell raw={row.blockName} matched={row.blockId !== null} />
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            <NameCell raw={row.floorName} matched={row.floorId !== null} />
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            <NameCell raw={row.roomTypeName} matched={row.roomTypeId !== null} />
-                          </TableCell>
-                          <TableCell>
-                            {row.exists
-                              ? <Badge variant="outline" className="text-[10px] bg-gray-50 text-gray-500">Skip</Badge>
-                              : <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700">New</Badge>}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {parsedRows.some((r) => !r.exists && (
-                  (r.blockName && !r.blockId) || (r.floorName && !r.floorId) || (r.roomTypeName && !r.roomTypeId)
-                )) && (
-                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                    <AlertCircle className="inline h-3.5 w-3.5 mr-1" />
-                    Highlighted names couldn't be matched to a PowerHub master. Those rooms will still be imported — just without that assignment. Add matching names in Blocks, Floors, or Room Types first if you want them linked.
-                  </p>
+                {parsedRows === null ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="csvArea">Paste CSV data</Label>
+                      <div className="flex items-center gap-2">
+                        <input ref={fileRef} type="file" accept=".csv,.txt,.tsv" className="hidden" onChange={handleFileUpload} />
+                        <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+                          <FileText className="mr-1.5 h-3.5 w-3.5" /> Upload file
+                        </Button>
+                      </div>
+                    </div>
+                    <Textarea
+                      id="csvArea"
+                      value={csvText}
+                      onChange={(e) => setCsvText(e.target.value)}
+                      placeholder={`RoomNo, Block, Floor, RoomType\n101, Block A, I - Floor, Double AC\n102, Block A, I - Floor, Non AC`}
+                      className="h-48 font-mono text-xs resize-none"
+                    />
+                    <Button className="w-full" onClick={handleParsePreview} disabled={!csvText.trim()}>
+                      Preview Rooms
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <PreviewTable rows={parsedRows} />
+                    <Button variant="outline" size="sm" onClick={() => setParsedRows(null)}>← Back to paste</Button>
+                  </div>
                 )}
-
-                <Button variant="outline" size="sm" onClick={() => setParsedRows(null)}>← Back to paste</Button>
-              </div>
-            )}
+              </TabsContent>
+            </Tabs>
           </div>
 
           <DialogFooter className="border-t pt-4">
             <Button variant="outline" onClick={() => setIsImportOpen(false)}>Cancel</Button>
-            {parsedRows !== null && (
-              <Button
-                onClick={handleImport}
-                disabled={bulkMutation.isPending || newRows.length === 0}
-              >
+            {activeRows !== null && newRows.length > 0 && (
+              <Button onClick={handleImport} disabled={bulkMutation.isPending}>
                 {bulkMutation.isPending
                   ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Importing…</>
                   : `Import ${newRows.length} Room${newRows.length !== 1 ? 's' : ''}`}
@@ -538,6 +571,73 @@ export function Rooms() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// Reusable preview table shown for both API and CSV import paths
+function PreviewTable({ rows, onRefresh, showRefresh }: { rows: ParsedRow[]; onRefresh?: () => void; showRefresh?: boolean }) {
+  const newCount = rows.filter((r) => !r.exists).length;
+  const skipCount = rows.filter((r) => r.exists).length;
+  const hasUnmatched = rows.some((r) => !r.exists && (
+    (r.blockName && !r.blockId) || (r.floorName && !r.floorId) || (r.roomTypeName && !r.roomTypeId)
+  ));
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3 text-sm flex-wrap">
+        <span className="flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-green-700 font-medium border border-green-200">
+          <CheckCircle2 className="h-3.5 w-3.5" /> {newCount} to import
+        </span>
+        {skipCount > 0 && (
+          <span className="flex items-center gap-1.5 rounded-full bg-gray-50 px-3 py-1 text-gray-600 font-medium border border-gray-200">
+            <SkipForward className="h-3.5 w-3.5" /> {skipCount} already exist (will skip)
+          </span>
+        )}
+        {hasUnmatched && (
+          <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-amber-700 font-medium border border-amber-200">
+            <AlertCircle className="h-3.5 w-3.5" /> Some names unmatched
+          </span>
+        )}
+        {showRefresh && onRefresh && (
+          <Button variant="ghost" size="sm" className="ml-auto" onClick={onRefresh}>
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh
+          </Button>
+        )}
+      </div>
+      <div className="rounded-md border overflow-hidden max-h-64 overflow-y-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-gray-50">
+              <TableHead className="text-xs">Room No</TableHead>
+              <TableHead className="text-xs">Block</TableHead>
+              <TableHead className="text-xs">Floor</TableHead>
+              <TableHead className="text-xs">Room Type</TableHead>
+              <TableHead className="text-xs w-[80px]">Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row, i) => (
+              <TableRow key={i} className={row.exists ? 'opacity-40' : ''}>
+                <TableCell className="font-mono text-xs font-semibold">{row.roomNo}</TableCell>
+                <TableCell className="text-xs"><NameCell raw={row.blockName} matched={row.blockId !== null} /></TableCell>
+                <TableCell className="text-xs"><NameCell raw={row.floorName} matched={row.floorId !== null} /></TableCell>
+                <TableCell className="text-xs"><NameCell raw={row.roomTypeName} matched={row.roomTypeId !== null} /></TableCell>
+                <TableCell>
+                  {row.exists
+                    ? <Badge variant="outline" className="text-[10px] bg-gray-50 text-gray-500">Skip</Badge>
+                    : <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700">New</Badge>}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      {hasUnmatched && (
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+          <AlertCircle className="inline h-3.5 w-3.5 mr-1" />
+          Rooms with amber names will still be imported — just without that assignment. Add the matching names in Blocks, Floors, or Room Types masters first if you want them linked.
+        </p>
+      )}
     </div>
   );
 }

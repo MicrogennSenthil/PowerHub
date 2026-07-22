@@ -45,6 +45,9 @@ export interface Property {
   trialEndsAt?: string | null;
   /** @nullable */
   nextBillingAt?: string | null;
+  /** @nullable */
+  mhmsApiUrl?: string | null;
+  mhmsApiKeySet?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -76,6 +79,8 @@ export interface PropertyInput {
   tariffPerKwh?: number;
   timezone?: string;
   active?: boolean;
+  mhmsApiUrl?: string;
+  mhmsApiKey?: string;
 }
 
 export interface PropertyUpdate {
@@ -93,6 +98,10 @@ export interface PropertyUpdate {
   tariffPerKwh?: number;
   timezone?: string;
   active?: boolean;
+  /** @nullable */
+  mhmsApiUrl?: string | null;
+  /** @nullable */
+  mhmsApiKey?: string | null;
 }
 
 export interface Block {
@@ -230,6 +239,13 @@ export interface RoomUpdate {
   /** @nullable */
   roomTypeId?: number | null;
   active?: boolean;
+}
+
+export interface MhmsRoom {
+  roomNo: string;
+  blockName: string;
+  floorName: string;
+  roomTypeName: string;
 }
 
 export interface RoomBulkItem {
@@ -871,6 +887,10 @@ propertyId: PropertyIdQueryParameter;
 };
 
 export type ListRoomsParams = {
+propertyId: PropertyIdQueryParameter;
+};
+
+export type GetMhmsRoomPreviewParams = {
 propertyId: PropertyIdQueryParameter;
 };
 

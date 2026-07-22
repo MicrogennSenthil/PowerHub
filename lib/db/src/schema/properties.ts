@@ -32,6 +32,9 @@ export const propertiesTable = pgTable(
     maxDevices: integer("max_devices").notNull().default(5),
     trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
     nextBillingAt: timestamp("next_billing_at", { withTimezone: true }),
+    // MHMS front-office connection — used to fetch room list for import
+    mhmsApiUrl: text("mhms_api_url"),
+    mhmsApiKey: text("mhms_api_key"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

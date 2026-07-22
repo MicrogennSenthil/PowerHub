@@ -32,6 +32,9 @@ export interface Property {
   trialEndsAt?: Date | null;
   /** @nullable */
   nextBillingAt?: Date | null;
+  /** @nullable */
+  mhmsApiUrl?: string | null;
+  mhmsApiKeySet?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

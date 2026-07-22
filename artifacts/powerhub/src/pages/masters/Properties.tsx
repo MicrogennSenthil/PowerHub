@@ -83,7 +83,9 @@ export function Properties() {
     currency: 'USD',
     tariffPerKwh: '0.15',
     timezone: 'UTC',
-    active: true
+    active: true,
+    mhmsApiUrl: '',
+    mhmsApiKey: '',
   });
 
   const openNew = () => {
@@ -99,7 +101,9 @@ export function Properties() {
       currency: 'USD',
       tariffPerKwh: '0.15',
       timezone: 'UTC',
-      active: true
+      active: true,
+      mhmsApiUrl: '',
+      mhmsApiKey: '',
     });
     setIsEditorOpen(true);
   };
@@ -117,7 +121,9 @@ export function Properties() {
       currency: property.currency,
       tariffPerKwh: property.tariffPerKwh.toString(),
       timezone: property.timezone,
-      active: property.active
+      active: property.active,
+      mhmsApiUrl: property.mhmsApiUrl || '',
+      mhmsApiKey: '',   // never pre-fill the key; treat like a password
     });
     setIsEditorOpen(true);
   };
@@ -327,6 +333,36 @@ export function Properties() {
             <div className="flex items-center space-x-2 mt-4">
               <Switch id="active" checked={formData.active} onCheckedChange={(c) => setFormData({ ...formData, active: c })} />
               <Label htmlFor="active">Active Property</Label>
+            </div>
+
+            {/* MHMS integration */}
+            <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 space-y-3 mt-2">
+              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">MHMS Integration (Room Import)</p>
+              <div className="space-y-2">
+                <Label htmlFor="mhmsApiUrl" className="text-sm">MHMS Server URL</Label>
+                <Input
+                  id="mhmsApiUrl"
+                  value={formData.mhmsApiUrl}
+                  onChange={(e) => setFormData({ ...formData, mhmsApiUrl: e.target.value })}
+                  placeholder="http://192.168.1.100/mhms"
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-blue-600">Base URL of the MHMS server. PowerHub will call <code className="bg-blue-100 px-1 rounded">{'{url}'}/api/rooms</code> to fetch the room list.</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mhmsApiKey" className="text-sm">
+                  MHMS API Key
+                  {editingRecord?.mhmsApiKeySet && <span className="ml-2 text-green-600 text-xs font-normal">✓ key saved</span>}
+                </Label>
+                <Input
+                  id="mhmsApiKey"
+                  type="password"
+                  value={formData.mhmsApiKey}
+                  onChange={(e) => setFormData({ ...formData, mhmsApiKey: e.target.value })}
+                  placeholder={editingRecord?.mhmsApiKeySet ? '(leave blank to keep current)' : 'API key provided by MHMS team'}
+                  className="font-mono text-sm"
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>

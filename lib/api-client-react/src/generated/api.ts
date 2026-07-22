@@ -53,6 +53,7 @@ import type {
   ForbiddenResponse,
   GetDashboardSummaryParams,
   GetDashboardTrendsParams,
+  GetMhmsRoomPreviewParams,
   GetPowerUsageReportParams,
   GetRoomChartParams,
   HealthStatus,
@@ -67,6 +68,7 @@ import type {
   ListRolesParams,
   ListRoomTypesParams,
   ListRoomsParams,
+  MhmsRoom,
   NotFoundResponse,
   PermissionDef,
   PowerLog,
@@ -1749,6 +1751,84 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getCreateRoomMutationOptions(options));
     }
+
+export const getGetMhmsRoomPreviewUrl = (params: GetMhmsRoomPreviewParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/rooms/mhms-preview?${stringifiedParams}` : `/api/rooms/mhms-preview`
+}
+
+export const getMhmsRoomPreview = async (params: GetMhmsRoomPreviewParams, options?: RequestInit): Promise<MhmsRoom[]> => {
+
+  return customFetch<MhmsRoom[]>(getGetMhmsRoomPreviewUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMhmsRoomPreviewQueryKey = (params?: GetMhmsRoomPreviewParams,) => {
+    return [
+    `/api/rooms/mhms-preview`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetMhmsRoomPreviewQueryOptions = <TData = Awaited<ReturnType<typeof getMhmsRoomPreview>>, TError = ErrorType<BadRequestResponse>>(params: GetMhmsRoomPreviewParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMhmsRoomPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMhmsRoomPreviewQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMhmsRoomPreview>>> = ({ signal }) => getMhmsRoomPreview(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMhmsRoomPreview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMhmsRoomPreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getMhmsRoomPreview>>>
+export type GetMhmsRoomPreviewQueryError = ErrorType<BadRequestResponse>
+
+
+
+export function useGetMhmsRoomPreview<TData = Awaited<ReturnType<typeof getMhmsRoomPreview>>, TError = ErrorType<BadRequestResponse>>(
+ params: GetMhmsRoomPreviewParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMhmsRoomPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMhmsRoomPreviewQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getBulkCreateRoomsUrl = () => {
 

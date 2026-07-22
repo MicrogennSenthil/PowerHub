@@ -20,6 +20,8 @@ export function serializeProperty(p: PropertyRow) {
     maxDevices: p.maxDevices,
     trialEndsAt: p.trialEndsAt ? p.trialEndsAt.toISOString() : null,
     nextBillingAt: p.nextBillingAt ? p.nextBillingAt.toISOString() : null,
+    mhmsApiUrl: p.mhmsApiUrl ?? null,
+    mhmsApiKeySet: !!p.mhmsApiKey,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };

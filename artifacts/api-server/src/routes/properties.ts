@@ -210,6 +210,8 @@ router.patch("/:id", requirePermission("properties.manage"), async (req, res) =>
           : {}),
         ...(body.timezone !== undefined ? { timezone: body.timezone } : {}),
         ...(body.active !== undefined ? { active: body.active } : {}),
+        ...(body.mhmsApiUrl !== undefined ? { mhmsApiUrl: body.mhmsApiUrl } : {}),
+        ...(body.mhmsApiKey !== undefined ? { mhmsApiKey: body.mhmsApiKey } : {}),
       })
       .where(eq(propertiesTable.id, id))
       .returning();

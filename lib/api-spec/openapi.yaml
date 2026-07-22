@@ -418,6 +418,23 @@ paths:
                 $ref: "#/components/schemas/Room"
         "400":
           $ref: "#/components/responses/BadRequest"
+  /rooms/mhms-preview:
+    get:
+      operationId: getMhmsRoomPreview
+      tags: [rooms]
+      parameters:
+        - $ref: "#/components/parameters/PropertyIdQuery"
+      responses:
+        "200":
+          description: Rooms fetched from MHMS, normalized for import preview
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MhmsRoom"
+        "400":
+          $ref: "#/components/responses/BadRequest"
   /rooms/bulk:
     post:
       operationId: bulkCreateRooms
@@ -1307,6 +1324,8 @@ components:
         maxDevices: { type: integer }
         trialEndsAt: { type: ["string", "null"], format: date-time }
         nextBillingAt: { type: ["string", "null"], format: date-time }
+        mhmsApiUrl: { type: ["string", "null"] }
+        mhmsApiKeySet: { type: boolean }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     PropertyInput:
@@ -1324,6 +1343,8 @@ components:
         tariffPerKwh: { type: number, minimum: 0 }
         timezone: { type: string }
         active: { type: boolean }
+        mhmsApiUrl: { type: string }
+        mhmsApiKey: { type: string }
     PropertyUpdate:
       type: object
       properties:
@@ -1338,6 +1359,8 @@ components:
         tariffPerKwh: { type: number, minimum: 0 }
         timezone: { type: string }
         active: { type: boolean }
+        mhmsApiUrl: { type: ["string", "null"] }
+        mhmsApiKey: { type: ["string", "null"] }
 
     Block:
       type: object
@@ -1465,6 +1488,14 @@ components:
         floorId: { type: ["integer", "null"] }
         roomTypeId: { type: ["integer", "null"] }
         active: { type: boolean }
+    MhmsRoom:
+      type: object
+      required: [roomNo, blockName, floorName, roomTypeName]
+      properties:
+        roomNo: { type: string }
+        blockName: { type: string }
+        floorName: { type: string }
+        roomTypeName: { type: string }
     RoomBulkItem:
       type: object
       required: [roomNo]
