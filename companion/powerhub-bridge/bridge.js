@@ -15,35 +15,11 @@ const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
-const { spawn } = require("child_process");
+// spawn not needed — tray icon disabled
 
-// ---------------------------------------------------------------------------
-// System-tray icon (Windows only) — spawns tray.ps1 as a hidden PowerShell
-// process. Double-click the tray icon for status; right-click to stop.
-// The tray is completely optional — any failure is silently swallowed so the
-// bridge keeps running even on systems where PowerShell is not in PATH.
-// ---------------------------------------------------------------------------
-function findPowerShell() {
-  // Try several well-known locations before falling back to bare name.
-  const candidates = [
-    process.env.SystemRoot
-      ? `${process.env.SystemRoot}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`
-      : null,
-    "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-    "C:\\Windows\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe",
-    "powershell.exe",
-  ];
-  for (const c of candidates) {
-    if (!c) continue;
-    try { if (c === "powershell.exe" || fs.existsSync(c)) return c; } catch (_) {}
-  }
-  return "powershell.exe";
-}
-
-function startTray(_powerhubUrl) {
-  // Tray icon disabled — PowerShell spawn fails on some Windows configurations.
-  // The bridge runs identically without it; use debug.bat for status logs.
-}
+// Tray icon removed — caused crashes on Windows PCs where PowerShell is not
+// in PATH. The bridge works identically without it; use debug.bat for logs.
+function startTray(_powerhubUrl) {}
 
 // ---------------------------------------------------------------------------
 // Auto-startup registration (Windows only) — writes a registry key so the
