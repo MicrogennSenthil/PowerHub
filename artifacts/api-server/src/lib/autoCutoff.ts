@@ -4,8 +4,11 @@ import {
   controlsTable,
   powerSessionsTable,
   processTypesTable,
+  roomsTable,
+  propertiesTable,
 } from "@workspace/db";
 import { enqueueControlChange } from "./powerQueue";
+import { notifyMhms } from "./mhmsNotify";
 import { logger } from "./logger";
 
 // ---------------------------------------------------------------------------
@@ -26,6 +29,8 @@ export async function sweepAutoCutoff(): Promise<number> {
       sessionId: powerSessionsTable.id,
       controlId: powerSessionsTable.controlId,
       processTypeId: powerSessionsTable.processTypeId,
+      grcNo: powerSessionsTable.grcNo,
+      guestName: powerSessionsTable.guestName,
     })
     .from(powerSessionsTable)
     .where(
@@ -41,6 +46,23 @@ export async function sweepAutoCutoff(): Promise<number> {
     .select()
     .from(controlsTable)
     .where(inArray(controlsTable.id, controlIds));
+
+  // Fetch rooms + MHMS property config for all affected controls in one query
+  const roomIds = [...new Set(controls.map((c) => c.roomId).filter((id): id is number => id != null))];
+  const roomRows = roomIds.length > 0
+    ? await db
+        .select({
+          id: roomsTable.id,
+          roomNo: roomsTable.roomNo,
+          propertyId: roomsTable.propertyId,
+          mhmsApiUrl: propertiesTable.mhmsApiUrl,
+          mhmsApiKey: propertiesTable.mhmsApiKey,
+        })
+        .from(roomsTable)
+        .leftJoin(propertiesTable, eq(roomsTable.propertyId, propertiesTable.id))
+        .where(inArray(roomsTable.id, roomIds))
+    : [];
+  const roomById = new Map(roomRows.map((r) => [r.id, r]));
 
   // Group by property so each enqueue stays tenant-scoped; per control we use
   // its own session's process type for the audit row.
@@ -66,7 +88,25 @@ export async function sweepAutoCutoff(): Promise<number> {
     await enqueueControlChange([control], 0, {
       processType: pt ?? null,
       source: "auto-cutoff",
+      grcNo: d.grcNo ?? null,
+      billNo: null,
+      guestName: d.guestName ?? null,
+      requestedBy: null,
     });
+
+    // Notify MHMS so their room chart updates icon/colour immediately
+    const room = control.roomId != null ? roomById.get(control.roomId) : undefined;
+    if (room?.mhmsApiUrl && room.mhmsApiKey) {
+      // Fire-and-forget — don't await so sweep stays fast
+      notifyMhms(room.mhmsApiUrl, room.mhmsApiKey, {
+        roomNumber: room.roomNo,
+        action: "OFF",
+        event: "auto-cutoff",
+        grcNo: d.grcNo ?? null,
+        guestName: d.guestName ?? null,
+        timestamp: now.toISOString(),
+      }).catch(() => {/* already logged inside notifyMhms */});
+    }
   }
   logger.info({ count: due.length }, "Auto-cutoff sweep switched off sessions");
   return due.length;
