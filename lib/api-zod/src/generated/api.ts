@@ -421,6 +421,10 @@ export const GetRoomChartResponseItem = zod.object({
   "floorName": zod.string().nullish(),
   "roomTypeName": zod.string().nullish(),
   "active": zod.boolean(),
+  "lastProcessName": zod.string().nullish(),
+  "lastGuestName": zod.string().nullish(),
+  "lastGrcNo": zod.string().nullish(),
+  "lastEventAt": zod.string().nullish(),
   "controls": zod.array(zod.object({
   "id": zod.number(),
   "controlTypeId": zod.number().nullish(),

@@ -197,6 +197,14 @@ export interface RoomChartRoom {
   /** @nullable */
   roomTypeName?: string | null;
   active: boolean;
+  /** @nullable */
+  lastProcessName?: string | null;
+  /** @nullable */
+  lastGuestName?: string | null;
+  /** @nullable */
+  lastGrcNo?: string | null;
+  /** @nullable */
+  lastEventAt?: string | null;
   controls: RoomChartControl[];
 }
 

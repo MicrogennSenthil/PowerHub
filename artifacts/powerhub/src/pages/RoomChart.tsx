@@ -27,7 +27,15 @@ import {
   Search,
   Activity,
   Zap,
-  AlertTriangle
+  AlertTriangle,
+  LogIn,
+  LogOut,
+  Sparkles,
+  Users,
+  ArrowRightLeft,
+  UserCheck,
+  Timer,
+  MousePointer,
 } from 'lucide-react';
 
 // Compact "how long ago" for device last-seen times.
@@ -104,6 +112,32 @@ const NO_FLOOR = '__no_floor__';
 // Natural sort so "10" sorts after "9" instead of after "1".
 function naturalCompare(a: string, b: string) {
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+}
+
+// Map an MHMS event/process name to an icon + colour.
+function processConfig(name: string | null | undefined): {
+  Icon: React.ElementType;
+  label: string;
+  color: string;
+} {
+  const n = (name ?? '').toLowerCase();
+  if (n.includes('checkin') || n.includes('check-in') || n.includes('walkin') || n.includes('walk-in'))
+    return { Icon: LogIn,           label: name!,  color: 'text-green-600 bg-green-50 border-green-200' };
+  if (n.includes('checkout') || n.includes('check-out'))
+    return { Icon: LogOut,          label: name!,  color: 'text-red-600 bg-red-50 border-red-200' };
+  if (n.includes('clean'))
+    return { Icon: Sparkles,        label: name!,  color: 'text-blue-600 bg-blue-50 border-blue-200' };
+  if (n.includes('visit'))
+    return { Icon: Users,           label: name!,  color: 'text-purple-600 bg-purple-50 border-purple-200' };
+  if (n.includes('transfer'))
+    return { Icon: ArrowRightLeft,  label: name!,  color: 'text-orange-600 bg-orange-50 border-orange-200' };
+  if (n.includes('group'))
+    return { Icon: UserCheck,       label: name!,  color: 'text-teal-600 bg-teal-50 border-teal-200' };
+  if (n.includes('auto') || n.includes('cutoff'))
+    return { Icon: Timer,           label: name!,  color: 'text-gray-600 bg-gray-50 border-gray-200' };
+  if (name)
+    return { Icon: MousePointer,    label: name,   color: 'text-gray-600 bg-gray-50 border-gray-200' };
+  return { Icon: MousePointer, label: 'Manual', color: 'text-gray-500 bg-gray-50 border-gray-200' };
 }
 
 // Map a control type name to an icon. Falls back to a generic power icon.
@@ -223,6 +257,25 @@ function RoomCard({ room }: { room: RoomChartRoom }) {
           {state === 'on' ? 'Live' : state === 'offline' ? 'Offline' : 'Off'}
         </span>
       </div>
+
+      {/* Last process badge */}
+      {room.lastProcessName && (
+        <div className="relative z-10 mb-2">
+          {(() => {
+            const { Icon, label, color } = processConfig(room.lastProcessName);
+            return (
+              <div className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold', color)}
+                title={[label, room.lastGuestName, room.lastGrcNo].filter(Boolean).join(' · ')}>
+                <Icon className="h-3 w-3 shrink-0" />
+                <span>{label}</span>
+                {room.lastGuestName && (
+                  <span className="opacity-70 truncate max-w-[90px]">· {room.lastGuestName}</span>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       <div className={cn(
         "mt-auto relative z-10 pt-2 border-t",

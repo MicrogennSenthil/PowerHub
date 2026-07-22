@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, asc, and, inArray } from "drizzle-orm";
+import { eq, asc, desc, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
   db,
@@ -11,6 +11,8 @@ import {
   controlTypesTable,
   devicesTable,
   propertiesTable,
+  powerLogsTable,
+  processTypesTable,
 } from "@workspace/db";
 import { CreateRoomBody, UpdateRoomBody } from "@workspace/api-zod";
 import { requirePermission, canAccessProperty } from "../lib/auth";
@@ -162,7 +164,7 @@ router.get("/chart", requirePermission("rooms.view"), async (req, res) => {
     return;
   }
 
-  const [roomRows, controlRows, threshold] = await Promise.all([
+  const [roomRows, controlRows, latestLogs, threshold] = await Promise.all([
     withJoins().where(eq(roomsTable.propertyId, propertyId)),
     db
       .select({
@@ -184,6 +186,22 @@ router.get("/chart", requirePermission("rooms.view"), async (req, res) => {
       .leftJoin(devicesTable, eq(controlsTable.deviceId, devicesTable.id))
       .where(eq(controlsTable.propertyId, propertyId))
       .orderBy(asc(controlsTable.slate), asc(controlsTable.channel)),
+    // Latest power log per room — gives us last process, guest name, grc
+    db
+      .selectDistinctOn([powerLogsTable.roomId], {
+        roomId: powerLogsTable.roomId,
+        processName: processTypesTable.name,
+        guestName: powerLogsTable.guestName,
+        grcNo: powerLogsTable.grcNo,
+        rdate: powerLogsTable.rdate,
+      })
+      .from(powerLogsTable)
+      .leftJoin(
+        processTypesTable,
+        eq(powerLogsTable.processTypeId, processTypesTable.id),
+      )
+      .where(eq(powerLogsTable.propertyId, propertyId))
+      .orderBy(powerLogsTable.roomId, desc(powerLogsTable.rdate)),
     getOfflineThresholdMinutes(),
   ]);
 
@@ -205,7 +223,25 @@ router.get("/chart", requirePermission("rooms.view"), async (req, res) => {
     byRoom.set(c.roomId, list);
   }
 
-  res.json(roomRows.map((r) => ({ ...r, controls: byRoom.get(r.id) ?? [] })));
+  // Index latest power log by roomId
+  const logByRoom = new Map<number, typeof latestLogs[number]>();
+  for (const l of latestLogs) {
+    if (l.roomId != null) logByRoom.set(l.roomId, l);
+  }
+
+  res.json(
+    roomRows.map((r) => {
+      const log = logByRoom.get(r.id);
+      return {
+        ...r,
+        controls: byRoom.get(r.id) ?? [],
+        lastProcessName: log?.processName ?? null,
+        lastGuestName: log?.guestName ?? null,
+        lastGrcNo: log?.grcNo ?? null,
+        lastEventAt: log?.rdate?.toISOString() ?? null,
+      };
+    }),
+  );
 });
 
 router.post("/bulk", requirePermission("rooms.manage"), async (req, res) => {

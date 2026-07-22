@@ -1452,6 +1452,10 @@ components:
         floorName: { type: ["string", "null"] }
         roomTypeName: { type: ["string", "null"] }
         active: { type: boolean }
+        lastProcessName: { type: ["string", "null"] }
+        lastGuestName: { type: ["string", "null"] }
+        lastGrcNo: { type: ["string", "null"] }
+        lastEventAt: { type: ["string", "null"] }
         controls:
           type: array
           items:
