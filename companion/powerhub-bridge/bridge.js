@@ -40,30 +40,9 @@ function findPowerShell() {
   return "powershell.exe";
 }
 
-function startTray(powerhubUrl) {
-  if (process.platform !== "win32") return;
-  const ps1 = path.join(__dirname, "tray.ps1");
-  if (!fs.existsSync(ps1)) return;
-  try {
-    const psExe = findPowerShell();
-    const child = spawn(
-      psExe,
-      [
-        "-WindowStyle", "Hidden",
-        "-NonInteractive",
-        "-ExecutionPolicy", "Bypass",
-        "-File", ps1,
-        "-BridgePid", String(process.pid),
-        "-PowerhubUrl", powerhubUrl,
-      ],
-      { detached: true, stdio: "ignore" }
-    );
-    // Tray icon is optional — swallow errors so the bridge keeps running
-    child.on("error", () => {});
-    child.unref();
-  } catch (_) {
-    // Tray failed to start — bridge continues without it
-  }
+function startTray(_powerhubUrl) {
+  // Tray icon disabled — PowerShell spawn fails on some Windows configurations.
+  // The bridge runs identically without it; use debug.bat for status logs.
 }
 
 // ---------------------------------------------------------------------------
