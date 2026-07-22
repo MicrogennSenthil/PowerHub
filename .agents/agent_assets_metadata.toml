@@ -72,3 +72,9 @@ id = "qVpC9hwHC6vYEFGVD0-to"
 uri = "file://attached_assets/powerhub-bridge.zip"
 type = "unspecified"
 title = "PowerHub Bridge (updated)"
+
+[[outputs]]
+id = "XRS_5-z2JWl25rANOHLbO"
+uri = "file://attached_assets/MHMS-PowerHub-Integration-API-v1.1.pdf"
+type = "pdf"
+title = "M-HMS × PowerHub Integration API v1.1"
