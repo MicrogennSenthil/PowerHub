@@ -60,3 +60,9 @@ id = "6qQ86fRQAdP2EU-ju3Str"
 uri = "file://docs/PowerHub-MHMS-Front-Office-SOP.md"
 type = "text"
 title = "PowerHub × MHMS — Front Office SOP"
+
+[[outputs]]
+id = "rSED5wGtphxpojM0rMnd1"
+uri = "file://docs/MHMS-PowerHub-Integration-Guide.md"
+type = "text"
+title = "MHMS × PowerHub Integration Guide (for front office team)"
