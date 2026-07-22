@@ -155,57 +155,81 @@ function RoomCard({ room }: { room: RoomChartRoom }) {
   const allOffline = room.controls.length > 0 && room.controls.every((c) => !c.deviceOnline);
   const anyOffline = room.controls.some((c) => !c.deviceOnline);
 
+  // Determine card colour state
+  const state: 'on' | 'offline' | 'off' = anyOn ? 'on' : allOffline ? 'offline' : 'off';
+
   return (
     <div
       className={cn(
-        'group flex flex-col rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-sm transition-all duration-300 hover-elevate relative overflow-hidden',
-        anyOn ? 'border-success/50 ring-2 ring-success/20 bg-success/5 dark:bg-success/10 shadow-[0_4px_20px_-4px_hsl(var(--success)/0.15)]' : 
-        allOffline ? 'border-warning/40 bg-warning/5 dark:bg-warning/10' : 
-        'border-gray-200 dark:border-gray-800 hover:border-primary/30',
+        'group flex flex-col rounded-xl border p-4 shadow-sm transition-all duration-300 hover-elevate relative overflow-hidden',
+        state === 'on'
+          ? 'border-green-400 bg-green-50 dark:bg-green-950 shadow-[0_4px_20px_-4px_rgba(34,197,94,0.3)]'
+          : state === 'offline'
+          ? 'border-amber-400 bg-amber-50 dark:bg-amber-950'
+          : 'border-red-300 bg-red-50 dark:bg-red-950',
       )}
     >
-      {/* Background glow effect for ON rooms */}
-      {anyOn && (
-        <div className="absolute top-0 right-0 w-32 h-32 bg-success/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-      )}
+      {/* Subtle top stripe as status band */}
+      <div className={cn(
+        'absolute top-0 left-0 right-0 h-1 rounded-t-xl',
+        state === 'on' ? 'bg-green-500' : state === 'offline' ? 'bg-amber-500' : 'bg-red-500',
+      )} />
 
-      <div className="mb-3 flex items-start justify-between gap-2 relative z-10">
+      <div className="mb-3 flex items-start justify-between gap-2 relative z-10 pt-1">
         <div className="flex items-center gap-3">
           <div
             className={cn(
               'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg shadow-sm transition-colors',
-              anyOn ? 'bg-success text-success-foreground' : 
-              allOffline ? 'bg-warning/20 text-warning' : 
-              'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 group-hover:bg-primary/10 group-hover:text-primary',
+              state === 'on'
+                ? 'bg-green-500 text-white'
+                : state === 'offline'
+                ? 'bg-amber-400/30 text-amber-600 dark:text-amber-400'
+                : 'bg-red-400/30 text-red-600 dark:text-red-400',
             )}
           >
-            <DoorClosed className={cn("h-5 w-5", anyOn && "animate-pulse")} />
+            <DoorClosed className={cn("h-5 w-5", state === 'on' && "animate-pulse")} />
           </div>
           <div className="leading-tight">
-            <div className={cn("text-xl font-extrabold tracking-tight", anyOn ? "text-success-foreground dark:text-success" : "text-gray-900 dark:text-white")}>
+            {/* Room number — large, bold, high contrast */}
+            <div className={cn(
+              "text-2xl font-black tracking-tight leading-none",
+              state === 'on'
+                ? 'text-green-700 dark:text-green-300'
+                : state === 'offline'
+                ? 'text-amber-700 dark:text-amber-300'
+                : 'text-red-700 dark:text-red-300',
+            )}>
               {room.roomNo}
             </div>
             {room.roomTypeName && (
-              <div className="text-[11px] font-medium text-gray-400 mt-0.5 uppercase tracking-wide">{room.roomTypeName}</div>
+              <div className={cn(
+                "text-[11px] font-semibold mt-0.5 uppercase tracking-wide",
+                state === 'on' ? 'text-green-600/80 dark:text-green-400/80'
+                : state === 'offline' ? 'text-amber-600/80 dark:text-amber-400/80'
+                : 'text-red-500/80 dark:text-red-400/80',
+              )}>{room.roomTypeName}</div>
             )}
           </div>
         </div>
         
-        <div className="flex flex-col items-end gap-1">
-          <span
-            className={cn(
-              'rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest border',
-              anyOn ? 'bg-success/20 text-success border-success/30' : 
-              allOffline ? 'bg-warning/20 text-warning border-warning/30' :
-              'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
-            )}
-          >
-            {anyOn ? 'Live' : allOffline ? 'Offline' : 'Standby'}
-          </span>
-        </div>
+        <span className={cn(
+          'rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest border mt-1',
+          state === 'on'
+            ? 'bg-green-500 text-white border-green-600'
+            : state === 'offline'
+            ? 'bg-amber-100 text-amber-700 border-amber-400 dark:bg-amber-900 dark:text-amber-300'
+            : 'bg-red-100 text-red-700 border-red-400 dark:bg-red-900 dark:text-red-300',
+        )}>
+          {state === 'on' ? 'Live' : state === 'offline' ? 'Offline' : 'Off'}
+        </span>
       </div>
 
-      <div className="mt-auto relative z-10 pt-2 border-t border-gray-100 dark:border-gray-800">
+      <div className={cn(
+        "mt-auto relative z-10 pt-2 border-t",
+        state === 'on' ? 'border-green-200 dark:border-green-800'
+        : state === 'offline' ? 'border-amber-200 dark:border-amber-800'
+        : 'border-red-200 dark:border-red-800',
+      )}>
         {room.controls.length === 0 ? (
           <div className="rounded-md border border-dashed border-gray-200 dark:border-gray-800 px-2 py-2 text-center text-[11px] font-medium text-gray-400">
             No controls mapped
@@ -218,7 +242,7 @@ function RoomCard({ room }: { room: RoomChartRoom }) {
               </div>
             )}
             {allOffline && (
-              <div className="flex w-full items-center justify-center gap-1.5 text-xs font-bold text-warning mb-1 bg-warning/10 p-2 rounded-md border border-warning/20">
+              <div className="flex w-full items-center justify-center gap-1.5 text-xs font-bold text-amber-600 mb-1 bg-amber-50 dark:bg-amber-900/30 p-2 rounded-md border border-amber-200 dark:border-amber-700">
                 <WifiOff className="h-4 w-4" /> All devices offline
               </div>
             )}
