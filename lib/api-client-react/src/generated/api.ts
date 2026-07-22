@@ -4362,6 +4362,71 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getDeleteApiKeyMutationOptions(options));
     }
 
+export const getRegenerateApiKeyUrl = (id: number,) => {
+
+
+
+
+  return `/api/integration/api-keys/${id}/regenerate`
+}
+
+export const regenerateApiKey = async (id: number, options?: RequestInit): Promise<ApiKeyCreated> => {
+
+  return customFetch<ApiKeyCreated>(getRegenerateApiKeyUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRegenerateApiKeyMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof regenerateApiKey>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof regenerateApiKey>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['regenerateApiKey'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof regenerateApiKey>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  regenerateApiKey(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegenerateApiKeyMutationResult = NonNullable<Awaited<ReturnType<typeof regenerateApiKey>>>
+
+    export type RegenerateApiKeyMutationError = ErrorType<unknown>
+
+    export const useRegenerateApiKey = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof regenerateApiKey>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof regenerateApiKey>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRegenerateApiKeyMutationOptions(options));
+    }
+
 export const getListPowerLogsUrl = (params: ListPowerLogsParams,) => {
   const normalizedParams = new URLSearchParams();
 

@@ -82,6 +82,34 @@ router.patch("/:id", requirePermission("integration.manage"), async (req, res) =
   res.json(serialize(updated[0]!));
 });
 
+router.post("/:id/regenerate", requirePermission("integration.manage"), async (req, res) => {
+  const id = parseId(req.params.id);
+  if (id === null) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  const existing = await db
+    .select()
+    .from(apiKeysTable)
+    .where(eq(apiKeysTable.id, id))
+    .limit(1);
+  if (!existing[0]) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  if (!canAccessProperty(req.currentUser!, existing[0].propertyId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const { key, hash, prefix } = generateApiKey();
+  const updated = await db
+    .update(apiKeysTable)
+    .set({ keyHash: hash, prefix })
+    .where(eq(apiKeysTable.id, id))
+    .returning();
+  res.json({ ...serialize(updated[0]!), key });
+});
+
 router.delete("/:id", requirePermission("integration.manage"), async (req, res) => {
   const id = parseId(req.params.id);
   if (id === null) {

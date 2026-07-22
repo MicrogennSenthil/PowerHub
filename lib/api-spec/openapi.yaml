@@ -1036,6 +1036,19 @@ paths:
       responses:
         "204":
           description: Deleted
+  /integration/api-keys/{id}/regenerate:
+    post:
+      operationId: regenerateApiKey
+      tags: [integration]
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Regenerated key (full key returned once)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyCreated"
   /power-logs:
     get:
       operationId: listPowerLogs

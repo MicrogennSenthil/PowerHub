@@ -5,6 +5,7 @@ import {
   useCreateApiKey,
   useUpdateApiKey,
   useDeleteApiKey,
+  useRegenerateApiKey,
   getListApiKeysQueryKey,
   useListPowerLogs,
   getListPowerLogsQueryKey,
@@ -66,11 +67,14 @@ export function PowerAutomation() {
   const createMutation = useCreateApiKey();
   const updateMutation = useUpdateApiKey();
   const deleteMutation = useDeleteApiKey();
+  const regenerateMutation = useRegenerateApiKey();
 
   const [newKeyName, setNewKeyName] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [deletingKey, setDeletingKey] = useState<ApiKey | null>(null);
+  const [regeneratingKey, setRegeneratingKey] = useState<ApiKey | null>(null);
+  const [regeneratedKey, setRegeneratedKey] = useState<string | null>(null);
 
   const invalidateKeys = () =>
     queryClient.invalidateQueries({ queryKey: getListApiKeysQueryKey({ propertyId: selectedPropertyId! }) });
@@ -105,6 +109,18 @@ export function PowerAutomation() {
       invalidateKeys();
     } catch (err: any) {
       toast({ title: 'Error deleting key', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const handleRegenerate = async () => {
+    if (!regeneratingKey) return;
+    try {
+      const result = await regenerateMutation.mutateAsync({ id: regeneratingKey.id });
+      setRegeneratingKey(null);
+      setRegeneratedKey(result.key);
+      invalidateKeys();
+    } catch (err: any) {
+      toast({ title: 'Error regenerating key', description: err.message, variant: 'destructive' });
     }
   };
 
@@ -158,6 +174,7 @@ export function PowerAutomation() {
                       <TableCell className="text-sm text-gray-500">{k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleString() : 'Never'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setRegeneratingKey(k)} title="Regenerate key"><RefreshCw className="mr-1.5 h-3.5 w-3.5" />Regenerate</Button>
                           <Button variant="outline" size="sm" onClick={() => handleToggle(k)}>{k.active ? 'Disable' : 'Enable'}</Button>
                           <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => setDeletingKey(k)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
@@ -321,6 +338,38 @@ GET ${baseUrl}/PowerDeviceStatusApi/<device-code>/<random-no>`}</CodeBlock>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!regeneratingKey} onOpenChange={(o) => !o && setRegeneratingKey(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Regenerate API key?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A new key will be issued for "{regeneratingKey?.name}". The old key stops working immediately — you'll need to update it in MHMS.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRegenerate} disabled={regenerateMutation.isPending}>
+              {regenerateMutation.isPending ? 'Regenerating…' : 'Regenerate'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={!!regeneratedKey} onOpenChange={(o) => !o && setRegeneratedKey(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New API key ready</DialogTitle>
+            <DialogDescription className="text-amber-600">
+              Copy this key now — it will never be shown again.
+            </DialogDescription>
+          </DialogHeader>
+          {regeneratedKey && <CodeBlock>{regeneratedKey}</CodeBlock>}
+          <DialogFooter>
+            <Button onClick={() => setRegeneratedKey(null)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

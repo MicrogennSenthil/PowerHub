@@ -1267,6 +1267,23 @@ export const DeleteApiKeyParams = zod.object({
 export const DeleteApiKeyResponse = zod.void()
 
 
+export const RegenerateApiKeyParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RegenerateApiKeyResponse = zod.object({
+  "id": zod.number(),
+  "propertyId": zod.number(),
+  "name": zod.string(),
+  "prefix": zod.string(),
+  "active": zod.boolean(),
+  "createdAt": zod.string(),
+  "lastUsedAt": zod.string().nullish()
+}).and(zod.object({
+  "key": zod.string()
+}))
+
+
 export const ListPowerLogsQueryParams = zod.object({
   "propertyId": zod.coerce.number(),
   "flag": zod.coerce.number().optional(),
