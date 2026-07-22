@@ -66,3 +66,9 @@ id = "rSED5wGtphxpojM0rMnd1"
 uri = "file://docs/MHMS-PowerHub-Integration-Guide.md"
 type = "text"
 title = "MHMS × PowerHub Integration Guide (for front office team)"
+
+[[outputs]]
+id = "qVpC9hwHC6vYEFGVD0-to"
+uri = "file://attached_assets/powerhub-bridge.zip"
+type = "unspecified"
+title = "PowerHub Bridge (updated)"

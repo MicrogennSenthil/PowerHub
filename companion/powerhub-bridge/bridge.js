@@ -25,8 +25,12 @@ function startTray(powerhubUrl) {
   if (process.platform !== "win32") return;
   const ps1 = path.join(__dirname, "tray.ps1");
   if (!fs.existsSync(ps1)) return;
+  // Use full path as fallback in case PowerShell is not in PATH
+  const psExe = process.env.SystemRoot
+    ? `${process.env.SystemRoot}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`
+    : "powershell.exe";
   const child = spawn(
-    "powershell.exe",
+    psExe,
     [
       "-WindowStyle", "Hidden",
       "-NonInteractive",
@@ -37,6 +41,8 @@ function startTray(powerhubUrl) {
     ],
     { detached: true, stdio: "ignore" }
   );
+  // Tray icon is optional — swallow errors so the bridge keeps running
+  child.on("error", () => {});
   child.unref();
 }
 
