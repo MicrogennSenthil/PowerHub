@@ -1,3 +1,4 @@
+import path from "node:path";
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -64,6 +65,18 @@ app.use((req, _res, next) => {
   }
   next();
 });
+
+// Public static downloads (no auth) — e.g. PowerHub Bridge installer
+app.use(
+  "/api/download",
+  express.static(path.join(__dirname, "../public"), {
+    setHeaders(res, filePath) {
+      if (filePath.endsWith(".zip")) {
+        res.setHeader("Content-Disposition", `attachment; filename="${path.basename(filePath)}"`);
+      }
+    },
+  }),
+);
 
 app.use("/api", router);
 

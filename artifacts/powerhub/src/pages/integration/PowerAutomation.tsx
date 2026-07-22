@@ -22,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Loader2, Plus, Trash2, Copy, KeyRound, Radio, BookOpen, RefreshCw } from 'lucide-react';
+import { Loader2, Plus, Trash2, Copy, KeyRound, Radio, BookOpen, RefreshCw, Download } from 'lucide-react';
 
 function CodeBlock({ children }: { children: string }) {
   const { toast } = useToast();
@@ -128,11 +128,20 @@ export function PowerAutomation() {
 
   const baseUrl = `${window.location.origin}/api`;
 
+  const bridgeDownloadUrl = `${window.location.origin}/api/download/powerhub-bridge.zip`;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Power Automation</h1>
-        <p className="text-sm text-gray-500">Connect MHMS front office and relay boxes to PowerHub.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Power Automation</h1>
+          <p className="text-sm text-gray-500">Connect MHMS front office and relay boxes to PowerHub.</p>
+        </div>
+        <a href={bridgeDownloadUrl} download="powerhub-bridge.zip">
+          <Button variant="outline" className="shrink-0">
+            <Download className="mr-2 h-4 w-4" /> Download Bridge
+          </Button>
+        </a>
       </div>
 
       <Tabs defaultValue="keys">
