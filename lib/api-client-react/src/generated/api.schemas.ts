@@ -232,6 +232,31 @@ export interface RoomUpdate {
   active?: boolean;
 }
 
+export interface RoomBulkItem {
+  /** @minLength 1 */
+  roomNo: string;
+  /** @nullable */
+  blockId?: number | null;
+  /** @nullable */
+  floorId?: number | null;
+  /** @nullable */
+  roomTypeId?: number | null;
+}
+
+export interface RoomBulkInput {
+  propertyId: number;
+  /**
+     * @minItems 1
+     * @maxItems 500
+     */
+  rooms: RoomBulkItem[];
+}
+
+export interface RoomBulkResult {
+  created: number;
+  skipped: number;
+}
+
 export interface ControlType {
   id: number;
   propertyId: number;

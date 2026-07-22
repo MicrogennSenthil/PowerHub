@@ -467,6 +467,27 @@ export const CreateRoomResponse = zod.object({
 })
 
 
+
+export const bulkCreateRoomsBodyRoomsMax = 500;
+
+
+
+export const BulkCreateRoomsBody = zod.object({
+  "propertyId": zod.number(),
+  "rooms": zod.array(zod.object({
+  "roomNo": zod.string().min(1),
+  "blockId": zod.number().nullish(),
+  "floorId": zod.number().nullish(),
+  "roomTypeId": zod.number().nullish()
+})).min(1).max(bulkCreateRoomsBodyRoomsMax)
+})
+
+export const BulkCreateRoomsResponse = zod.object({
+  "created": zod.number(),
+  "skipped": zod.number()
+})
+
+
 export const UpdateRoomParams = zod.object({
   "id": zod.coerce.number()
 })

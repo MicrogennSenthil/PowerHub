@@ -418,6 +418,25 @@ paths:
                 $ref: "#/components/schemas/Room"
         "400":
           $ref: "#/components/responses/BadRequest"
+  /rooms/bulk:
+    post:
+      operationId: bulkCreateRooms
+      tags: [rooms]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomBulkInput"
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomBulkResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
   /rooms/{id}:
     patch:
       operationId: updateRoom
@@ -1446,6 +1465,31 @@ components:
         floorId: { type: ["integer", "null"] }
         roomTypeId: { type: ["integer", "null"] }
         active: { type: boolean }
+    RoomBulkItem:
+      type: object
+      required: [roomNo]
+      properties:
+        roomNo: { type: string, minLength: 1 }
+        blockId: { type: ["integer", "null"] }
+        floorId: { type: ["integer", "null"] }
+        roomTypeId: { type: ["integer", "null"] }
+    RoomBulkInput:
+      type: object
+      required: [propertyId, rooms]
+      properties:
+        propertyId: { type: integer }
+        rooms:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoomBulkItem"
+          minItems: 1
+          maxItems: 500
+    RoomBulkResult:
+      type: object
+      required: [created, skipped]
+      properties:
+        created: { type: integer }
+        skipped: { type: integer }
 
     ControlType:
       type: object
