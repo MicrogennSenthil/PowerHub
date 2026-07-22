@@ -43,6 +43,7 @@ import type {
   ControlUpdate,
   CurrentUser,
   DashboardSummary,
+  DashboardTrends,
   Device,
   DeviceInput,
   DeviceUpdate,
@@ -51,6 +52,7 @@ import type {
   FloorUpdate,
   ForbiddenResponse,
   GetDashboardSummaryParams,
+  GetDashboardTrendsParams,
   GetPowerUsageReportParams,
   GetRoomChartParams,
   HealthStatus,
@@ -3694,6 +3696,90 @@ export function useGetDashboardSummary<TData = Awaited<ReturnType<typeof getDash
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetDashboardSummaryQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetDashboardTrendsUrl = (params: GetDashboardTrendsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/dashboard/trends?${stringifiedParams}` : `/api/dashboard/trends`
+}
+
+/**
+ * @summary Last-7-days room usage and power consumption trend vs previous 7 days
+ */
+export const getDashboardTrends = async (params: GetDashboardTrendsParams, options?: RequestInit): Promise<DashboardTrends> => {
+
+  return customFetch<DashboardTrends>(getGetDashboardTrendsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDashboardTrendsQueryKey = (params?: GetDashboardTrendsParams,) => {
+    return [
+    `/api/dashboard/trends`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetDashboardTrendsQueryOptions = <TData = Awaited<ReturnType<typeof getDashboardTrends>>, TError = ErrorType<unknown>>(params: GetDashboardTrendsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDashboardTrends>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDashboardTrendsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDashboardTrends>>> = ({ signal }) => getDashboardTrends(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDashboardTrends>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDashboardTrendsQueryResult = NonNullable<Awaited<ReturnType<typeof getDashboardTrends>>>
+export type GetDashboardTrendsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Last-7-days room usage and power consumption trend vs previous 7 days
+ */
+
+export function useGetDashboardTrends<TData = Awaited<ReturnType<typeof getDashboardTrends>>, TError = ErrorType<unknown>>(
+ params: GetDashboardTrendsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDashboardTrends>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDashboardTrendsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

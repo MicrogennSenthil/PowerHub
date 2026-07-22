@@ -594,6 +594,37 @@ export interface DashboardSummary {
   devicesList?: Device[];
 }
 
+export interface TrendDay {
+  /** YYYY-MM-DD (current window) */
+  date: string;
+  /** Short weekday label, e.g. Mon */
+  label: string;
+  /** Distinct rooms with at least one session that day */
+  roomsUsed: number;
+  sessions: number;
+  kwh: number;
+  /** Same weekday in the previous 7-day window */
+  prevDate: string;
+  prevRoomsUsed: number;
+  prevSessions: number;
+  prevKwh: number;
+}
+
+export interface TrendTotals {
+  /** Distinct rooms used across the window */
+  roomsUsed: number;
+  sessions: number;
+  kwh: number;
+  hours: number;
+}
+
+export interface DashboardTrends {
+  propertyId: number;
+  days: TrendDay[];
+  current: TrendTotals;
+  previous: TrendTotals;
+}
+
 export interface ApiKey {
   id: number;
   propertyId: number;
@@ -839,6 +870,10 @@ propertyId: PropertyIdQueryParameter;
 };
 
 export type GetDashboardSummaryParams = {
+propertyId: PropertyIdQueryParameter;
+};
+
+export type GetDashboardTrendsParams = {
 propertyId: PropertyIdQueryParameter;
 };
 

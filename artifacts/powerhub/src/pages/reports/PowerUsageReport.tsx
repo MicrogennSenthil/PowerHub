@@ -10,10 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, FileSpreadsheet, Printer, Mail, MessageCircle, Zap, Clock, IndianRupee, ListChecks } from 'lucide-react';
+import { Loader2, FileSpreadsheet, Printer, Mail, MessageCircle, Zap, Clock, IndianRupee, ListChecks, Filter, Download } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 function todayISO(daysAgo = 0) {
   const d = new Date();
@@ -22,7 +23,7 @@ function todayISO(daysAgo = 0) {
 }
 
 export function PowerUsageReport() {
-  const { selectedPropertyId } = useProperty();
+  const { selectedPropertyId, selectedProperty } = useProperty();
 
   const [from, setFrom] = useState(todayISO(7));
   const [to, setTo] = useState(todayISO(0));
@@ -79,139 +80,267 @@ export function PowerUsageReport() {
     ? `Power Usage Report (${from} to ${to})\nSessions: ${report.totals.sessions}\nTotal hours: ${report.totals.hours}\nConsumption: ${report.totals.kwh} kWh\nCost: ${currencySymbol}${report.totals.cost}`
     : '';
 
-  if (!selectedPropertyId) return <div className="p-8 text-center text-gray-500">Please select a property first.</div>;
+  if (!selectedPropertyId) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 mb-6">
+            <Zap className="h-10 w-10 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Select Property</h2>
+          <p className="mt-2 text-gray-500 dark:text-gray-400">Please select a property to view its power usage intelligence and reports.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 print:space-y-3">
-      <div className="flex items-center justify-between print:hidden">
+    <div className="space-y-8 pb-12 animate-in fade-in duration-500 print:space-y-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 print:hidden border-b border-gray-200 dark:border-gray-800 pb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Power Usage Report</h1>
-          <p className="text-sm text-gray-500">Room-wise power sessions with hours, consumption and cost.</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white flex items-center gap-3">
+            Power Analytics
+          </h1>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">
+            Detailed consumption & cost analysis for <span className="text-primary font-bold">{selectedProperty?.name}</span>
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={exportCsv} disabled={!report?.sessions.length}>
-            <FileSpreadsheet className="mr-1.5 h-4 w-4" />Excel
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" className="font-semibold shadow-sm hover-elevate border-gray-200" onClick={exportCsv} disabled={!report?.sessions.length || isFetching}>
+            {isFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin text-primary" /> : <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />}
+            Export Excel
           </Button>
-          <Button variant="outline" onClick={() => window.print()} disabled={!report?.sessions.length}>
-            <Printer className="mr-1.5 h-4 w-4" />PDF / Print
+          <Button variant="outline" className="font-semibold shadow-sm hover-elevate border-gray-200" onClick={() => window.print()} disabled={!report?.sessions.length}>
+            <Printer className="mr-2 h-4 w-4 text-blue-600" />
+            Print PDF
           </Button>
-          <Button variant="outline" disabled={!report?.sessions.length}
+          <Button variant="outline" className="font-semibold shadow-sm hover-elevate border-gray-200" disabled={!report?.sessions.length}
             onClick={() => { window.location.href = `mailto:?subject=${encodeURIComponent('Power Usage Report')}&body=${encodeURIComponent(summaryText)}`; }}>
-            <Mail className="mr-1.5 h-4 w-4" />Mail
+            <Mail className="mr-2 h-4 w-4 text-gray-600" />
+            Email
           </Button>
-          <Button variant="outline" disabled={!report?.sessions.length}
+          <Button variant="outline" className="font-semibold shadow-sm hover-elevate border-gray-200" disabled={!report?.sessions.length}
             onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(summaryText)}`, '_blank')}>
-            <MessageCircle className="mr-1.5 h-4 w-4" />WhatsApp
+            <MessageCircle className="mr-2 h-4 w-4 text-green-500" />
+            WhatsApp
           </Button>
         </div>
       </div>
 
       {/* Filters */}
-      <Card className="print:hidden">
-        <CardContent className="grid grid-cols-2 gap-3 pt-6 md:grid-cols-4 lg:grid-cols-7">
-          <div className="space-y-1">
-            <Label className="text-xs">From</Label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">To</Label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Room</Label>
-            <Select value={roomId} onValueChange={setRoomId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All rooms</SelectItem>
-                {rooms?.map((r) => <SelectItem key={r.id} value={String(r.id)}>{r.roomNo}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Guest name</Label>
-            <Input value={guest} onChange={(e) => setGuest(e.target.value)} placeholder="Search…" />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Bill No</Label>
-            <Input value={billNo} onChange={(e) => setBillNo(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">GRC No</Label>
-            <Input value={grcNo} onChange={(e) => setGrcNo(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">User</Label>
-            <Input value={username} onChange={(e) => setUsername(e.target.value)} />
+      <Card className="print:hidden border-primary/20 shadow-sm bg-white dark:bg-gray-900 overflow-hidden relative">
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+        <CardHeader className="py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
+          <CardTitle className="text-sm font-bold flex items-center text-gray-700 dark:text-gray-300">
+            <Filter className="mr-2 h-4 w-4 text-primary" />
+            Report Parameters
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-gray-600">From Date</Label>
+              <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="font-medium bg-gray-50" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-gray-600">To Date</Label>
+              <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="font-medium bg-gray-50" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-gray-600">Room Filter</Label>
+              <Select value={roomId} onValueChange={setRoomId}>
+                <SelectTrigger className="font-medium bg-gray-50"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="font-medium">All rooms</SelectItem>
+                  {rooms?.map((r) => <SelectItem key={r.id} value={String(r.id)} className="font-medium">{r.roomNo}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-gray-600">Guest Name</Label>
+              <Input value={guest} onChange={(e) => setGuest(e.target.value)} placeholder="Search…" className="font-medium bg-gray-50" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-gray-600">Bill No</Label>
+              <Input value={billNo} onChange={(e) => setBillNo(e.target.value)} placeholder="Enter bill..." className="font-medium bg-gray-50 uppercase" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-gray-600">GRC No</Label>
+              <Input value={grcNo} onChange={(e) => setGrcNo(e.target.value)} placeholder="Enter GRC..." className="font-medium bg-gray-50 uppercase" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-gray-600">User / Staff</Label>
+              <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Search staff..." className="font-medium bg-gray-50" />
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Totals */}
+      {/* KPI Totals */}
       {report && (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {[
-            { icon: ListChecks, label: 'Sessions', value: String(report.totals.sessions) },
-            { icon: Clock, label: 'Total hours', value: `${report.totals.hours} h` },
-            { icon: Zap, label: 'Consumption', value: `${report.totals.kwh} kWh` },
-            { icon: IndianRupee, label: `Cost @ ${currencySymbol}${report.tariffPerKwh}/kWh`, value: `${currencySymbol}${report.totals.cost}` },
-          ].map(({ icon: Icon, label, value }) => (
-            <Card key={label}>
-              <CardContent className="flex items-center gap-3 py-4">
-                <div className="rounded-md bg-primary/10 p-2"><Icon className="h-5 w-5 text-primary" /></div>
-                <div>
-                  <div className="text-xs text-gray-500">{label}</div>
-                  <div className="text-lg font-bold">{value}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border-l-4 border-l-chart-1 shadow-sm hover:shadow-md transition-all overflow-hidden relative">
+            <div className="absolute right-0 top-0 w-20 h-20 bg-chart-1/5 rounded-bl-full pointer-events-none"></div>
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="rounded-xl bg-chart-1/10 p-3"><ListChecks className="h-6 w-6 text-chart-1" /></div>
+              <div>
+                <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Total Sessions</div>
+                <div className="text-2xl font-extrabold text-gray-900 dark:text-white">{report.totals.sessions}</div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-l-4 border-l-chart-2 shadow-sm hover:shadow-md transition-all overflow-hidden relative">
+            <div className="absolute right-0 top-0 w-20 h-20 bg-chart-2/5 rounded-bl-full pointer-events-none"></div>
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="rounded-xl bg-chart-2/10 p-3"><Clock className="h-6 w-6 text-chart-2" /></div>
+              <div>
+                <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Total Hours</div>
+                <div className="text-2xl font-extrabold text-gray-900 dark:text-white">{report.totals.hours} <span className="text-sm font-medium text-gray-400">hrs</span></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all overflow-hidden relative">
+            <div className="absolute right-0 top-0 w-20 h-20 bg-primary/5 rounded-bl-full pointer-events-none"></div>
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="rounded-xl bg-primary/10 p-3"><Zap className="h-6 w-6 text-primary" /></div>
+              <div>
+                <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Consumption</div>
+                <div className="text-2xl font-extrabold text-gray-900 dark:text-white">{report.totals.kwh} <span className="text-sm font-medium text-gray-400">kWh</span></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-chart-5 shadow-sm hover:shadow-md transition-all overflow-hidden relative">
+            <div className="absolute right-0 top-0 w-20 h-20 bg-chart-5/5 rounded-bl-full pointer-events-none"></div>
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="rounded-xl bg-chart-5/10 p-3"><IndianRupee className="h-6 w-6 text-chart-5" /></div>
+              <div>
+                <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                  Est. Cost <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 bg-gray-100">{currencySymbol}{report.tariffPerKwh}/kWh</Badge>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+                <div className="text-2xl font-extrabold text-chart-5">{currencySymbol}{report.totals.cost}</div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {/* Sessions table */}
-      <div className="rounded-md border bg-white shadow-sm overflow-x-auto">
-        {isLoading || isFetching ? (
-          <div className="flex h-40 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Room</TableHead>
-                <TableHead>Control</TableHead>
-                <TableHead>Process</TableHead>
-                <TableHead>GRC / Bill</TableHead>
-                <TableHead>Guest</TableHead>
-                <TableHead>Started</TableHead>
-                <TableHead>Ended</TableHead>
-                <TableHead className="text-right">Hours</TableHead>
-                <TableHead className="text-right">kWh</TableHead>
-                <TableHead className="text-right">Cost</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {report?.sessions.length ? report.sessions.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium">{s.roomNo ?? '—'}{s.blockName ? <span className="ml-1 text-xs text-gray-400">({s.blockName})</span> : null}</TableCell>
-                  <TableCell className="text-sm">{s.controlLabel || s.controlTypeName || `#${s.controlId}`}{s.controlTypeName && s.controlLabel ? <span className="ml-1 text-xs text-gray-400">{s.controlTypeName}</span> : null}</TableCell>
-                  <TableCell className="text-sm">{s.processName ?? '—'}</TableCell>
-                  <TableCell className="text-xs">{[s.grcNo, s.billNo].filter(Boolean).join(' / ') || '—'}</TableCell>
-                  <TableCell className="text-sm">{s.guestName ?? '—'}</TableCell>
-                  <TableCell className="text-xs whitespace-nowrap">{new Date(s.startedAt).toLocaleString()}</TableCell>
-                  <TableCell className="text-xs whitespace-nowrap">
-                    {s.endedAt
-                      ? <>{new Date(s.endedAt).toLocaleString()}{s.endReason === 'auto-cutoff' && <Badge variant="outline" className="ml-1 bg-blue-50 text-blue-700 text-[10px]">auto</Badge>}</>
-                      : <Badge variant="outline" className="bg-green-50 text-green-700">RUNNING</Badge>}
-                  </TableCell>
-                  <TableCell className="text-right">{s.hours}</TableCell>
-                  <TableCell className="text-right">{s.kwh}</TableCell>
-                  <TableCell className="text-right">{currencySymbol}{s.cost}</TableCell>
+      {/* Sessions Data Table */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden flex flex-col">
+        <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 flex justify-between items-center">
+          <h3 className="font-bold text-gray-800 dark:text-gray-200">Session Log Details</h3>
+          {report && report.sessions.length > 0 && (
+            <Badge variant="outline" className="font-medium bg-white">
+              Showing {report.sessions.length} records
+            </Badge>
+          )}
+        </div>
+        
+        <div className="overflow-x-auto">
+          {isLoading ? (
+            <div className="flex h-64 flex-col items-center justify-center space-y-3 text-gray-400">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="font-medium tracking-wide">Compiling report data...</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader className="bg-gray-50 dark:bg-gray-800/80">
+                <TableRow className="hover:bg-transparent border-gray-200 dark:border-gray-700">
+                  <TableHead className="font-bold text-gray-600 dark:text-gray-300 py-4">Room</TableHead>
+                  <TableHead className="font-bold text-gray-600 dark:text-gray-300 py-4">Control</TableHead>
+                  <TableHead className="font-bold text-gray-600 dark:text-gray-300 py-4">Process</TableHead>
+                  <TableHead className="font-bold text-gray-600 dark:text-gray-300 py-4">GRC / Bill</TableHead>
+                  <TableHead className="font-bold text-gray-600 dark:text-gray-300 py-4">Guest</TableHead>
+                  <TableHead className="font-bold text-gray-600 dark:text-gray-300 py-4">Started</TableHead>
+                  <TableHead className="font-bold text-gray-600 dark:text-gray-300 py-4">Ended</TableHead>
+                  <TableHead className="font-bold text-gray-600 dark:text-gray-300 py-4 text-right">Hrs</TableHead>
+                  <TableHead className="font-bold text-gray-600 dark:text-gray-300 py-4 text-right">kWh</TableHead>
+                  <TableHead className="font-bold text-gray-600 dark:text-gray-300 py-4 text-right">Cost</TableHead>
                 </TableRow>
-              )) : (
-                <TableRow><TableCell colSpan={10} className="h-24 text-center text-gray-500">No power sessions in this range.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        )}
+              </TableHeader>
+              <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {report?.sessions.length ? report.sessions.map((s) => (
+                  <TableRow key={s.id} className="hover:bg-primary/5 transition-colors group">
+                    <TableCell className="py-3">
+                      <div className="font-extrabold text-gray-900 dark:text-white">{s.roomNo ?? '—'}</div>
+                      {s.blockName && <div className="text-[10px] uppercase font-bold text-gray-400 mt-0.5">{s.blockName}</div>}
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="font-semibold text-gray-800 dark:text-gray-200">{s.controlLabel || s.controlTypeName || `#${s.controlId}`}</div>
+                      {s.controlTypeName && s.controlLabel && <div className="text-[10px] uppercase font-bold text-gray-400 mt-0.5">{s.controlTypeName}</div>}
+                    </TableCell>
+                    <TableCell className="py-3">
+                      {s.processName ? (
+                        <Badge variant="outline" className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold border-gray-200 dark:border-gray-700">
+                          {s.processName}
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="text-xs font-mono font-medium text-gray-600 dark:text-gray-400">
+                        {[s.grcNo, s.billNo].filter(Boolean).join(' / ') || '—'}
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">{s.guestName ?? '—'}</div>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="text-xs font-mono text-gray-600 dark:text-gray-400 whitespace-nowrap bg-gray-50 dark:bg-gray-800/50 px-2 py-1 rounded inline-block">
+                        {new Date(s.startedAt).toLocaleString(undefined, { 
+                          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                        })}
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      {s.endedAt ? (
+                        <div className="flex items-center gap-2">
+                          <div className="text-xs font-mono text-gray-600 dark:text-gray-400 whitespace-nowrap bg-gray-50 dark:bg-gray-800/50 px-2 py-1 rounded inline-block">
+                            {new Date(s.endedAt).toLocaleString(undefined, { 
+                              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                            })}
+                          </div>
+                          {s.endReason === 'auto-cutoff' && (
+                            <Badge variant="secondary" className="bg-chart-2/10 text-chart-2 border border-chart-2/20 text-[9px] uppercase tracking-wider font-bold">
+                              Auto
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge variant="default" className="bg-success text-success-foreground font-bold shadow-[0_0_8px_hsl(var(--success)/0.5)] animate-pulse">
+                          RUNNING
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-3 text-right font-mono text-sm font-medium">{s.hours}</TableCell>
+                    <TableCell className="py-3 text-right">
+                      <Badge variant="outline" className="font-mono bg-primary/5 text-primary border-primary/20 text-sm">
+                        {s.kwh}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-3 text-right">
+                      <div className="font-mono font-bold text-gray-900 dark:text-white text-sm">
+                        {currencySymbol}{s.cost}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={10} className="h-40 text-center">
+                      <div className="flex flex-col items-center justify-center text-gray-400">
+                        <ListChecks className="h-10 w-10 mb-3 opacity-20" />
+                        <p className="font-medium text-gray-500">No power sessions found in this date range.</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </div>
       </div>
     </div>
   );

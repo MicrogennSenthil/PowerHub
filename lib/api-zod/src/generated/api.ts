@@ -1061,6 +1061,41 @@ export const GetDashboardSummaryResponse = zod.object({
 
 
 /**
+ * @summary Last-7-days room usage and power consumption trend vs previous 7 days
+ */
+export const GetDashboardTrendsQueryParams = zod.object({
+  "propertyId": zod.coerce.number()
+})
+
+export const GetDashboardTrendsResponse = zod.object({
+  "propertyId": zod.number(),
+  "days": zod.array(zod.object({
+  "date": zod.string().describe('YYYY-MM-DD (current window)'),
+  "label": zod.string().describe('Short weekday label, e.g. Mon'),
+  "roomsUsed": zod.number().describe('Distinct rooms with at least one session that day'),
+  "sessions": zod.number(),
+  "kwh": zod.number(),
+  "prevDate": zod.string().describe('Same weekday in the previous 7-day window'),
+  "prevRoomsUsed": zod.number(),
+  "prevSessions": zod.number(),
+  "prevKwh": zod.number()
+})),
+  "current": zod.object({
+  "roomsUsed": zod.number().describe('Distinct rooms used across the window'),
+  "sessions": zod.number(),
+  "kwh": zod.number(),
+  "hours": zod.number()
+}),
+  "previous": zod.object({
+  "roomsUsed": zod.number().describe('Distinct rooms used across the window'),
+  "sessions": zod.number(),
+  "kwh": zod.number(),
+  "hours": zod.number()
+})
+})
+
+
+/**
  * @summary Get global system / device-communication settings
  */
 export const GetSettingsResponse = zod.object({

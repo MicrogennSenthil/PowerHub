@@ -895,6 +895,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardSummary"
 
+  /dashboard/trends:
+    get:
+      operationId: getDashboardTrends
+      tags: [dashboard]
+      summary: Last-7-days room usage and power consumption trend vs previous 7 days
+      parameters:
+        - $ref: "#/components/parameters/PropertyIdQuery"
+      responses:
+        "200":
+          description: Trends
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardTrends"
+
   /settings:
     get:
       operationId: getSettings
@@ -1733,6 +1748,41 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Device"
+
+    TrendDay:
+      type: object
+      required: [date, label, roomsUsed, sessions, kwh, prevDate, prevRoomsUsed, prevSessions, prevKwh]
+      properties:
+        date: { type: string, description: "YYYY-MM-DD (current window)" }
+        label: { type: string, description: "Short weekday label, e.g. Mon" }
+        roomsUsed: { type: integer, description: "Distinct rooms with at least one session that day" }
+        sessions: { type: integer }
+        kwh: { type: number }
+        prevDate: { type: string, description: "Same weekday in the previous 7-day window" }
+        prevRoomsUsed: { type: integer }
+        prevSessions: { type: integer }
+        prevKwh: { type: number }
+    TrendTotals:
+      type: object
+      required: [roomsUsed, sessions, kwh, hours]
+      properties:
+        roomsUsed: { type: integer, description: "Distinct rooms used across the window" }
+        sessions: { type: integer }
+        kwh: { type: number }
+        hours: { type: number }
+    DashboardTrends:
+      type: object
+      required: [propertyId, days, current, previous]
+      properties:
+        propertyId: { type: integer }
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendDay"
+        current:
+          $ref: "#/components/schemas/TrendTotals"
+        previous:
+          $ref: "#/components/schemas/TrendTotals"
 
     ApiKey:
       type: object

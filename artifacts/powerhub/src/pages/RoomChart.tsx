@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   useGetRoomChart,
   getGetRoomChartQueryKey,
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
   Lightbulb,
@@ -24,18 +25,21 @@ import {
   Wifi,
   WifiOff,
   Search,
+  Activity,
+  Zap,
+  AlertTriangle
 } from 'lucide-react';
 
 // Compact "how long ago" for device last-seen times.
 function timeAgo(iso: string | null | undefined) {
-  if (!iso) return 'never seen';
+  if (!iso) return 'never';
   const secs = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
-  if (secs < 60) return `${secs}s ago`;
+  if (secs < 60) return `${secs}s`;
   const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return `${mins}m`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  if (hrs < 24) return `${hrs}h`;
+  return `${Math.floor(hrs / 24)}d`;
 }
 
 // One chip per relay box: green = polling the server, red = silent.
@@ -50,33 +54,42 @@ function DeviceStatusStrip({ propertyId }: { propertyId: number }) {
     },
   );
   if (!devices || devices.length === 0) return null;
+  
+  const onlineCount = devices.filter(d => d.online).length;
+  const offlineCount = devices.filter(d => !d.online).length;
+  
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-2">
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Boxes:</span>
+    <div className="mt-4 flex flex-wrap items-center gap-2 bg-gray-50/50 dark:bg-gray-800/50 p-2 rounded-lg border border-gray-100 dark:border-gray-800">
+      <div className="flex items-center gap-2 px-2 border-r border-gray-200 dark:border-gray-700 mr-1">
+        <Activity className="h-4 w-4 text-primary" />
+        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Hubs</span>
+      </div>
+      
+      {offlineCount > 0 && (
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-destructive/10 text-destructive border border-destructive/20 text-xs font-bold animate-pulse">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          {offlineCount} Offline
+        </div>
+      )}
+      
       {devices.map((d) => (
         <div
           key={d.id}
           className={cn(
-            'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
+            'flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold transition-colors duration-300 cursor-default hover-elevate',
             d.online
-              ? 'border-green-200 bg-green-50 text-green-700'
-              : 'border-red-200 bg-red-50 text-red-600',
+              ? 'border-success/30 bg-success/10 text-success'
+              : 'border-destructive/30 bg-destructive/10 text-destructive',
           )}
           title={
             d.online
-              ? `Box ${d.code} online — last poll ${timeAgo(d.lastSeenAt)}`
-              : `Box ${d.code} OFFLINE — last poll ${timeAgo(d.lastSeenAt)}`
+              ? `Box ${d.code} online — last poll ${timeAgo(d.lastSeenAt)} ago`
+              : `Box ${d.code} OFFLINE — last poll ${timeAgo(d.lastSeenAt)} ago`
           }
         >
           {d.online ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-          <span>Box {d.code}</span>
-          <span
-            className={cn(
-              'h-2 w-2 rounded-full',
-              d.online ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.7)]' : 'bg-red-500',
-            )}
-          />
-          <span className={cn('text-[10px]', d.online ? 'text-green-500' : 'text-red-400')}>
+          <span>{d.code}</span>
+          <span className={cn('text-[10px] opacity-70 ml-1 font-mono')}>
             {timeAgo(d.lastSeenAt)}
           </span>
         </div>
@@ -109,29 +122,30 @@ function ControlChip({ control }: { control: RoomChartControl }) {
   const on = control.on;
 
   const cls = offline
-    ? 'border-gray-200 bg-gray-50 text-gray-400'
+    ? 'border-warning/30 bg-warning/10 text-warning-foreground dark:text-warning'
     : on
-      ? 'border-green-200 bg-green-50 text-green-700'
-      : 'border-red-200 bg-red-50 text-red-700';
-
-  const dot = offline ? 'bg-gray-300' : on ? 'bg-green-500' : 'bg-red-500';
+      ? 'border-success/40 bg-success text-success-foreground shadow-[0_2px_10px_-2px_hsl(var(--success)/0.5)]'
+      : 'border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 opacity-80 hover:opacity-100';
 
   return (
     <div
-      className={cn('flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium', cls)}
+      className={cn(
+        'flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-bold transition-all duration-200',
+        cls
+      )}
       title={
         offline
           ? `${name} — device ${control.deviceCode ?? ''} offline`
           : `${name} — ${on ? 'ON' : 'OFF'}`
       }
     >
-      <Icon className="h-3.5 w-3.5 shrink-0" />
+      <Icon className={cn("h-3.5 w-3.5 shrink-0", on && !offline && "animate-pulse")} />
       <span className="truncate max-w-[90px]">{name}</span>
       {offline ? (
-        <WifiOff className="h-3 w-3 shrink-0" />
-      ) : (
-        <span className={cn('h-2 w-2 shrink-0 rounded-full', dot)} />
-      )}
+        <WifiOff className="h-3 w-3 shrink-0 ml-1 opacity-70" />
+      ) : on ? (
+        <Zap className="h-3 w-3 shrink-0 ml-1 fill-current opacity-90" />
+      ) : null}
     </div>
   );
 }
@@ -139,57 +153,81 @@ function ControlChip({ control }: { control: RoomChartControl }) {
 function RoomCard({ room }: { room: RoomChartRoom }) {
   const anyOn = room.controls.some((c) => c.on && c.deviceOnline);
   const allOffline = room.controls.length > 0 && room.controls.every((c) => !c.deviceOnline);
+  const anyOffline = room.controls.some((c) => !c.deviceOnline);
 
   return (
     <div
       className={cn(
-        'flex flex-col rounded-lg border bg-white p-3 shadow-sm transition-colors',
-        anyOn ? 'border-green-300 ring-1 ring-green-100' : 'border-gray-200',
+        'group flex flex-col rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-sm transition-all duration-300 hover-elevate relative overflow-hidden',
+        anyOn ? 'border-success/50 ring-2 ring-success/20 bg-success/5 dark:bg-success/10 shadow-[0_4px_20px_-4px_hsl(var(--success)/0.15)]' : 
+        allOffline ? 'border-warning/40 bg-warning/5 dark:bg-warning/10' : 
+        'border-gray-200 dark:border-gray-800 hover:border-primary/30',
       )}
     >
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span
+      {/* Background glow effect for ON rooms */}
+      {anyOn && (
+        <div className="absolute top-0 right-0 w-32 h-32 bg-success/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+      )}
+
+      <div className="mb-3 flex items-start justify-between gap-2 relative z-10">
+        <div className="flex items-center gap-3">
+          <div
             className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-md',
-              anyOn ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500',
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg shadow-sm transition-colors',
+              anyOn ? 'bg-success text-success-foreground' : 
+              allOffline ? 'bg-warning/20 text-warning' : 
+              'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 group-hover:bg-primary/10 group-hover:text-primary',
             )}
           >
-            <DoorClosed className="h-4 w-4" />
-          </span>
+            <DoorClosed className={cn("h-5 w-5", anyOn && "animate-pulse")} />
+          </div>
           <div className="leading-tight">
-            <div className="text-sm font-bold text-gray-900">{room.roomNo}</div>
+            <div className={cn("text-xl font-extrabold tracking-tight", anyOn ? "text-success-foreground dark:text-success" : "text-gray-900 dark:text-white")}>
+              {room.roomNo}
+            </div>
             {room.roomTypeName && (
-              <div className="text-[11px] text-gray-400">{room.roomTypeName}</div>
+              <div className="text-[11px] font-medium text-gray-400 mt-0.5 uppercase tracking-wide">{room.roomTypeName}</div>
             )}
           </div>
         </div>
-        <span
-          className={cn(
-            'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-            anyOn ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500',
-          )}
-        >
-          {anyOn ? 'Power On' : 'Off'}
-        </span>
+        
+        <div className="flex flex-col items-end gap-1">
+          <span
+            className={cn(
+              'rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest border',
+              anyOn ? 'bg-success/20 text-success border-success/30' : 
+              allOffline ? 'bg-warning/20 text-warning border-warning/30' :
+              'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
+            )}
+          >
+            {anyOn ? 'Live' : allOffline ? 'Offline' : 'Standby'}
+          </span>
+        </div>
       </div>
 
-      {room.controls.length === 0 ? (
-        <div className="rounded-md border border-dashed border-gray-200 px-2 py-1.5 text-center text-[11px] text-gray-400">
-          No controls mapped
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-1.5">
-          {allOffline && (
-            <div className="flex w-full items-center gap-1 text-[11px] text-amber-600">
-              <WifiOff className="h-3 w-3" /> device offline
-            </div>
-          )}
-          {room.controls.map((c) => (
-            <ControlChip key={c.id} control={c} />
-          ))}
-        </div>
-      )}
+      <div className="mt-auto relative z-10 pt-2 border-t border-gray-100 dark:border-gray-800">
+        {room.controls.length === 0 ? (
+          <div className="rounded-md border border-dashed border-gray-200 dark:border-gray-800 px-2 py-2 text-center text-[11px] font-medium text-gray-400">
+            No controls mapped
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {anyOffline && !allOffline && (
+              <div className="flex w-full items-center gap-1.5 text-[11px] font-bold text-warning mb-1 bg-warning/10 p-1.5 rounded-md">
+                <AlertTriangle className="h-3.5 w-3.5" /> Some devices offline
+              </div>
+            )}
+            {allOffline && (
+              <div className="flex w-full items-center justify-center gap-1.5 text-xs font-bold text-warning mb-1 bg-warning/10 p-2 rounded-md border border-warning/20">
+                <WifiOff className="h-4 w-4" /> All devices offline
+              </div>
+            )}
+            {room.controls.map((c) => (
+              <ControlChip key={c.id} control={c} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -265,97 +303,126 @@ export function RoomChart() {
 
   if (!selectedPropertyId) {
     return (
-      <div className="p-6 text-sm text-gray-500">Select a property to view the room chart.</div>
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 mb-6">
+            <Activity className="h-10 w-10 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Select Property</h2>
+          <p className="mt-2 text-gray-500 dark:text-gray-400">Select a property to view the live power matrix and control rooms.</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b bg-white px-6 py-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex h-full flex-col animate-in fade-in duration-500">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-6 py-5 shadow-sm relative z-20">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Room Chart</h1>
-            <p className="text-sm text-gray-500">
-              Live room &amp; device status — {activeRooms} of {totalRooms} rooms powered on
+            <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white flex items-center gap-3">
+              Power Matrix
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 text-success border border-success/20 text-xs font-bold tracking-wide">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                </span>
+                {activeRooms} / {totalRooms} ACTIVE
+              </div>
+            </h1>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">
+              Live room &amp; device status monitor
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          
+          <div className="flex flex-wrap items-center gap-3">
             <Legend />
-            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} className="font-semibold shadow-sm hover-elevate">
               <RefreshCw className={cn('mr-2 h-4 w-4', isFetching && 'animate-spin')} />
-              Refresh
+              Sync Grid
             </Button>
           </div>
         </div>
 
         <DeviceStatusStrip propertyId={selectedPropertyId} />
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-5 flex flex-wrap items-center gap-3">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Search room no…"
+              placeholder="Search room..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 w-48 pl-8"
+              className="h-10 w-48 sm:w-64 pl-9 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 font-medium focus-visible:ring-primary/50"
             />
           </div>
           {hasBlocks && (
             <Select value={blockFilter} onValueChange={setBlockFilter}>
-              <SelectTrigger className="h-9 w-40">
+              <SelectTrigger className="h-10 w-40 bg-gray-50 dark:bg-gray-800 font-medium border-gray-200 dark:border-gray-700">
                 <SelectValue placeholder="All blocks" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All blocks</SelectItem>
+                <SelectItem value="all" className="font-medium">All blocks</SelectItem>
                 {blockOptions.map((b) => (
-                  <SelectItem key={b} value={b}>{b}</SelectItem>
+                  <SelectItem key={b} value={b} className="font-medium">{b}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
           <Select value={floorFilter} onValueChange={setFloorFilter}>
-            <SelectTrigger className="h-9 w-40">
+            <SelectTrigger className="h-10 w-40 bg-gray-50 dark:bg-gray-800 font-medium border-gray-200 dark:border-gray-700">
               <SelectValue placeholder="All floors" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All floors</SelectItem>
+              <SelectItem value="all" className="font-medium">All floors</SelectItem>
               {floorOptions.map((f) => (
-                <SelectItem key={f} value={f}>{f}</SelectItem>
+                <SelectItem key={f} value={f} className="font-medium">{f}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      <ScrollArea className="flex-1 bg-gray-50">
-        <div className="p-6">
+      <ScrollArea className="flex-1 bg-gray-50/50 dark:bg-gray-950 p-0 relative z-10">
+        <div className="p-6 md:p-8">
           {isLoading ? (
-            <div className="flex items-center justify-center py-20 text-gray-400">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading room chart…
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+              <Loader2 className="mb-4 h-10 w-10 animate-spin text-primary" /> 
+              <p className="font-medium tracking-wide">INITIALIZING POWER MATRIX...</p>
             </div>
           ) : groups.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-              <DoorClosed className="mb-2 h-8 w-8" />
-              <p className="text-sm">No rooms match the current filters.</p>
+            <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+              <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-6 mb-4">
+                <Search className="h-10 w-10 text-gray-300 dark:text-gray-600" />
+              </div>
+              <p className="text-lg font-bold text-gray-700 dark:text-gray-300">No rooms found</p>
+              <p className="text-sm mt-1">Adjust your filters to see more rooms.</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-10">
               {groups.map((block) => (
-                <div key={block.blockName}>
+                <div key={block.blockName} className="space-y-6">
                   {hasBlocks && (
-                    <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-700">
-                      {block.blockName}
-                    </h2>
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-lg font-extrabold uppercase tracking-widest text-gray-800 dark:text-gray-200">
+                        {block.blockName}
+                      </h2>
+                      <div className="h-px flex-1 bg-gray-200 dark:bg-gray-800"></div>
+                    </div>
                   )}
-                  <div className="flex flex-col gap-5">
+                  
+                  <div className="flex flex-col gap-8 pl-1">
                     {block.floors.map((floor) => (
-                      <div key={floor.floorName}>
-                        <div className="mb-2 flex items-center gap-2">
-                          <span className="h-4 w-1 rounded-full bg-primary" />
-                          <h3 className="text-sm font-semibold text-gray-600">{floor.floorName}</h3>
-                          <span className="text-xs text-gray-400">({floor.rooms.length})</span>
+                      <div key={floor.floorName} className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <span className="h-6 w-1.5 rounded-full bg-primary" />
+                          <h3 className="text-base font-bold text-gray-700 dark:text-gray-300">{floor.floorName}</h3>
+                          <Badge variant="secondary" className="bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-bold">
+                            {floor.rooms.length} {floor.rooms.length === 1 ? 'Room' : 'Rooms'}
+                          </Badge>
                         </div>
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                        
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                           {floor.rooms.map((room) => (
                             <RoomCard key={room.id} room={room} />
                           ))}
@@ -375,15 +442,15 @@ export function RoomChart() {
 
 function Legend() {
   return (
-    <div className="flex items-center gap-3 text-xs text-gray-500">
-      <span className="flex items-center gap-1">
-        <span className="h-2.5 w-2.5 rounded-full bg-green-500" /> On
+    <div className="flex items-center gap-4 text-xs font-bold text-gray-500 bg-gray-100/80 dark:bg-gray-800/80 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700">
+      <span className="flex items-center gap-2">
+        <span className="h-3 w-3 rounded-full bg-success shadow-[0_0_8px_hsl(var(--success)/0.6)]" /> Live Load
       </span>
-      <span className="flex items-center gap-1">
-        <span className="h-2.5 w-2.5 rounded-full bg-red-500" /> Off
+      <span className="flex items-center gap-2">
+        <span className="h-3 w-3 rounded-full bg-gray-300 dark:bg-gray-600" /> Standby
       </span>
-      <span className="flex items-center gap-1">
-        <WifiOff className="h-3 w-3 text-gray-400" /> Offline
+      <span className="flex items-center gap-1.5 text-warning">
+        <AlertTriangle className="h-3.5 w-3.5" /> Offline
       </span>
     </div>
   );
