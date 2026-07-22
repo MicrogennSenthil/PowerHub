@@ -23,18 +23,18 @@ import { validateBody } from "../lib/http";
 //     GET /PowerDeviceStatusApi/:deviceCode/:randomNo
 // ---------------------------------------------------------------------------
 
+// Official M-HMS payload (v1.0 spec)
 const CommandBody = z.object({
-  roomNo: z.string().min(1),
-  state: z.enum(["on", "off"]),
-  // Process master reference: numeric id or exact name (e.g. "Checkin").
-  process: z.union([z.number().int(), z.string()]).optional(),
-  // Restrict to specific load types, e.g. ["Light","AC"]. Omit = all controls
-  // mapped to the room.
+  roomNumber:   z.string().min(1),
+  action:       z.enum(["ON", "OFF"]),
+  // Restrict to specific load types, e.g. ["Light","AC"]. Empty = all controls.
   controlTypes: z.array(z.string()).optional(),
-  grcNo: z.string().optional(),
-  billNo: z.string().optional(),
-  guestName: z.string().optional(),
-  username: z.string().optional(),
+  // Lifecycle event name — mapped to a PowerHub process type (checkin, checkout, etc.)
+  event:        z.string().optional(),
+  hotelId:      z.string().optional(),
+  grcNo:        z.string().optional(),
+  guestName:    z.string().optional(),
+  timestamp:    z.string().optional(),
 });
 
 export const mhmsRouter: IRouter = Router();
@@ -48,32 +48,25 @@ mhmsRouter.post("/commands", requireApiKey, async (req, res) => {
     .select()
     .from(roomsTable)
     .where(
-      and(eq(roomsTable.propertyId, propertyId), eq(roomsTable.roomNo, body.roomNo)),
+      and(eq(roomsTable.propertyId, propertyId), eq(roomsTable.roomNo, body.roomNumber)),
     )
     .limit(1);
   const room = rooms[0];
   if (!room) {
-    res.status(404).json({ error: `Room ${body.roomNo} not found` });
+    res.status(404).json({ error: `Room ${body.roomNumber} not found` });
     return;
   }
 
-  // Resolve process type (optional).
+  // Resolve process type from event name (e.g. "checkin" → process named "Checkin").
   let processType = null;
-  if (body.process !== undefined) {
-    const cond =
-      typeof body.process === "number"
-        ? eq(processTypesTable.id, body.process)
-        : eq(processTypesTable.name, body.process);
+  if (body.event) {
     const found = await db
       .select()
       .from(processTypesTable)
-      .where(and(eq(processTypesTable.propertyId, propertyId), cond))
+      .where(and(eq(processTypesTable.propertyId, propertyId), eq(processTypesTable.name, body.event)))
       .limit(1);
-    if (!found[0]) {
-      res.status(400).json({ error: `Unknown process: ${body.process}` });
-      return;
-    }
-    processType = found[0];
+    // Soft-fail: unknown event names are accepted but logged without a process link.
+    if (found[0]) processType = found[0];
   }
 
   // Room controls, optionally filtered by control type names.
@@ -91,7 +84,7 @@ mhmsRouter.post("/commands", requireApiKey, async (req, res) => {
       and(eq(controlsTable.propertyId, propertyId), eq(controlsTable.roomId, room.id)),
     );
   if (roomControls.length === 0) {
-    res.status(400).json({ error: `No controls mapped to room ${body.roomNo}` });
+    res.status(400).json({ error: `No controls mapped to room ${body.roomNumber}` });
     return;
   }
   let targets = roomControls;
@@ -102,39 +95,36 @@ mhmsRouter.post("/commands", requireApiKey, async (req, res) => {
     );
     if (targets.length === 0) {
       res.status(400).json({
-        error: `Room ${body.roomNo} has no controls of type(s): ${body.controlTypes.join(", ")}`,
+        error: `Room ${body.roomNumber} has no controls of type(s): ${body.controlTypes.join(", ")}`,
       });
       return;
     }
   }
 
-  const state = body.state === "on" ? 1 : 0;
+  const state = body.action === "ON" ? 1 : 0;
   const logIds = await enqueueControlChange(
     targets.map((t) => t.control),
     state as 0 | 1,
     {
       processType,
       source: "mhms",
-      grcNo: body.grcNo ?? null,
-      billNo: body.billNo ?? null,
-      guestName: body.guestName ?? null,
-      requestedBy: body.username ?? null,
+      grcNo:       body.grcNo     ?? null,
+      billNo:      null,
+      guestName:   body.guestName ?? null,
+      requestedBy: null,
     },
   );
 
+  // M-HMS expects 202 Accepted on success.
   res.status(202).json({
-    queued: logIds.length,
+    queued:      logIds.length,
     powerLogIds: logIds,
-    room: body.roomNo,
-    state: body.state,
-    controls: targets.map((t) => ({
-      id: t.control.id,
-      label: t.control.label,
-      type: t.typeName,
-    })),
-    process: processType?.name ?? null,
-    autoCutoffMinutes:
-      state === 1 && processType?.isAuto ? processType.cutoffMinutes : null,
+    room:        body.roomNumber,
+    action:      body.action,
+    event:       body.event ?? null,
+    controls:    targets.map((t) => ({ id: t.control.id, label: t.control.label, type: t.typeName })),
+    process:     processType?.name ?? null,
+    autoCutoffMinutes: state === 1 && processType?.isAuto ? processType.cutoffMinutes : null,
   });
 });
 

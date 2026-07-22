@@ -117,14 +117,14 @@ router.get("/mhms-preview", requirePermission("rooms.view"), async (req, res) =>
     return;
   }
 
-  // Call MHMS room list endpoint. We support the URL as-is or with /api/rooms appended.
+  // MHMS official endpoint: GET {base}/api/integration/power/rooms
   const base = prop.mhmsApiUrl.replace(/\/+$/, "");
-  const url = base.endsWith("/rooms") || base.endsWith("/api/rooms") ? base : `${base}/api/rooms`;
+  const url = `${base}/api/integration/power/rooms`;
 
   let raw: unknown;
   try {
-    const headers: Record<string, string> = { "Accept": "application/json" };
-    if (prop.mhmsApiKey) headers["X-Api-Key"] = prop.mhmsApiKey;
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (prop.mhmsApiKey) headers["X-API-Key"] = prop.mhmsApiKey;
     const resp = await fetch(url, { headers, signal: AbortSignal.timeout(10_000) });
     if (!resp.ok) {
       res.status(400).json({ error: `MHMS returned HTTP ${resp.status}. Check the API URL and key.` });
@@ -136,27 +136,17 @@ router.get("/mhms-preview", requirePermission("rooms.view"), async (req, res) =>
     return;
   }
 
-  // Normalise: accept array directly or {rooms:[...]} / {data:[...]} / {result:[...]}
-  const list: unknown[] = Array.isArray(raw)
-    ? raw
-    : Array.isArray((raw as any)?.rooms)
-    ? (raw as any).rooms
-    : Array.isArray((raw as any)?.data)
-    ? (raw as any).data
-    : Array.isArray((raw as any)?.result)
-    ? (raw as any).result
-    : [];
+  // Response shape: { hotelId, hotelName, rooms: [ { roomNumber, roomType, block, floor } ] }
+  const list: unknown[] = Array.isArray((raw as any)?.rooms) ? (raw as any).rooms : [];
 
-  // Map common field name variants to a canonical shape.
-  const pick = (obj: any, ...keys: string[]): string =>
-    (keys.map((k) => obj[k]).find((v) => v != null) ?? "").toString().trim();
-
-  const rooms = list.map((item: any) => ({
-    roomNo: pick(item, "RoomNo", "roomNo", "room_no", "room", "RoomNumber", "roomNumber"),
-    blockName: pick(item, "Block", "block", "BlockName", "blockName", "block_name"),
-    floorName: pick(item, "Floor", "floor", "FloorName", "floorName", "floor_name"),
-    roomTypeName: pick(item, "RoomType", "roomType", "room_type", "RoomTypeName", "roomTypeName", "Type", "type"),
-  })).filter((r) => r.roomNo.length > 0);
+  const rooms = list
+    .map((item: any) => ({
+      roomNo:       (item.roomNumber ?? "").toString().trim(),
+      blockName:    (item.block      ?? "").toString().trim(),
+      floorName:    (item.floor      ?? "").toString().trim(),
+      roomTypeName: (item.roomType   ?? "").toString().trim(),
+    }))
+    .filter((r) => r.roomNo.length > 0);
 
   res.json(rooms);
 });

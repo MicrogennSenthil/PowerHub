@@ -1,0 +1,114 @@
+M-HMS × PowerHub Integration API
+Document version: 1.0 — July 2026 Environment: Production — https://mhms.microgenn.com
+
+Overview
+M-HMS exposes two REST endpoints for PowerHub integration:
+
+Direction	Who calls it	Purpose
+M-HMS → PowerHub	M-HMS (outbound)	Send ON/OFF power commands at lifecycle events
+PowerHub → M-HMS	PowerHub (inbound)	Pull the hotel room master list
+Authentication uses the same shared API key for both directions. The key is configured once in M-HMS under Configuration → Power Automation.
+
+Authentication
+All requests must include the header:
+
+X-API-Key: <your-api-key>
+
+Missing or invalid keys return 401 Unauthorized.
+
+1. Outbound — M-HMS sends power commands to PowerHub
+M-HMS calls this endpoint on your PowerHub server at lifecycle events.
+
+Request
+POST {PowerHub Base URL}/api/integration/power/commands
+X-API-Key: <api-key>
+Content-Type: application/json
+
+{
+  "roomNumber": "101",
+  "action": "ON",
+  "controlTypes": ["Light", "AC"],
+  "event": "checkin",
+  "hotelId": "...",
+  "grcNo": "GRC/001/26-27/0000001",
+  "guestName": "John Doe",
+  "timestamp": "2026-07-22T10:30:00+05:30"
+}
+
+Field	Type	Description
+roomNumber	string	Hotel room number (e.g. "101")
+action	"ON" | "OFF"	Power action
+controlTypes	string[]	Controls to switch (e.g. ["Light","AC"]). Empty = all controls
+event	string	Lifecycle event that triggered this (checkin, walkin, checkout, cleaning, visiting, transfer)
+hotelId	string	M-HMS hotel identifier
+grcNo	string?	Guest registration card number (if applicable)
+guestName	string?	Guest name (if applicable)
+timestamp	string	ISO 8601 timestamp with hotel timezone offset
+Expected Response
+HTTP 202 Accepted
+
+M-HMS treats 202 as success — command queued. Other 2xx also accepted. Non-2xx is logged and retried (for deferred cutoffs).
+
+2. Inbound — PowerHub pulls the room master list from M-HMS
+PowerHub calls this endpoint to fetch all active rooms with their room type, block and floor.
+
+Request
+GET https://mhms.microgenn.com/api/integration/power/rooms
+X-API-Key: <api-key>
+
+Response
+{
+  "hotelId": "28fe7680-d1b4-45ae-9949-26f226c3d865",
+  "hotelName": "GM Residency",
+  "rooms": [
+    {
+      "roomNumber": "101",
+      "roomType": "Standard",
+      "block": "Main Block",
+      "floor": "First Floor"
+    },
+    {
+      "roomNumber": "106",
+      "roomType": "Deluxe",
+      "block": "Main Block",
+      "floor": "First Floor"
+    }
+  ]
+}
+
+Field	Type	Description
+hotelId	string	M-HMS hotel identifier
+hotelName	string	Hotel name
+rooms[].roomNumber	string	Room number as configured in M-HMS
+rooms[].roomType	string | null	Room type name (e.g. Standard, Deluxe)
+rooms[].block	string | null	Block name (e.g. Main Block)
+rooms[].floor	string | null	Floor name (e.g. First Floor)
+Only active rooms are returned. Deactivated or removed rooms are excluded automatically.
+
+Error Responses
+HTTP Code	Meaning
+401	Missing, empty, or invalid X-API-Key
+500	Internal server error
+Events that trigger power commands
+Event	Action	Notes
+Check-in	ON	Walk-in and advance check-in
+Group check-in / walk-in	ON	All rooms in the group
+Room transfer	ON	New room powered on; old room powered off
+Checkout	OFF	Immediate (default) or deferred to settlement
+Cleaning	ON	Configured control types only (default: Light)
+Visiting	ON	Visitor access; auto OFF after visit ends
+Setup (one-time, done by hotel staff in M-HMS)
+Log in to M-HMS → Configuration → Power Automation
+Fill in:
+Base URL — PowerHub server address (provided by PowerHub team)
+API Key — shared key agreed with PowerHub team
+Turn on Enable Power Automation
+Click Save
+Use Test Connection (enter a room number, click Test Power ON) to verify
+Once saved, the key must be configured on the PowerHub side as well to enable inbound room-list pulls.
+
+Staging environment
+For testing before going live:
+
+Base URL: https://stagmhms.microgenn.com
+Authentication and all endpoints are identical to production
