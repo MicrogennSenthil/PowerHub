@@ -15,9 +15,17 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
-          port: ${{ secrets.VPS_PORT }}
+          port: 22
           script: |
             set -e
+
+            # Load nvm so node/pnpm/pm2 are available in non-interactive SSH
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            export PATH="$HOME/.nvm/versions/node/$(nvm current)/bin:$PATH"
+
+            echo "=== Node: $(node -v) | pnpm: $(pnpm -v) ==="
+
             echo "=== Pulling latest code ==="
             cd /var/www/powerhub
             git pull origin main
@@ -25,11 +33,13 @@ jobs:
             echo "=== Installing dependencies ==="
             pnpm install --frozen-lockfile
 
-            echo "=== Building ==="
+            echo "=== Building API server ==="
             pnpm --filter @workspace/api-server run build
+
+            echo "=== Building frontend ==="
             pnpm --filter @workspace/powerhub run build
 
-            echo "=== Restarting services ==="
+            echo "=== Restarting API ==="
             pm2 reload powerhub-api --update-env
             pm2 save
 
