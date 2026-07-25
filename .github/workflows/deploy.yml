@@ -1,0 +1,36 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT }}
+          script: |
+            set -e
+            echo "=== Pulling latest code ==="
+            cd /var/www/powerhub
+            git pull origin main
+
+            echo "=== Installing dependencies ==="
+            pnpm install --frozen-lockfile
+
+            echo "=== Building ==="
+            pnpm --filter @workspace/api-server run build
+            pnpm --filter @workspace/powerhub run build
+
+            echo "=== Restarting services ==="
+            pm2 reload powerhub-api --update-env
+            pm2 save
+
+            echo "=== Done ==="
