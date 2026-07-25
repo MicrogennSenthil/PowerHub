@@ -2,43 +2,50 @@ PowerHub Companion Bridge
 =========================
 
 WHAT IT DOES
-The relay boxes speak plain HTTP. The PowerHub server needs HTTPS.
-This bridge runs on one always-on computer at the hotel and translates
-between the two. If this computer is off, the boxes cannot receive
-commands - keep it running 24/7 for real operation.
+------------
+The relay boxes (ESP32) speak plain HTTP. PowerHub requires HTTPS.
+This bridge runs on any always-on Windows PC at the hotel. It accepts
+plain HTTP from the relay boxes and forwards every request securely to
+https://power.microgenn.com over HTTPS.
 
-SETUP (Windows)
-1. Install Node.js (LTS) from https://nodejs.org  - next, next, finish.
-2. Copy this folder anywhere, e.g. C:\powerhub-bridge
-3. Open config.json in Notepad. Change "powerhubUrl" to wherever
-   PowerHub is hosted — this is the ONLY line you ever need to change:
+REQUIREMENTS
+------------
+- Windows 7 / 10 / 11
+- Node.js (download LTS from https://nodejs.org)
 
-     Replit production  →  "https://power.microgenn.com"
-     Your VPS          →  "https://power.microgenn.com"  (or http://VPS_IP:PORT)
-     Replit dev        →  "https://xxxx.sisko.replit.dev"
+FIRST-TIME SETUP
+----------------
+1. Install Node.js if not already installed.
+2. Double-click  install.bat
+   - Registers the bridge to auto-start on Windows login.
+   - Starts the bridge immediately in the background.
 
-   listenPort (8085) stays the same regardless of where the server is.
-4. Double-click start-bridge.bat
-   A black window opens and shows the exact PORT and Host IP to type
-   into each relay box's WiFi CONFIGURATION page.
+DAILY USE
+---------
+After install.bat runs once, the bridge starts automatically every
+time you log in to Windows. Nothing else to do.
 
-CONFIGURE EACH RELAY BOX
-   PORT      : 8085
-   Device ID : the box's number (e.g. 000010)
-   Host      : this computer's IP shown in the bridge window
-               (e.g. 192.168.250.105 - NOT any internet IP)
+DEBUG / LOGS
+------------
+Double-click  debug.bat  to see the bridge logs in a visible window.
+Useful for troubleshooting relay box connectivity.
 
-TEST
-Open in a browser on the same network:
-   http://<this-pc-ip>:8085/api/PowerDeviceApi/000010
-If you see NOCMD (or a command string), the bridge works.
+RELAY BOX CONFIGURATION
+-----------------------
+In each relay box's WiFi configuration page, enter:
+  HOST : <this PC's IP address>   (run ipconfig to find it)
+  PORT : 8085
 
-AUTOSTART WITH WINDOWS (recommended)
-Press Win+R, type: shell:startup
-Copy a shortcut of start-bridge.bat into that folder.
+Test the connection from any browser on the local network:
+  http://<this-PC-IP>:8085/api/PowerDeviceApi/000010
+  (should return NOCMD or a command string)
 
-IMPORTANT
-- Give this computer a FIXED IP on the router (DHCP reservation),
-  otherwise the IP may change after a reboot and boxes will lose it.
-- Allow port 8085 through Windows Firewall if boxes cannot connect
-  (Windows usually asks the first time - click "Allow").
+STOPPING THE BRIDGE
+-------------------
+Open Task Manager → find  node.exe → End Task.
+
+CONFIG
+------
+config.json controls where requests are forwarded and which port to listen on.
+  "powerhubUrl"  : https://power.microgenn.com  (do not change unless server moves)
+  "listenPort"   : 8085  (change if port conflicts with another app)

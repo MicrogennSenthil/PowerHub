@@ -174,11 +174,13 @@ export function Settings() {
         </CardHeader>
         <CardContent className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-sm text-gray-600">
-            <p>1. Download &amp; unzip on the bridge PC (Node.js LTS required).</p>
-            <p>2. Edit <code className="rounded bg-gray-100 px-1">config.json</code> with your PowerHub address, then run <code className="rounded bg-gray-100 px-1">start-bridge.bat</code>.</p>
+            <p>1. Install <strong>Node.js LTS</strong> from <a href="https://nodejs.org" target="_blank" rel="noreferrer" className="underline">nodejs.org</a> if not already installed.</p>
+            <p>2. Download &amp; unzip on the always-on PC at the property.</p>
+            <p>3. Run <code className="rounded bg-gray-100 px-1">install.bat</code> — registers auto-start &amp; runs the bridge.</p>
+            <p>4. Use <code className="rounded bg-gray-100 px-1">debug.bat</code> to see logs or troubleshoot.</p>
           </div>
           <Button asChild variant="outline">
-            <a href="/api/settings/bridge-download" download>
+            <a href="/api/download/powerhub-bridge.zip" download="powerhub-bridge.zip">
               <Download className="mr-2 h-4 w-4" /> Download Bridge
             </a>
           </Button>

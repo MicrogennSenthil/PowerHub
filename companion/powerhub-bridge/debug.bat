@@ -2,7 +2,8 @@
 title PowerHub Bridge (Debug Mode)
 echo ==========================================================
 echo   PowerHub Bridge - DEBUG / VISIBLE MODE
-echo   (This window shows logs. Close it to stop the bridge.)
+echo   (This window shows logs. For background mode, run
+echo    install.bat or double-click start.vbs instead.)
 echo ==========================================================
 echo.
 node bridge.js
