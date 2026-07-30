@@ -27,19 +27,20 @@ export interface CommandMeta {
 
 function slateMaskHex(controls: ControlRow[], slate: number): string {
   // Active-high bitmask: relay ON = bit 1. Channel 1 → bit 0 (LSB).
-  // IMPORTANT: the relay board firmware parses the value with atoi() (decimal),
-  // NOT as hexadecimal. Values 0-9 are identical in decimal and hex, so the
-  // existing *0X07 command for 3 channels still works unchanged. Values ≥ 10
-  // MUST be expressed as decimal (e.g. 15 → "15") not hex (e.g. "0F"), because
-  // atoi("0F") returns 0 (stops at the non-digit 'F') → all relays off.
+  // The relay board firmware parses the value as HEXADECIMAL (e.g. sscanf/strtol
+  // with base 16). The *0X prefix is a protocol literal, not a C-style hex
+  // prefix — the firmware strips it and hex-decodes the remaining digits.
+  //   *0X07 → 0x07 = 7  = 0b0000111 → Ch1+Ch2+Ch3
+  //   *0X0F → 0x0F = 15 = 0b0001111 → Ch1+Ch2+Ch3+Ch4
+  //   *0X1F → 0x1F = 31 = 0b0011111 → Ch1–Ch5
+  // Minimum 2 hex digits, upper-case (e.g. 7→"07", 15→"0F").
   let mask = 0;
   for (const c of controls) {
     if (c.slate === slate && c.state === 1) {
       mask |= 1 << (c.channel - 1);
     }
   }
-  // Represent as decimal string, minimum 2 chars (e.g. 7→"07", 15→"15").
-  return mask.toString(10).padStart(2, "0");
+  return mask.toString(16).toUpperCase().padStart(2, "0");
 }
 
 export function buildPush(controls: ControlRow[]): string {
