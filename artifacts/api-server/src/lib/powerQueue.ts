@@ -18,7 +18,7 @@ import {
 
 export interface CommandMeta {
   processType?: ProcessTypeRow | null;
-  source: "mhms" | "ui" | "auto-cutoff";
+  source: "mhms" | "ui" | "auto-cutoff" | "hms-sync";
   grcNo?: string | null;
   billNo?: string | null;
   guestName?: string | null;

@@ -49,6 +49,8 @@ export * from './getMhmsRoomPreviewParams';
 export * from './getPowerUsageReportParams';
 export * from './getRoomChartParams';
 export * from './healthStatus';
+export * from './hmsSyncBody';
+export * from './hmsSyncResult';
 export * from './listApiKeysParams';
 export * from './listBlocksParams';
 export * from './listControlsParams';

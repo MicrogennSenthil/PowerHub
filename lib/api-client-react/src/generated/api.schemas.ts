@@ -401,6 +401,22 @@ export interface ControlBulkUpdate {
   items: ControlBulkUpdateItem[];
 }
 
+export interface HmsSyncBody {
+  propertyId: number;
+}
+
+export interface HmsSyncResult {
+  /** Total rooms processed */
+  synced: number;
+  /** Rooms where power turned ON */
+  turnsOn: number;
+  /** Rooms where power turned OFF */
+  turnsOff: number;
+  /** Rooms not found in PowerHub or already at correct state */
+  skipped: number;
+  errors: string[];
+}
+
 export type DeviceCommandBodyState = typeof DeviceCommandBodyState[keyof typeof DeviceCommandBodyState];
 
 
@@ -969,5 +985,9 @@ guest?: string;
 billNo?: string;
 grcNo?: string;
 username?: string;
+/**
+ * Filter by trigger source: hms-sync | mhms
+ */
+source?: string;
 };
 

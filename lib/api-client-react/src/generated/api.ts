@@ -59,6 +59,8 @@ import type {
   GetPowerUsageReportParams,
   GetRoomChartParams,
   HealthStatus,
+  HmsSyncBody,
+  HmsSyncResult,
   ListApiKeysParams,
   ListBlocksParams,
   ListControlTypesParams,
@@ -2879,6 +2881,77 @@ export const useSendControlCommand = <TError = ErrorType<ForbiddenResponse | Not
         TContext
       > => {
       return useMutation(getSendControlCommandMutationOptions(options));
+    }
+
+export const getSyncHmsStatusUrl = () => {
+
+
+
+
+  return `/api/rooms/hms-sync`
+}
+
+/**
+ * @summary Pull current HMS room occupancy and apply ON/OFF relay commands to match
+ */
+export const syncHmsStatus = async (hmsSyncBody: HmsSyncBody, options?: RequestInit): Promise<HmsSyncResult> => {
+
+  return customFetch<HmsSyncResult>(getSyncHmsStatusUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(hmsSyncBody)
+  }
+);}
+
+
+
+
+
+export const getSyncHmsStatusMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncHmsStatus>>, TError,{data: BodyType<HmsSyncBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncHmsStatus>>, TError,{data: BodyType<HmsSyncBody>}, TContext> => {
+
+const mutationKey = ['syncHmsStatus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncHmsStatus>>, {data: BodyType<HmsSyncBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  syncHmsStatus(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncHmsStatusMutationResult = NonNullable<Awaited<ReturnType<typeof syncHmsStatus>>>
+    export type SyncHmsStatusMutationBody = BodyType<HmsSyncBody>
+    export type SyncHmsStatusMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+
+    /**
+ * @summary Pull current HMS room occupancy and apply ON/OFF relay commands to match
+ */
+export const useSyncHmsStatus = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncHmsStatus>>, TError,{data: BodyType<HmsSyncBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof syncHmsStatus>>,
+        TError,
+        {data: BodyType<HmsSyncBody>},
+        TContext
+      > => {
+      return useMutation(getSyncHmsStatusMutationOptions(options));
     }
 
 export const getSendDeviceCommandUrl = () => {

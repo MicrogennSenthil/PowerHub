@@ -16,4 +16,8 @@ guest?: string;
 billNo?: string;
 grcNo?: string;
 username?: string;
+/**
+ * Filter by trigger source: hms-sync | mhms
+ */
+source?: string;
 };

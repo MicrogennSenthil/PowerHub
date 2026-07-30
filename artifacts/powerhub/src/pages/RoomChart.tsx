@@ -4,10 +4,12 @@ import {
   getGetRoomChartQueryKey,
   useListDevices,
   getListDevicesQueryKey,
+  useSyncHmsStatus,
   RoomChartRoom,
   RoomChartControl,
 } from '@workspace/api-client-react';
 import { useProperty } from '@/contexts/PropertyContext';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -311,9 +313,36 @@ function RoomCard({ room }: { room: RoomChartRoom }) {
 
 export function RoomChart() {
   const { selectedPropertyId } = useProperty();
+  const { toast } = useToast();
   const [blockFilter, setBlockFilter] = useState('all');
   const [floorFilter, setFloorFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [hmsSyncing, setHmsSyncing] = useState(false);
+
+  const syncHms = useSyncHmsStatus();
+
+  const handleHmsSync = async () => {
+    if (!selectedPropertyId) return;
+    setHmsSyncing(true);
+    try {
+      const result = await syncHms.mutateAsync({ data: { propertyId: selectedPropertyId } });
+      refetch();
+      const { synced, turnsOn, turnsOff, skipped, errors } = result;
+      toast({
+        title: `HMS Sync complete — ${synced} room${synced !== 1 ? 's' : ''} processed`,
+        description: [
+          turnsOn > 0 && `${turnsOn} turned ON`,
+          turnsOff > 0 && `${turnsOff} turned OFF`,
+          skipped > 0 && `${skipped} skipped`,
+          errors.length > 0 && `${errors.length} error(s): ${errors[0]}`,
+        ].filter(Boolean).join(' · ') || 'No changes queued.',
+      });
+    } catch (err: any) {
+      toast({ title: 'HMS Sync failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setHmsSyncing(false);
+    }
+  };
 
   const { data: rooms, isLoading, isFetching, refetch } = useGetRoomChart(
     { propertyId: selectedPropertyId! },
@@ -414,6 +443,17 @@ export function RoomChart() {
           
           <div className="flex flex-wrap items-center gap-3">
             <Legend />
+            <Button
+              variant="outline" size="sm"
+              onClick={handleHmsSync}
+              disabled={hmsSyncing || isFetching}
+              className="font-semibold shadow-sm hover-elevate border-blue-200 text-blue-700 hover:bg-blue-50"
+            >
+              {hmsSyncing
+                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                : <ArrowRightLeft className="mr-2 h-4 w-4" />}
+              Sync HMS
+            </Button>
             <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} className="font-semibold shadow-sm hover-elevate">
               <RefreshCw className={cn('mr-2 h-4 w-4', isFetching && 'animate-spin')} />
               Sync Grid

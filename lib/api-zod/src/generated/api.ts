@@ -827,6 +827,22 @@ export const SendControlCommandResponse = zod.object({
 
 
 /**
+ * @summary Pull current HMS room occupancy and apply ON/OFF relay commands to match
+ */
+export const SyncHmsStatusBody = zod.object({
+  "propertyId": zod.number()
+})
+
+export const SyncHmsStatusResponse = zod.object({
+  "synced": zod.number().describe('Total rooms processed'),
+  "turnsOn": zod.number().describe('Rooms where power turned ON'),
+  "turnsOff": zod.number().describe('Rooms where power turned OFF'),
+  "skipped": zod.number().describe('Rooms not found in PowerHub or already at correct state'),
+  "errors": zod.array(zod.string())
+})
+
+
+/**
  * @summary Queue an ALL-ON or ALL-OFF command for every relay on a device (or a single slate)
  */
 export const SendDeviceCommandBody = zod.object({
@@ -1392,7 +1408,8 @@ export const GetPowerUsageReportQueryParams = zod.object({
   "guest": zod.coerce.string().optional(),
   "billNo": zod.coerce.string().optional(),
   "grcNo": zod.coerce.string().optional(),
-  "username": zod.coerce.string().optional()
+  "username": zod.coerce.string().optional(),
+  "source": zod.coerce.string().optional().describe('Filter by trigger source: hms-sync | mhms')
 })
 
 export const GetPowerUsageReportResponse = zod.object({

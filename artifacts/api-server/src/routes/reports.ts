@@ -56,6 +56,15 @@ router.get("/power-usage", requirePermission("reports.view"), async (req, res) =
   if (q("username")) {
     conditions.push(ilike(powerSessionsTable.requestedBy, `%${q("username")}%`));
   }
+  // source filter: "hms-sync" → requestedBy = "HMS Sync"; "ui" → not HMS Sync/mhms
+  if (q("source")) {
+    const src = q("source")!;
+    if (src === "hms-sync") {
+      conditions.push(ilike(powerSessionsTable.requestedBy, "%HMS Sync%"));
+    } else if (src === "mhms") {
+      conditions.push(ilike(powerSessionsTable.requestedBy, "%mhms%"));
+    }
+  }
 
   const [property] = await db
     .select()

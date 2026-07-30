@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, asc, desc, and, inArray } from "drizzle-orm";
+import { eq, asc, desc, and, inArray, ilike } from "drizzle-orm";
 import { z } from "zod";
 import {
   db,
@@ -20,7 +20,13 @@ import { parseId, parsePropertyIdQuery, validateBody } from "../lib/http";
 import { refBelongsToProperty } from "../lib/integrity";
 import { getOfflineThresholdMinutes } from "../lib/settings";
 import { isDeviceOnline } from "../lib/serialize";
+import { enqueueControlChange } from "../lib/powerQueue";
 import type { Response } from "express";
+
+// HMS status values that map to ON (guest is in room)
+const HMS_ON_STATUSES = new Set(["occupied", "checkin", "walkin", "group", "transfer", "partialcheckout"]);
+// HMS status values that map to OFF (room is empty)
+const HMS_OFF_STATUSES = new Set(["vacant", "checkout", "cleaning", "maintenance", "dirty", "inspect"]);
 
 const router: IRouter = Router();
 
@@ -243,6 +249,137 @@ router.get("/chart", requirePermission("rooms.view"), async (req, res) => {
     }),
   );
 });
+
+// HMS occupancy sync: fetch current room statuses from the configured MHMS
+// endpoint and queue ON/OFF relay commands to match. Source = "hms-sync" so
+// the power-usage report can filter specifically for these batches.
+router.post(
+  "/hms-sync",
+  requirePermission("controls.manage"),
+  async (req, res) => {
+    const propertyId =
+      typeof req.body?.propertyId === "number" ? req.body.propertyId : null;
+    if (propertyId === null) {
+      res.status(400).json({ error: "propertyId is required" });
+      return;
+    }
+    if (!canAccessProperty(req.currentUser!, propertyId)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const propRows = await db
+      .select({
+        mhmsApiUrl: propertiesTable.mhmsApiUrl,
+        mhmsApiKey: propertiesTable.mhmsApiKey,
+      })
+      .from(propertiesTable)
+      .where(eq(propertiesTable.id, propertyId))
+      .limit(1);
+    const prop = propRows[0];
+    if (!prop?.mhmsApiUrl) {
+      res.status(400).json({
+        error:
+          "MHMS API URL is not configured for this property. Set it in Settings → Property.",
+      });
+      return;
+    }
+
+    // Fetch current occupancy from MHMS.
+    // Expected response: { rooms: [{ roomNumber, status, grcNo?, guestName?, billNo? }] }
+    const base = prop.mhmsApiUrl.replace(/\/+$/, "");
+    const url = `${base}/api/integration/power/occupancy`;
+    let rawRooms: {
+      roomNumber: string;
+      status: string;
+      grcNo?: string;
+      guestName?: string;
+      billNo?: string;
+    }[] = [];
+
+    try {
+      const headers: Record<string, string> = { Accept: "application/json" };
+      if (prop.mhmsApiKey) headers["X-API-Key"] = prop.mhmsApiKey;
+      const resp = await fetch(url, {
+        headers,
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!resp.ok) {
+        res
+          .status(400)
+          .json({
+            error: `HMS returned HTTP ${resp.status}. Check the API URL and key.`,
+          });
+        return;
+      }
+      const raw = (await resp.json()) as any;
+      rawRooms = Array.isArray(raw?.rooms) ? raw.rooms : [];
+    } catch (err: any) {
+      res
+        .status(400)
+        .json({ error: `Could not reach HMS: ${err.message}` });
+      return;
+    }
+
+    // Load all rooms for the property so we can match by room number.
+    const propertyRooms = await db
+      .select({ id: roomsTable.id, roomNo: roomsTable.roomNo })
+      .from(roomsTable)
+      .where(eq(roomsTable.propertyId, propertyId));
+    const roomByNo = new Map(propertyRooms.map((r) => [r.roomNo.toLowerCase(), r.id]));
+
+    // Load all controls for the property to enqueue commands.
+    const allControls = await db
+      .select()
+      .from(controlsTable)
+      .where(eq(controlsTable.propertyId, propertyId));
+    const controlsByRoom = new Map<number, typeof allControls>();
+    for (const c of allControls) {
+      if (c.roomId == null) continue;
+      if (!controlsByRoom.has(c.roomId)) controlsByRoom.set(c.roomId, []);
+      controlsByRoom.get(c.roomId)!.push(c);
+    }
+
+    const errors: string[] = [];
+    let turnsOn = 0;
+    let turnsOff = 0;
+    let skipped = 0;
+    let synced = 0;
+
+    for (const item of rawRooms) {
+      const roomNo = (item.roomNumber ?? "").toString().trim().toLowerCase();
+      if (!roomNo) { skipped++; continue; }
+      const statusRaw = (item.status ?? "").toLowerCase().trim();
+
+      let targetState: 1 | 0 | null = null;
+      if (HMS_ON_STATUSES.has(statusRaw)) targetState = 1;
+      else if (HMS_OFF_STATUSES.has(statusRaw)) targetState = 0;
+      else { skipped++; continue; } // Unknown status — skip
+
+      const roomId = roomByNo.get(roomNo);
+      if (roomId == null) { skipped++; continue; } // Room not configured in PowerHub
+
+      const controls = controlsByRoom.get(roomId) ?? [];
+      if (controls.length === 0) { skipped++; continue; }
+
+      synced++;
+      try {
+        await enqueueControlChange(controls, targetState, {
+          source: "hms-sync",
+          requestedBy: "HMS Sync",
+          grcNo: item.grcNo ?? null,
+          guestName: item.guestName ?? null,
+          billNo: item.billNo ?? null,
+        });
+        if (targetState === 1) turnsOn++; else turnsOff++;
+      } catch (err: any) {
+        errors.push(`Room ${item.roomNumber}: ${err.message}`);
+      }
+    }
+
+    res.status(202).json({ synced, turnsOn, turnsOff, skipped, errors });
+  },
+);
 
 router.post("/bulk", requirePermission("rooms.manage"), async (req, res) => {
   const BulkBody = z.object({

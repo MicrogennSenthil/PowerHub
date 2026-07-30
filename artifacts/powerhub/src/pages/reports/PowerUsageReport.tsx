@@ -32,6 +32,7 @@ export function PowerUsageReport() {
   const [billNo, setBillNo] = useState('');
   const [grcNo, setGrcNo] = useState('');
   const [username, setUsername] = useState('');
+  const [source, setSource] = useState<string>('all');
 
   const params = useMemo(() => ({
     propertyId: selectedPropertyId!,
@@ -42,7 +43,8 @@ export function PowerUsageReport() {
     ...(billNo ? { billNo } : {}),
     ...(grcNo ? { grcNo } : {}),
     ...(username ? { username } : {}),
-  }), [selectedPropertyId, from, to, roomId, guest, billNo, grcNo, username]);
+    ...(source !== 'all' ? { source } : {}),
+  }), [selectedPropertyId, from, to, roomId, guest, billNo, grcNo, username, source]);
 
   const { data: report, isLoading, isFetching } = useGetPowerUsageReport(params, {
     query: { enabled: !!selectedPropertyId, queryKey: getGetPowerUsageReportQueryKey(params) },
@@ -172,6 +174,17 @@ export function PowerUsageReport() {
               <Label className="text-xs font-bold text-gray-600">User / Staff</Label>
               <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Search staff..." className="font-medium bg-gray-50" />
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-gray-600">Trigger Source</Label>
+              <Select value={source} onValueChange={setSource}>
+                <SelectTrigger className="font-medium bg-gray-50"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="font-medium">All sources</SelectItem>
+                  <SelectItem value="hms-sync" className="font-medium">HMS Sync</SelectItem>
+                  <SelectItem value="mhms" className="font-medium">HMS Auto (MHMS)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -272,13 +285,20 @@ export function PowerUsageReport() {
                       {s.controlTypeName && s.controlLabel && <div className="text-[10px] uppercase font-bold text-gray-400 mt-0.5">{s.controlTypeName}</div>}
                     </TableCell>
                     <TableCell className="py-3">
-                      {s.processName ? (
-                        <Badge variant="outline" className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold border-gray-200 dark:border-gray-700">
-                          {s.processName}
-                        </Badge>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
+                      <div className="flex flex-col gap-1">
+                        {s.processName ? (
+                          <Badge variant="outline" className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold border-gray-200 dark:border-gray-700 w-fit">
+                            {s.processName}
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                        {s.requestedBy === 'HMS Sync' && (
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[9px] uppercase tracking-wider font-bold w-fit">
+                            HMS Sync
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="py-3">
                       <div className="text-xs font-mono font-medium text-gray-600 dark:text-gray-400">
