@@ -23,6 +23,18 @@ import { isDeviceOnline } from "../lib/serialize";
 import { enqueueControlChange } from "../lib/powerQueue";
 import type { Response } from "express";
 
+/**
+ * Ensure the stored MHMS URL has a scheme.
+ * Users often paste "microgenn.in/api/..." without "https://", which causes
+ * the Node fetch to throw "Failed to parse URL".  Prepend https:// if no
+ * scheme is present, then strip any trailing slashes.
+ */
+function normaliseBaseUrl(raw: string): string {
+  const trimmed = raw.trim();
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  return withScheme.replace(/\/+$/, "");
+}
+
 // HMS status values that map to ON (guest is in room)
 const HMS_ON_STATUSES = new Set(["occupied", "checkin", "walkin", "group", "transfer", "partialcheckout"]);
 // HMS status values that map to OFF (room is empty)
@@ -126,7 +138,7 @@ router.get("/mhms-preview", requirePermission("rooms.view"), async (req, res) =>
   }
 
   // MHMS official endpoint: GET {base}/api/integration/power/rooms
-  const base = prop.mhmsApiUrl.replace(/\/+$/, "");
+  const base = normaliseBaseUrl(prop.mhmsApiUrl);
   const url = `${base}/api/integration/power/rooms`;
 
   let raw: unknown;
@@ -287,7 +299,7 @@ router.post(
 
     // Fetch current occupancy from MHMS.
     // Expected response: { rooms: [{ roomNumber, status, grcNo?, guestName?, billNo? }] }
-    const base = prop.mhmsApiUrl.replace(/\/+$/, "");
+    const base = normaliseBaseUrl(prop.mhmsApiUrl);
     const url = `${base}/api/integration/power/occupancy`;
     let rawRooms: {
       roomNumber: string;
