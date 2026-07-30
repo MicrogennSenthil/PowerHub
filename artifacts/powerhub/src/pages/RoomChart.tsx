@@ -13,7 +13,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
@@ -38,6 +37,8 @@ import {
   UserCheck,
   Timer,
   MousePointer,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 
 // Compact "how long ago" for device last-seen times.
@@ -318,6 +319,14 @@ export function RoomChart() {
   const [floorFilter, setFloorFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [hmsSyncing, setHmsSyncing] = useState(false);
+  // collapsible: sets of "blockName" or "blockName::floorName" keys
+  const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
+  const [collapsedFloors, setCollapsedFloors] = useState<Set<string>>(new Set());
+
+  const toggleBlock = (key: string) =>
+    setCollapsedBlocks((prev) => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
+  const toggleFloor = (key: string) =>
+    setCollapsedFloors((prev) => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
 
   const syncHms = useSyncHmsStatus();
 
@@ -422,11 +431,12 @@ export function RoomChart() {
   }
 
   return (
-    <div className="flex h-full flex-col animate-in fade-in duration-500">
-      <div className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-6 py-5 shadow-sm relative z-20">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+    <div className="animate-in fade-in duration-500 -mx-4 md:-mx-6 lg:-mx-8 -mt-4 md:-mt-6 lg:-mt-8 flex flex-col">
+      {/* Sticky header — breaks out of AppShell padding so it pins edge-to-edge */}
+      <div className="sticky top-0 z-20 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 md:px-6 lg:px-8 py-4 shadow-sm">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white flex items-center gap-3">
+            <h1 className="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white flex items-center gap-3">
               Power Matrix
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 text-success border border-success/20 text-xs font-bold tracking-wide">
                 <span className="relative flex h-2 w-2">
@@ -436,123 +446,174 @@ export function RoomChart() {
                 {activeRooms} / {totalRooms} ACTIVE
               </div>
             </h1>
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">
               Live room &amp; device status monitor
             </p>
           </div>
-          
-          <div className="flex flex-wrap items-center gap-3">
+
+          <div className="flex flex-wrap items-center gap-2">
             <Legend />
             <Button
               variant="outline" size="sm"
               onClick={handleHmsSync}
               disabled={hmsSyncing || isFetching}
-              className="font-semibold shadow-sm hover-elevate border-blue-200 text-blue-700 hover:bg-blue-50"
+              className="font-semibold shadow-sm hover-elevate border-blue-200 text-blue-700 hover:bg-blue-50 h-8 text-xs"
             >
-              {hmsSyncing
-                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                : <ArrowRightLeft className="mr-2 h-4 w-4" />}
+              {hmsSyncing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <ArrowRightLeft className="mr-1.5 h-3.5 w-3.5" />}
               Sync HMS
             </Button>
-            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} className="font-semibold shadow-sm hover-elevate">
-              <RefreshCw className={cn('mr-2 h-4 w-4', isFetching && 'animate-spin')} />
+            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}
+              className="font-semibold shadow-sm hover-elevate h-8 text-xs">
+              <RefreshCw className={cn('mr-1.5 h-3.5 w-3.5', isFetching && 'animate-spin')} />
               Sync Grid
             </Button>
           </div>
         </div>
 
-        <DeviceStatusStrip propertyId={selectedPropertyId} />
-
-        <div className="mt-5 flex flex-wrap items-center gap-3">
+        {/* Device strip + filters on one compact row */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <DeviceStatusStrip propertyId={selectedPropertyId} />
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+            <Search className="pointer-events-none absolute left-3 top-2 h-3.5 w-3.5 text-gray-400" />
             <Input
               placeholder="Search room..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-10 w-48 sm:w-64 pl-9 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 font-medium focus-visible:ring-primary/50"
+              className="h-8 w-40 sm:w-52 pl-8 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 font-medium text-xs focus-visible:ring-primary/50"
             />
           </div>
           {hasBlocks && (
             <Select value={blockFilter} onValueChange={setBlockFilter}>
-              <SelectTrigger className="h-10 w-40 bg-gray-50 dark:bg-gray-800 font-medium border-gray-200 dark:border-gray-700">
+              <SelectTrigger className="h-8 w-36 bg-gray-50 dark:bg-gray-800 font-medium border-gray-200 dark:border-gray-700 text-xs">
                 <SelectValue placeholder="All blocks" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all" className="font-medium">All blocks</SelectItem>
+                <SelectItem value="all" className="font-medium text-xs">All blocks</SelectItem>
                 {blockOptions.map((b) => (
-                  <SelectItem key={b} value={b} className="font-medium">{b}</SelectItem>
+                  <SelectItem key={b} value={b} className="font-medium text-xs">{b}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
           <Select value={floorFilter} onValueChange={setFloorFilter}>
-            <SelectTrigger className="h-10 w-40 bg-gray-50 dark:bg-gray-800 font-medium border-gray-200 dark:border-gray-700">
+            <SelectTrigger className="h-8 w-36 bg-gray-50 dark:bg-gray-800 font-medium border-gray-200 dark:border-gray-700 text-xs">
               <SelectValue placeholder="All floors" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all" className="font-medium">All floors</SelectItem>
+              <SelectItem value="all" className="font-medium text-xs">All floors</SelectItem>
               {floorOptions.map((f) => (
-                <SelectItem key={f} value={f} className="font-medium">{f}</SelectItem>
+                <SelectItem key={f} value={f} className="font-medium text-xs">{f}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      <ScrollArea className="flex-1 bg-gray-50/50 dark:bg-gray-950 p-0 relative z-10">
-        <div className="p-6 md:p-8">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-              <Loader2 className="mb-4 h-10 w-10 animate-spin text-primary" /> 
-              <p className="font-medium tracking-wide">INITIALIZING POWER MATRIX...</p>
+      {/* Scrollable room grid — just natural page scroll, no inner ScrollArea */}
+      <div className="px-4 md:px-6 lg:px-8 py-6 bg-gray-50/50 dark:bg-gray-950">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <Loader2 className="mb-4 h-10 w-10 animate-spin text-primary" />
+            <p className="font-medium tracking-wide">INITIALIZING POWER MATRIX...</p>
+          </div>
+        ) : groups.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+            <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-6 mb-4">
+              <Search className="h-10 w-10 text-gray-300 dark:text-gray-600" />
             </div>
-          ) : groups.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 text-gray-400">
-              <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-6 mb-4">
-                <Search className="h-10 w-10 text-gray-300 dark:text-gray-600" />
-              </div>
-              <p className="text-lg font-bold text-gray-700 dark:text-gray-300">No rooms found</p>
-              <p className="text-sm mt-1">Adjust your filters to see more rooms.</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-10">
-              {groups.map((block) => (
-                <div key={block.blockName} className="space-y-6">
-                  {hasBlocks && (
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-lg font-extrabold uppercase tracking-widest text-gray-800 dark:text-gray-200">
-                        {block.blockName}
-                      </h2>
-                      <div className="h-px flex-1 bg-gray-200 dark:bg-gray-800"></div>
+            <p className="text-lg font-bold text-gray-700 dark:text-gray-300">No rooms found</p>
+            <p className="text-sm mt-1">Adjust your filters to see more rooms.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6">
+            {groups.map((block) => {
+              const blockCollapsed = collapsedBlocks.has(block.blockName);
+              const blockRoomCount = block.floors.reduce((n, f) => n + f.rooms.length, 0);
+              const blockOnCount = block.floors.reduce((n, f) =>
+                n + f.rooms.filter((r) => r.controls.some((c) => c.on && c.deviceOnline)).length, 0);
+
+              return (
+                <div key={block.blockName} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
+                  {/* Block header — always visible, click to collapse */}
+                  <button
+                    type="button"
+                    onClick={() => hasBlocks && toggleBlock(block.blockName)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-5 py-3 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700 text-left transition-colors",
+                      hasBlocks && "hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer",
+                    )}
+                  >
+                    {hasBlocks && (
+                      blockCollapsed
+                        ? <ChevronRight className="h-4 w-4 text-gray-400 shrink-0" />
+                        : <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" />
+                    )}
+                    <h2 className="text-sm font-extrabold uppercase tracking-widest text-gray-800 dark:text-gray-200 flex-1">
+                      {block.blockName}
+                    </h2>
+                    <div className="flex items-center gap-2 text-xs font-bold text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <span className="h-2 w-2 rounded-full bg-success" />
+                        {blockOnCount} ON
+                      </span>
+                      <span className="text-gray-300">·</span>
+                      <span>{blockRoomCount} rooms</span>
+                    </div>
+                  </button>
+
+                  {!blockCollapsed && (
+                    <div className="p-4 flex flex-col gap-5">
+                      {block.floors.map((floor) => {
+                        const floorKey = `${block.blockName}::${floor.floorName}`;
+                        const floorCollapsed = collapsedFloors.has(floorKey);
+                        const floorOnCount = floor.rooms.filter((r) =>
+                          r.controls.some((c) => c.on && c.deviceOnline)).length;
+
+                        return (
+                          <div key={floor.floorName}>
+                            {/* Floor header */}
+                            <button
+                              type="button"
+                              onClick={() => toggleFloor(floorKey)}
+                              className="w-full flex items-center gap-2 mb-3 group text-left"
+                            >
+                              {floorCollapsed
+                                ? <ChevronRight className="h-3.5 w-3.5 text-primary shrink-0" />
+                                : <ChevronDown className="h-3.5 w-3.5 text-primary shrink-0" />}
+                              <span className="h-5 w-1 rounded-full bg-primary shrink-0" />
+                              <span className="text-sm font-bold text-gray-700 dark:text-gray-300 group-hover:text-primary transition-colors">
+                                {floor.floorName}
+                              </span>
+                              <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-bold text-[10px]">
+                                {floor.rooms.length} {floor.rooms.length === 1 ? 'room' : 'rooms'}
+                              </Badge>
+                              {floorOnCount > 0 && (
+                                <Badge className="bg-success/10 text-success border border-success/30 font-bold text-[10px]">
+                                  {floorOnCount} live
+                                </Badge>
+                              )}
+                            </button>
+
+                            {!floorCollapsed && (
+                              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                                {floor.rooms.map((room) => (
+                                  <RoomCard key={room.id} room={room} />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
-                  
-                  <div className="flex flex-col gap-8 pl-1">
-                    {block.floors.map((floor) => (
-                      <div key={floor.floorName} className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <span className="h-6 w-1.5 rounded-full bg-primary" />
-                          <h3 className="text-base font-bold text-gray-700 dark:text-gray-300">{floor.floorName}</h3>
-                          <Badge variant="secondary" className="bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-bold">
-                            {floor.rooms.length} {floor.rooms.length === 1 ? 'Room' : 'Rooms'}
-                          </Badge>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                          {floor.rooms.map((room) => (
-                            <RoomCard key={room.id} room={room} />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
