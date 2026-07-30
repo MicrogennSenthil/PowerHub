@@ -84,20 +84,23 @@ export async function enqueueControlChange(
         .from(controlsTable)
         .where(eq(controlsTable.deviceId, deviceId));
       const first = targetControls.find((c) => c.deviceId === deviceId)!;
-      // randomNo must stay 4-digit (legacy firmware contract), so guarantee it
-      // doesn't collide with any still-pending command for this device —
-      // otherwise a single ack could close multiple queued commands.
-      const pendingRows = await tx
-        .select({ randomNo: powerLogsTable.randomNo })
-        .from(powerLogsTable)
+      // Each new command carries the COMPLETE relay bitmask for this device,
+      // so any older pending command is now obsolete — applying it after the
+      // new one would put relays into a stale intermediate state (e.g. rapid
+      // ON clicks queue *0X01, *0X03, *0X07, *0X0F; box processes *0X01 last
+      // and wipes the relays that were already ON).
+      // Solution: supersede (flag=2) all still-pending commands for this
+      // device before inserting the new authoritative one.
+      await tx
+        .update(powerLogsTable)
+        .set({ flag: 2 })
         .where(
           and(eq(powerLogsTable.deviceId, deviceId), eq(powerLogsTable.flag, 0)),
         );
-      const taken = new Set(pendingRows.map((r) => r.randomNo));
-      let randomNo = 1000 + Math.floor(Math.random() * 9000);
-      while (taken.has(randomNo)) {
-        randomNo = 1000 + Math.floor(Math.random() * 9000);
-      }
+
+      // randomNo only needs to be 4-digit (legacy firmware contract).
+      // No collision risk now since we just cleared all pending rows.
+      const randomNo = 1000 + Math.floor(Math.random() * 9000);
       const inserted = await tx
         .insert(powerLogsTable)
         .values({
