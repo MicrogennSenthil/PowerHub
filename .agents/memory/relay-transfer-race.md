@@ -24,10 +24,13 @@ With both commands queued and unique randomNos, the board processed `*0X00` (cle
 |---|---|
 | `lib/powerQueue.ts` | Supersession now scoped to same `roomId`; falls back to full-device if either side has no roomId |
 | `lib/powerQueue.ts` | randomNo generation queries existing pending randomNos for the device and retries until collision-free (cap 50 iterations) |
-| `routes/integrationPower.ts` | In-memory `deviceLastAckedMs` map; poll endpoint returns empty (hold-off) for 2 s after any ack (`RELAY_SETTLE_MS = 2000`) |
+| `routes/integrationPower.ts` | DB-based settle check: poll handler queries `MAX(receivedAt)` for the device from the DB; holds off for `RELAY_SETTLE_MS = 5000 ms` after last ack |
 
-## Why 2 seconds
-Physical bistable (latching) relay coil needs ~50–200 ms to de-latch, but we use 2 s as a conservative margin. The board polls every few seconds anyway, so the effective latency impact is at most one additional poll cycle.
+## Why DB-based (not in-memory)
+The original fix used an in-memory `deviceLastAckedMs` map. That map is wiped on every PM2 restart or deploy, so the first transfer after any deployment had zero settle delay — explaining why the bug was *intermittent*. Replaced with a query on `powerLogsTable` (flag=1, order by id desc, limit 1) which survives restarts.
+
+## Why 5 seconds
+Bumped from 2 s to 5 s: 5 s is imperceptible to guests but provides extra margin over any realistic relay coil settle time or board poll interval variation. Confirmed working in production on 30 Jul 2026.
 
 ## Key invariant
 The `buildPush`/`buildPull` bitmasks in `slateMaskHex()` are full-state writes intended for the firmware (all channels set to the mask value). The settle delay is a safety net for firmware that may apply commands too fast for physical relay response.
