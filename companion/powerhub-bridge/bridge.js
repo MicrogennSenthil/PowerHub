@@ -184,6 +184,30 @@ const server = http.createServer((req, res) => {
   console.log(new Date().toISOString(), req.method, req.url);
 });
 
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.error("");
+    console.error("  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    console.error("  ERROR: Port " + PORT + " is already in use.");
+    console.error("");
+    console.error("  The bridge is most likely already running in the");
+    console.error("  background (started by install.bat or auto-startup).");
+    console.error("");
+    console.error("  To fix:");
+    console.error("    1. Open Task Manager (Ctrl+Shift+Esc)");
+    console.error("    2. Find 'node.exe' under Background Processes");
+    console.error("    3. Right-click -> End Task");
+    console.error("    4. Run debug.bat again");
+    console.error("");
+    console.error("  OR just run  stop-bridge.bat  then  debug.bat");
+    console.error("  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    console.error("");
+  } else {
+    console.error("Server error:", err.message);
+  }
+  process.exit(1);
+});
+
 server.listen(PORT, "0.0.0.0", () => {
   console.log("==========================================================");
   console.log("  PowerHub Companion Bridge is RUNNING");
