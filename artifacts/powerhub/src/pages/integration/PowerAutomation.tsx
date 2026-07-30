@@ -285,7 +285,9 @@ GET ${baseUrl}/PowerDeviceStatusApi/<device-code>/<random-no>`}</CodeBlock>
                     <TableCell>
                       {l.flag === 1
                         ? <Badge variant="outline" className="bg-green-50 text-green-700">Delivered</Badge>
-                        : <Badge variant="outline" className="bg-amber-50 text-amber-700">Pending</Badge>}
+                        : l.flag === 2
+                          ? <Badge variant="outline" className="bg-gray-100 text-gray-400">Superseded</Badge>
+                          : <Badge variant="outline" className="bg-amber-50 text-amber-700">Pending</Badge>}
                     </TableCell>
                   </TableRow>
                 )) : (
