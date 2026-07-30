@@ -34,7 +34,6 @@ import { makeSimpleMasterRouter } from "./simpleMaster";
 import { requireAuth } from "../lib/auth";
 import adminPropertiesRouter from "./adminProperties";
 import authOtpRouter from "./authOtp";
-import storageRouter from "./storage";
 
 const router: IRouter = Router();
 
@@ -98,6 +97,23 @@ router.use("/integration/api-keys", apiKeysRouter);
 router.use("/power-logs", powerLogsRouter);
 router.use("/reports", reportsRouter);
 router.use("/admin/properties", adminPropertiesRouter);
-router.use(storageRouter);
+
+// Object-storage routes require the Replit storage sidecar (127.0.0.1:1106).
+// On the VPS the sidecar doesn't exist, so we guard the import so the server
+// doesn't crash — photo uploads simply return 503 outside of Replit.
+if (process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) {
+  try {
+    // Dynamic require keeps the module tree free of a hard dependency on
+    // @google-cloud/storage when the bucket env-var isn't present.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { default: storageRouter } = require("./storage");
+    router.use(storageRouter);
+  } catch (err: any) {
+    console.warn(
+      "[storage] Object storage routes not loaded — package unavailable:",
+      err.message,
+    );
+  }
+}
 
 export default router;
