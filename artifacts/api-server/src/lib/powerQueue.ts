@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import {
   db,
   controlsTable,
@@ -94,17 +94,38 @@ export async function enqueueControlChange(
         .where(eq(controlsTable.deviceId, deviceId));
       const first = targetControls.find((c) => c.deviceId === deviceId)!;
       // Each new command carries the COMPLETE relay bitmask for this device,
-      // so any older pending command is now obsolete — applying it after the
-      // new one would put relays into a stale intermediate state (e.g. rapid
-      // ON clicks queue *0X01, *0X03, *0X07, *0X0F; box processes *0X01 last
-      // and wipes the relays that were already ON).
-      // Solution: supersede (flag=2) all still-pending commands for this
-      // device before inserting the new authoritative one.
+      // so any older pending command for the SAME ROOM is now obsolete —
+      // applying it after the new one would put relays into a stale
+      // intermediate state (e.g. rapid ON clicks queue *0X01, *0X03, *0X07,
+      // *0X0F; box processes *0X01 last and wipes the relays already ON).
+      //
+      // IMPORTANT: only supersede commands that target the same room.
+      // If room 103 is checking OUT and room 105 is checking IN at the same
+      // time, both on device 000001, the 105-ON command must NOT swallow the
+      // 103-OFF command.  The box will deliver them in queue order:
+      //   1. 103 OFF (*0X00) — relay physically de-energises              ✓
+      //   2. 105 ON  (*0X14) — relay energises for 105's channels         ✓
+      // Without this guard the 103-OFF is superseded, the board only
+      // receives *0X14 (SET 105), and the 103 relay stays energised.
+      //
+      // Rule: supersede only when the pending command has the SAME roomId as
+      // the new one (or when either side has no roomId — fall back to the
+      // original full-device supersession for non-room commands).
+      const newRoomId = first.roomId ?? null;
       await tx
         .update(powerLogsTable)
         .set({ flag: 2 })
         .where(
-          and(eq(powerLogsTable.deviceId, deviceId), eq(powerLogsTable.flag, 0)),
+          and(
+            eq(powerLogsTable.deviceId, deviceId),
+            eq(powerLogsTable.flag, 0),
+            // When both sides have a known room, only supersede same-room rows.
+            // If either is null we can't safely scope it, so fall back to
+            // the old full-device behaviour.
+            newRoomId != null
+              ? or(isNull(powerLogsTable.roomId), eq(powerLogsTable.roomId, newRoomId))
+              : undefined,
+          ),
         );
 
       // randomNo only needs to be 4-digit (legacy firmware contract).
