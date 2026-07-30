@@ -13,6 +13,7 @@ export const appUsersTable = pgTable("app_users", {
   clerkUserId: text("clerk_user_id"),
   email: text("email").notNull(),
   name: text("name").notNull().default(""),
+  phone: text("phone"),
   isSuperAdmin: boolean("is_super_admin").notNull().default(false),
   active: boolean("active").notNull().default(true),
   roleId: integer("role_id").references(() => rolesTable.id, {

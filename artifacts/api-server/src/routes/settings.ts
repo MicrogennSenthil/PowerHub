@@ -30,6 +30,10 @@ function serialize(r: SystemSettingsRow) {
     smtpFrom: r.smtpFrom,
     alertEmailEnabled: r.alertEmailEnabled,
     alertOfflineMinutes: r.alertOfflineMinutes,
+    waApiUrl: r.waApiUrl,
+    waApiKeySet: !!r.waApiKey,
+    waPhoneNumberId: r.waPhoneNumberId,
+    waOtpEnabled: r.waOtpEnabled,
     updatedAt: r.updatedAt.toISOString(),
   };
 }
@@ -102,6 +106,11 @@ router.put("/", requirePermission("settings.manage"), async (req, res) => {
       ...(body.smtpFrom !== undefined ? { smtpFrom: body.smtpFrom } : {}),
       ...(body.alertEmailEnabled !== undefined ? { alertEmailEnabled: body.alertEmailEnabled } : {}),
       ...(body.alertOfflineMinutes !== undefined ? { alertOfflineMinutes: body.alertOfflineMinutes } : {}),
+      ...(body.waApiUrl !== undefined ? { waApiUrl: body.waApiUrl } : {}),
+      // Only overwrite the API key when a non-empty value is supplied.
+      ...(body.waApiKey ? { waApiKey: body.waApiKey } : {}),
+      ...(body.waPhoneNumberId !== undefined ? { waPhoneNumberId: body.waPhoneNumberId } : {}),
+      ...(body.waOtpEnabled !== undefined ? { waOtpEnabled: body.waOtpEnabled } : {}),
       updatedAt: new Date(),
     })
     .where(eq(systemSettingsTable.id, SETTINGS_ID))

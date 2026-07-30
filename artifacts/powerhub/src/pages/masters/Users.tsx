@@ -51,6 +51,7 @@ export function Users() {
   const [formData, setFormData] = useState({ 
     email: '', 
     name: '', 
+    phone: '',
     roleId: '0', 
     isSuperAdmin: false, 
     active: true,
@@ -59,7 +60,7 @@ export function Users() {
 
   const openNew = () => {
     setEditingRecord(null);
-    setFormData({ email: '', name: '', roleId: '0', isSuperAdmin: false, active: true, propertyIds: [] });
+    setFormData({ email: '', name: '', phone: '', roleId: '0', isSuperAdmin: false, active: true, propertyIds: [] });
     setIsEditorOpen(true);
   };
 
@@ -68,6 +69,7 @@ export function Users() {
     setFormData({ 
       email: user.email, 
       name: user.name, 
+      phone: (user as any).phone ?? '',
       roleId: user.roleId?.toString() || '0', 
       isSuperAdmin: user.isSuperAdmin, 
       active: user.active,
@@ -102,6 +104,7 @@ export function Users() {
         // Can't edit email in update payload typically, but let's pass what API expects
         const payload = {
           name: formData.name,
+          phone: formData.phone.trim() || null,
           roleId: formData.roleId !== '0' ? parseInt(formData.roleId, 10) : null,
           isSuperAdmin: formData.isSuperAdmin,
           active: formData.active,
@@ -113,6 +116,7 @@ export function Users() {
         const payload = {
           email: formData.email,
           name: formData.name,
+          phone: formData.phone.trim() || undefined,
           roleId: formData.roleId !== '0' ? parseInt(formData.roleId, 10) : undefined,
           isSuperAdmin: formData.isSuperAdmin,
           active: formData.active,
@@ -225,6 +229,11 @@ export function Users() {
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} disabled={!!editingRecord} placeholder="For login via Clerk" />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="phone">WhatsApp Phone Number</Label>
+                <Input id="phone" type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="e.g. 919876543210 (with country code, no spaces)" />
+                <p className="text-xs text-gray-500">Used for WhatsApp OTP sign-in and password reset. Include country code (e.g. 91 for India).</p>
               </div>
             </div>
 

@@ -1021,6 +1021,7 @@ export const ListUsersResponse = zod.array(ListUsersResponseItem)
 export const CreateUserBody = zod.object({
   "email": zod.string().min(1),
   "name": zod.string().min(1),
+  "phone": zod.string().nullish(),
   "roleId": zod.number().optional(),
   "isSuperAdmin": zod.boolean().optional(),
   "active": zod.boolean().optional(),
@@ -1049,6 +1050,7 @@ export const UpdateUserParams = zod.object({
 
 export const UpdateUserBody = zod.object({
   "name": zod.string().min(1).optional(),
+  "phone": zod.string().nullish(),
   "roleId": zod.number().nullish(),
   "isSuperAdmin": zod.boolean().optional(),
   "active": zod.boolean().optional(),
@@ -1169,6 +1171,10 @@ export const GetSettingsResponse = zod.object({
   "smtpFrom": zod.string().nullish(),
   "alertEmailEnabled": zod.boolean().optional(),
   "alertOfflineMinutes": zod.number().optional(),
+  "waApiUrl": zod.string().nullish(),
+  "waApiKeySet": zod.boolean().optional(),
+  "waPhoneNumberId": zod.string().nullish(),
+  "waOtpEnabled": zod.boolean().optional(),
   "updatedAt": zod.coerce.date().optional()
 })
 
@@ -1200,7 +1206,11 @@ export const UpdateSettingsBody = zod.object({
   "smtpPassword": zod.string().nullish(),
   "smtpFrom": zod.string().nullish(),
   "alertEmailEnabled": zod.boolean().optional(),
-  "alertOfflineMinutes": zod.number().min(1).optional()
+  "alertOfflineMinutes": zod.number().min(1).optional(),
+  "waApiUrl": zod.string().nullish(),
+  "waApiKey": zod.string().nullish(),
+  "waPhoneNumberId": zod.string().nullish(),
+  "waOtpEnabled": zod.boolean().optional()
 })
 
 export const UpdateSettingsResponse = zod.object({

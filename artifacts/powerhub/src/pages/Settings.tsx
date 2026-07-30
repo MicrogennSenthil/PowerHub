@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Radio, Wifi, Save, ShieldCheck, Hash, Download, Bell, Mail } from 'lucide-react';
+import { Loader2, Radio, Wifi, Save, ShieldCheck, Hash, Download, Bell, Mail, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type ProtocolKind = 'legacy' | 'mqtt';
@@ -37,6 +37,10 @@ interface FormState {
   smtpFrom: string;
   alertEmailEnabled: boolean;
   alertOfflineMinutes: string;
+  waApiUrl: string;
+  waApiKey: string;
+  waPhoneNumberId: string;
+  waOtpEnabled: boolean;
 }
 
 const EMPTY: FormState = {
@@ -58,6 +62,10 @@ const EMPTY: FormState = {
   smtpFrom: '',
   alertEmailEnabled: false,
   alertOfflineMinutes: '10',
+  waApiUrl: '',
+  waApiKey: '',
+  waPhoneNumberId: '',
+  waOtpEnabled: false,
 };
 
 export function Settings() {
@@ -95,6 +103,10 @@ export function Settings() {
       smtpFrom: (settings as any).smtpFrom ?? '',
       alertEmailEnabled: (settings as any).alertEmailEnabled ?? false,
       alertOfflineMinutes: String((settings as any).alertOfflineMinutes ?? 10),
+      waApiUrl: (settings as any).waApiUrl ?? '',
+      waApiKey: '',
+      waPhoneNumberId: (settings as any).waPhoneNumberId ?? '',
+      waOtpEnabled: (settings as any).waOtpEnabled ?? false,
     });
   }, [settings]);
 
@@ -139,6 +151,10 @@ export function Settings() {
           smtpFrom: form.smtpFrom.trim() || null,
           alertEmailEnabled: form.alertEmailEnabled,
           alertOfflineMinutes: parseInt(form.alertOfflineMinutes, 10) || 10,
+          waApiUrl: form.waApiUrl.trim() || null,
+          ...(form.waApiKey ? { waApiKey: form.waApiKey } : {}),
+          waPhoneNumberId: form.waPhoneNumberId.trim() || null,
+          waOtpEnabled: form.waOtpEnabled,
         },
       });
       queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
@@ -433,6 +449,50 @@ export function Settings() {
               {(settings as any)?.smtpPasswordSet && (
                 <p className="text-xs text-gray-500">Password saved. Leave blank to keep it.</p>
               )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* WhatsApp OTP */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2"><MessageCircle className="h-4 w-4 text-green-600" /> WhatsApp OTP (Sign-in &amp; Password Reset)</CardTitle>
+          <CardDescription>
+            When enabled, users can sign in or reset their password via a one-time code sent to their registered WhatsApp number.
+            Powered by the mwhatsapp platform. Set up an API key and phone number ID before enabling.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Switch id="waEnabled" checked={form.waOtpEnabled} onCheckedChange={(c) => set('waOtpEnabled', c)} />
+            <div>
+              <Label htmlFor="waEnabled">Enable WhatsApp OTP</Label>
+              <p className="text-xs text-gray-500">Shows "Sign in with WhatsApp OTP" on the login screen.</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="waApiUrl">mwhatsapp Platform URL</Label>
+              <Input id="waApiUrl" placeholder="https://wa.microgenn.com" value={form.waApiUrl}
+                onChange={(e) => set('waApiUrl', e.target.value)} />
+              <p className="text-xs text-gray-500">Base URL of your mwhatsapp instance (no trailing slash).</p>
+            </div>
+            <div className="space-y-2sm:col-span-2">
+              <Label htmlFor="waApiKey">API Key</Label>
+              <Input id="waApiKey" type="password" autoComplete="new-password"
+                placeholder={(settings as any)?.waApiKeySet ? '•••••••• (unchanged)' : 'mwa_...'}
+                value={form.waApiKey} onChange={(e) => set('waApiKey', e.target.value)} />
+              {(settings as any)?.waApiKeySet && (
+                <p className="text-xs text-gray-500">API key saved. Leave blank to keep it.</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="waPhoneId">Phone Number ID</Label>
+              <Input id="waPhoneId" placeholder="e.g. clxxxxx..." value={form.waPhoneNumberId}
+                onChange={(e) => set('waPhoneNumberId', e.target.value)} />
+              <p className="text-xs text-gray-500">The phone number ID from your mwhatsapp dashboard — the number OTPs are sent from.</p>
             </div>
           </div>
         </CardContent>

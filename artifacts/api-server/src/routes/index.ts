@@ -33,6 +33,7 @@ import { mhmsRouter, deviceRouter } from "./integrationPower";
 import { makeSimpleMasterRouter } from "./simpleMaster";
 import { requireAuth } from "../lib/auth";
 import adminPropertiesRouter from "./adminProperties";
+import authOtpRouter from "./authOtp";
 
 const router: IRouter = Router();
 
@@ -46,6 +47,8 @@ router.use("/integration/power", mhmsRouter);
 // Branding is read publicly (login/splash + castable TV welcome page render
 // without an authenticated session). Writes remain authenticated below.
 router.use("/branding", brandingPublicRouter);
+// WhatsApp OTP + password-reset eligibility check — public, no Clerk session.
+router.use("/auth", authOtpRouter);
 
 // Everything below requires an authenticated (and provisioned) user.
 router.use(requireAuth);

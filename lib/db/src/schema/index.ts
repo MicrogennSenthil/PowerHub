@@ -15,3 +15,4 @@ export * from "./powerLogs";
 export * from "./powerSessions";
 export * from "./apiKeys";
 export * from "./propertyInvoices";
+export * from "./otpTokens";

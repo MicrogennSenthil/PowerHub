@@ -128,6 +128,7 @@ async function serializeOne(id: number) {
       id: appUsersTable.id,
       email: appUsersTable.email,
       name: appUsersTable.name,
+      phone: appUsersTable.phone,
       isSuperAdmin: appUsersTable.isSuperAdmin,
       active: appUsersTable.active,
       roleId: appUsersTable.roleId,
@@ -144,6 +145,7 @@ async function serializeOne(id: number) {
     id: r.id,
     email: r.email,
     name: r.name,
+    phone: r.phone ?? null,
     isSuperAdmin: r.isSuperAdmin,
     active: r.active,
     roleId: r.roleId,
@@ -207,6 +209,7 @@ router.post("/", requirePermission("users.manage"), async (req, res) => {
       .values({
         email: body.email,
         name: body.name,
+        phone: body.phone ?? null,
         roleId: body.roleId ?? null,
         isSuperAdmin: caller.isSuperAdmin
           ? (body.isSuperAdmin ?? false)
@@ -302,6 +305,7 @@ router.patch("/:id", requirePermission("users.manage"), async (req, res) => {
       .update(appUsersTable)
       .set({
         ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(body.phone !== undefined ? { phone: body.phone } : {}),
         ...(body.roleId !== undefined ? { roleId: body.roleId } : {}),
         ...(body.isSuperAdmin !== undefined
           ? { isSuperAdmin: body.isSuperAdmin }

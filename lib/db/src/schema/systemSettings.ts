@@ -40,6 +40,11 @@ export const systemSettingsTable = pgTable("system_settings", {
   smtpFrom: text("smtp_from"),
   alertEmailEnabled: boolean("alert_email_enabled").notNull().default(false),
   alertOfflineMinutes: integer("alert_offline_minutes").notNull().default(10),
+  // WhatsApp OTP delivery via mwhatsapp platform
+  waApiUrl: text("wa_api_url"),
+  waApiKey: text("wa_api_key"),
+  waPhoneNumberId: text("wa_phone_number_id"),
+  waOtpEnabled: boolean("wa_otp_enabled").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
