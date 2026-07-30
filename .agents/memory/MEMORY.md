@@ -4,3 +4,4 @@
 - [Multi-tenancy hardening](multitenancy-hardening.md) — roles are now property-scoped; default roles seeded on property creation; billing fields on properties; admin panel; user isolation pattern.
 - [Replit-managed Clerk key recovery](clerk-key-recovery.md) — overwritten Clerk keys can't be pasted back; fix with setupClerkWhitelabelAuth() + restart both workflows; never route managed keys through requestSecrets.
 - [WhatsApp OTP auth flow](whatsapp-otp-auth.md) — custom sign-in page, mwhatsapp API contract, Clerk ticket flow, superadmin reset block, phone field, WA settings.
+- [Relay transfer race condition](relay-transfer-race.md) — three-layer bug in simultaneous MHMS checkout+checkin: wrong supersession scope, randomNo collision, relay settle timing; three fixes applied.
