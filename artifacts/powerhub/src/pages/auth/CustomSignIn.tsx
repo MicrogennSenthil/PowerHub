@@ -44,41 +44,63 @@ export function CustomSignIn() {
     if (!signIn) return;
     setLoading(true);
     try {
-      const result = await signIn.create({
-        identifier: email.trim(),
-        password,
-      });
+      // Step A: create sign-in with identifier only.
+      // Clerk may return 'complete' immediately (password already in create)
+      // or 'needs_first_factor' (we must explicitly attempt the password).
+      let attempt = await signIn.create({ identifier: email.trim() });
 
-      if (result.status === 'complete') {
-        await setActive!({ session: result.createdSessionId });
+      // If Clerk resolved it already (some configurations do this)
+      if (attempt.status === 'complete') {
+        await setActive!({ session: attempt.createdSessionId });
         setLocation('/dashboard');
         return;
       }
 
-      // Clerk requires an additional email code on new devices.
-      if (result.status === 'needs_first_factor') {
-        const emailFactor = result.supportedFirstFactors?.find(
-          (f: any) => f.strategy === 'email_code',
+      // Step B: attempt the password as the first factor.
+      if (attempt.status === 'needs_first_factor') {
+        const passwordFactor = attempt.supportedFirstFactors?.find(
+          (f: any) => f.strategy === 'password',
         );
-        if (emailFactor) {
-          await result.prepareFirstFactor({
-            strategy: 'email_code',
-            emailAddressId: (emailFactor as any).emailAddressId,
-          });
-          toast({
-            title: 'Verification required',
-            description: 'A code has been sent to your email. Enter it below.',
-          });
-          setStep('forgot-code');
-          setLoading(false);
-          return;
+
+        if (passwordFactor) {
+          attempt = await attempt.attemptFirstFactor({
+            strategy: 'password',
+            password,
+          } as any);
+
+          if (attempt.status === 'complete') {
+            await setActive!({ session: attempt.createdSessionId });
+            setLocation('/dashboard');
+            return;
+          }
+
+          // Clerk now requires an additional email code (new-device check).
+          if (attempt.status === 'needs_second_factor' ||
+              attempt.status === 'needs_first_factor') {
+            const emailFactor = attempt.supportedFirstFactors?.find(
+              (f: any) => f.strategy === 'email_code',
+            );
+            if (emailFactor) {
+              await attempt.prepareFirstFactor({
+                strategy: 'email_code',
+                emailAddressId: (emailFactor as any).emailAddressId,
+              });
+              toast({
+                title: 'Verification required',
+                description: 'A code has been sent to your email. Enter it below.',
+              });
+              setStep('forgot-code');
+              setLoading(false);
+              return;
+            }
+          }
         }
       }
 
-      // Any other status (needs_second_factor, etc.) — surface it clearly.
+      // Fallback — surface whatever state Clerk is in for diagnosis.
       toast({
         title: 'Sign in incomplete',
-        description: `Could not complete sign-in (state: ${result.status ?? 'unknown'}). Please contact your administrator.`,
+        description: `Unexpected sign-in state: ${attempt.status ?? 'null'}. Please contact your administrator.`,
         variant: 'destructive',
       });
     } catch (err: any) {
