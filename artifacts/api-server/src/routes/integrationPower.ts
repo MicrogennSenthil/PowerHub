@@ -1,7 +1,7 @@
 import net from "node:net";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import {
   db,
   controlsTable,
@@ -135,22 +135,20 @@ export const deviceRouter: IRouter = Router();
 // ---------------------------------------------------------------------------
 // Inter-command delay
 // ---------------------------------------------------------------------------
-// When a transfer (or any simultaneous opposite-direction change) queues two
-// commands for the same device (e.g. *0X00 to clear 101 then *0X21 to set
-// 106), the relay board can process both back-to-back in the same poll
-// cycle.  The first command pulses all relays OFF; the second immediately
-// re-energises the new room's channels — but the relay contacts haven't had
-// time to physically open, so the old room's channel can stay latched ON.
+// When a transfer queues two commands for the same device (e.g. *0X00 to
+// clear room 103 then *0X26 to set room 106), the relay board can ack the
+// first and immediately poll for the second within milliseconds.  The relay
+// contacts physically haven't had time to open before the next bitmask
+// re-energises the same channel — so the old room stays ON.
 //
-// Fix: after a command is acked, hold off returning the *next* pending
-// command for the same device for RELAY_SETTLE_MS.  This lets the physical
-// relay contacts fully separate before the next bitmask is applied.
+// Fix: after a command is acked, the poll handler checks the most-recently
+// delivered command's receivedAt from the DB.  If it is within
+// RELAY_SETTLE_MS we return empty so the board retries on its next cycle.
 //
-// This is in-memory (no schema change required).  It resets on server
-// restart — the worst case is one transfer where the gap is skipped on the
-// first poll after a restart, which is acceptable.
-const RELAY_SETTLE_MS = 2_000; // 2 s — relay physical open/close settle time
-const deviceLastAckedMs = new Map<number, number>(); // deviceId → epoch ms
+// Using the DB (not an in-memory map) means the gap survives server
+// restarts — previously the in-memory map was cleared on every PM2 restart
+// or deploy, causing the first transfer after any restart to skip the delay.
+const RELAY_SETTLE_MS = 5_000; // 5 s — conservative relay settle window
 
 // Simple in-memory rate limiter for the unauthenticated device endpoints:
 // max 30 requests per device-code+IP per 10 s window. Real boxes poll every
@@ -240,14 +238,21 @@ deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
     return;
   }
 
-  // Inter-command relay settle delay: if this device had a command acked
-  // recently, hold off returning the next command so the relay contacts have
-  // time to physically open/close before the next bitmask is applied.
-  // Without this gap, a transfer queues *0X00 (clear all) then *0X21 (set
-  // new room) and the board processes both so fast the old room's relay never
-  // physically opens — it stays energised.
-  const lastAcked = deviceLastAckedMs.get(device.id);
-  if (lastAcked !== undefined && Date.now() - lastAcked < RELAY_SETTLE_MS) {
+  // Inter-command relay settle delay: check the most recently delivered
+  // command for this device.  If it was acked within RELAY_SETTLE_MS, return
+  // empty so the board retries on its next poll cycle.
+  //
+  // We query the DB rather than an in-memory map so the gap survives server
+  // restarts — the in-memory approach silently skipped the delay after every
+  // PM2 restart or deploy, causing intermittent transfer failures.
+  const lastDelivered = await db
+    .select({ receivedAt: powerLogsTable.receivedAt })
+    .from(powerLogsTable)
+    .where(and(eq(powerLogsTable.deviceId, device.id), eq(powerLogsTable.flag, 1)))
+    .orderBy(desc(powerLogsTable.id))
+    .limit(1);
+  const lastAckedAt = lastDelivered[0]?.receivedAt;
+  if (lastAckedAt && Date.now() - lastAckedAt.getTime() < RELAY_SETTLE_MS) {
     // Tell the board "nothing yet" — it will retry on its next poll cycle.
     res.type("text/plain").send("");
     return;
@@ -317,10 +322,6 @@ deviceRouter.get(
       .update(devicesTable)
       .set({ lastSeenAt: now })
       .where(eq(devicesTable.id, device.id));
-
-    // Record ack time so the poll handler can impose the relay settle delay
-    // before serving the next pending command for this device.
-    deviceLastAckedMs.set(device.id, Date.now());
 
     // Legacy firmware expects the literal (misspelled) 'Succss' ack response.
     res.type("text/plain").send("Succss");
