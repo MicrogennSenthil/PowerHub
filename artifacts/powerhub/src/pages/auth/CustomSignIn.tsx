@@ -58,12 +58,52 @@ export function CustomSignIn() {
         identifier: email.trim(),
         password,
       });
+
       if (result.status === 'complete') {
         await setActive!({ session: result.createdSessionId });
         setLocation('/dashboard');
-      } else {
-        toast({ title: 'Sign in incomplete', description: 'Unexpected auth state. Please try again.', variant: 'destructive' });
+        return;
       }
+
+      // Clerk may require an additional first factor (e.g. email code) for
+      // new device sessions even after password is accepted.
+      if (result.status === 'needs_first_factor') {
+        const emailFactor = result.supportedFirstFactors?.find(
+          (f: any) => f.strategy === 'email_code',
+        );
+        if (emailFactor) {
+          await result.prepareFirstFactor({
+            strategy: 'email_code',
+            emailAddressId: (emailFactor as any).emailAddressId,
+          });
+          toast({
+            title: 'Verification required',
+            description: 'A code has been sent to your email. Enter it below.',
+          });
+          setStep('forgot-code'); // reuse the OTP entry step
+          setLoading(false);
+          return;
+        }
+      }
+
+      // MFA required — surface a helpful message instead of a generic error.
+      if (result.status === 'needs_second_factor') {
+        toast({
+          title: 'Two-factor authentication required',
+          description: 'Please complete the second-factor verification.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Any other unexpected status — show the actual status for diagnosis.
+      console.error('[sign-in] unexpected Clerk status:', result.status, result);
+      toast({
+        title: 'Sign in incomplete',
+        description: `Auth state: ${result.status ?? 'unknown'}. Please try again or contact support.`,
+        variant: 'destructive',
+      });
     } catch (err: any) {
       toast({
         title: 'Sign in failed',
