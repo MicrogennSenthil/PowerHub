@@ -45,6 +45,8 @@ import type {
   DashboardSummary,
   DashboardTrends,
   Device,
+  DeviceCommandBody,
+  DeviceCommandResult,
   DeviceInput,
   DeviceUpdate,
   Floor,
@@ -2877,6 +2879,77 @@ export const useSendControlCommand = <TError = ErrorType<ForbiddenResponse | Not
         TContext
       > => {
       return useMutation(getSendControlCommandMutationOptions(options));
+    }
+
+export const getSendDeviceCommandUrl = () => {
+
+
+
+
+  return `/api/controls/device-command`
+}
+
+/**
+ * @summary Queue an ALL-ON or ALL-OFF command for every relay on a device (or a single slate)
+ */
+export const sendDeviceCommand = async (deviceCommandBody: DeviceCommandBody, options?: RequestInit): Promise<DeviceCommandResult> => {
+
+  return customFetch<DeviceCommandResult>(getSendDeviceCommandUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(deviceCommandBody)
+  }
+);}
+
+
+
+
+
+export const getSendDeviceCommandMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendDeviceCommand>>, TError,{data: BodyType<DeviceCommandBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendDeviceCommand>>, TError,{data: BodyType<DeviceCommandBody>}, TContext> => {
+
+const mutationKey = ['sendDeviceCommand'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendDeviceCommand>>, {data: BodyType<DeviceCommandBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  sendDeviceCommand(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendDeviceCommandMutationResult = NonNullable<Awaited<ReturnType<typeof sendDeviceCommand>>>
+    export type SendDeviceCommandMutationBody = BodyType<DeviceCommandBody>
+    export type SendDeviceCommandMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+    /**
+ * @summary Queue an ALL-ON or ALL-OFF command for every relay on a device (or a single slate)
+ */
+export const useSendDeviceCommand = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendDeviceCommand>>, TError,{data: BodyType<DeviceCommandBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendDeviceCommand>>,
+        TError,
+        {data: BodyType<DeviceCommandBody>},
+        TContext
+      > => {
+      return useMutation(getSendDeviceCommandMutationOptions(options));
     }
 
 export const getBulkUpdateControlsUrl = () => {

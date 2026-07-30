@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, asc, inArray } from "drizzle-orm";
+import { and, eq, asc, inArray } from "drizzle-orm";
 import {
   db,
   controlsTable,
@@ -70,6 +70,65 @@ router.get("/", requirePermission("devices.view"), async (req, res) => {
     .orderBy(asc(controlsTable.slate), asc(controlsTable.channel));
   res.json(rows);
 });
+
+// Bulk ON/OFF for all controls on a device (or a single slate). Declared
+// before "/:id" so the literal paths are not parsed as ids.
+router.post(
+  "/device-command",
+  requirePermission("controls.manage"),
+  async (req, res) => {
+    const { deviceId, slate, state: stateStr } = req.body as {
+      deviceId: unknown;
+      slate?: unknown;
+      state: unknown;
+    };
+    if (
+      typeof deviceId !== "number" ||
+      !Number.isInteger(deviceId) ||
+      (stateStr !== "on" && stateStr !== "off")
+    ) {
+      res.status(400).json({ error: "deviceId (integer) and state ('on'|'off') are required" });
+      return;
+    }
+    const slateNum =
+      typeof slate === "number" && Number.isInteger(slate) ? slate : null;
+
+    const device = await db
+      .select()
+      .from(devicesTable)
+      .where(eq(devicesTable.id, deviceId))
+      .limit(1);
+    if (!device[0]) {
+      res.status(404).json({ error: "Device not found" });
+      return;
+    }
+    if (!canAccessProperty(req.currentUser!, device[0].propertyId)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const targets = await db
+      .select()
+      .from(controlsTable)
+      .where(
+        slateNum !== null
+          ? and(eq(controlsTable.deviceId, deviceId), eq(controlsTable.slate, slateNum))
+          : eq(controlsTable.deviceId, deviceId),
+      );
+
+    if (targets.length === 0) {
+      res.status(404).json({ error: "No controls found for this device" });
+      return;
+    }
+
+    const state = stateStr === "on" ? 1 : 0;
+    const logIds = await enqueueControlChange(targets, state as 0 | 1, {
+      source: "ui",
+      requestedBy: req.currentUser!.name || req.currentUser!.email,
+    });
+    res.status(202).json({ queued: logIds.length, powerLogIds: logIds });
+  },
+);
 
 // Bulk-assign many channels to rooms / load types in one atomic batch. Declared
 // before "/:id" so the literal "bulk" path is not parsed as an id.

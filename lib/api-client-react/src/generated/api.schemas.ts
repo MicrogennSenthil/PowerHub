@@ -401,6 +401,26 @@ export interface ControlBulkUpdate {
   items: ControlBulkUpdateItem[];
 }
 
+export type DeviceCommandBodyState = typeof DeviceCommandBodyState[keyof typeof DeviceCommandBodyState];
+
+
+export const DeviceCommandBodyState = {
+  on: 'on',
+  off: 'off',
+} as const;
+
+export interface DeviceCommandBody {
+  deviceId: number;
+  /** If provided, only controls on this slate are toggled. Omit to toggle all slates. */
+  slate?: number;
+  state: DeviceCommandBodyState;
+}
+
+export interface DeviceCommandResult {
+  queued: number;
+  powerLogIds: number[];
+}
+
 export type ControlCommandBodyState = typeof ControlCommandBodyState[keyof typeof ControlCommandBodyState];
 
 

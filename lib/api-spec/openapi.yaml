@@ -697,6 +697,29 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /controls/device-command:
+    post:
+      operationId: sendDeviceCommand
+      tags: [controls]
+      summary: Queue an ALL-ON or ALL-OFF command for every relay on a device (or a single slate)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceCommandBody"
+      responses:
+        "202":
+          description: Commands queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceCommandResult"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /controls/bulk:
     patch:
       operationId: bulkUpdateControls
@@ -1629,6 +1652,25 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ControlBulkUpdateItem"
+    DeviceCommandBody:
+      type: object
+      required: [deviceId, state]
+      properties:
+        deviceId: { type: integer }
+        slate:
+          type: integer
+          description: "If provided, only controls on this slate are toggled. Omit to toggle all slates."
+        state:
+          type: string
+          enum: [on, "off"]
+    DeviceCommandResult:
+      type: object
+      required: [queued, powerLogIds]
+      properties:
+        queued: { type: integer }
+        powerLogIds:
+          type: array
+          items: { type: integer }
     ControlCommandBody:
       type: object
       required: [state]

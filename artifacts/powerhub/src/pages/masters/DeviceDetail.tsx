@@ -13,13 +13,14 @@ import {
   useListRooms,
   useListControlTypes,
   useSendControlCommand,
+  useSendDeviceCommand,
   Control
 } from '@workspace/api-client-react';
 import { useProperty } from '@/contexts/PropertyContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Loader2, Save, Wifi, WifiOff, X, ListChecks } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, Wifi, WifiOff, X, ListChecks, Power, PowerOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -157,8 +158,10 @@ export function DeviceDetail() {
   const updateControl = useUpdateControl();
   const bulkUpdate = useBulkUpdateControls();
   const sendCommand = useSendControlCommand();
+  const sendDeviceCommand = useSendDeviceCommand();
   const [bulkOpen, setBulkOpen] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [bulkToggling, setBulkToggling] = useState<string | null>(null); // 'slate1-on' | 'slate1-off' | 'slate2-on' | 'slate2-off'
 
   const handleToggle = async (control: Control, on: boolean) => {
     setTogglingId(control.id);
@@ -185,6 +188,25 @@ export function DeviceDetail() {
       toast({ title: 'Channel configured' });
     } catch (err: any) {
       toast({ title: 'Error saving channel', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const handleBulkSlateCommand = async (slate: number, on: boolean) => {
+    const key = `slate${slate}-${on ? 'on' : 'off'}`;
+    setBulkToggling(key);
+    try {
+      await sendDeviceCommand.mutateAsync({ data: { deviceId, slate, state: on ? 'on' : 'off' } });
+      queryClient.invalidateQueries({ queryKey: getListControlsQueryKey({ deviceId }) });
+      toast({
+        title: `Slate ${slate} ALL ${on ? 'ON' : 'OFF'} queued`,
+        description: device?.online
+          ? 'The relay box will apply it on its next poll.'
+          : 'Device offline — command waits in the queue.',
+      });
+    } catch (err: any) {
+      toast({ title: 'Failed to queue command', description: err.message, variant: 'destructive' });
+    } finally {
+      setBulkToggling(null);
     }
   };
 
@@ -250,8 +272,22 @@ export function DeviceDetail() {
 
       <div className="grid md:grid-cols-2 gap-8">
         <div className="rounded-md border bg-white shadow-sm overflow-hidden">
-          <div className="bg-gray-50 px-4 py-3 border-b font-medium text-gray-700 flex justify-between">
+          <div className="bg-gray-50 px-4 py-3 border-b font-medium text-gray-700 flex items-center justify-between">
             <span>Slate 1 (Channels 1-8)</span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-green-700 border-green-200 hover:bg-green-50"
+                onClick={() => handleBulkSlateCommand(1, true)}
+                disabled={!!bulkToggling}>
+                {bulkToggling === 'slate1-on' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Power className="h-3 w-3" />}
+                All ON
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-red-700 border-red-200 hover:bg-red-50"
+                onClick={() => handleBulkSlateCommand(1, false)}
+                disabled={!!bulkToggling}>
+                {bulkToggling === 'slate1-off' ? <Loader2 className="h-3 w-3 animate-spin" /> : <PowerOff className="h-3 w-3" />}
+                All OFF
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-12 gap-4 px-4 py-2 border-b bg-gray-50/50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
             <div className="col-span-1">Ch</div>
@@ -279,8 +315,22 @@ export function DeviceDetail() {
         </div>
 
         <div className="rounded-md border bg-white shadow-sm overflow-hidden">
-          <div className="bg-gray-50 px-4 py-3 border-b font-medium text-gray-700 flex justify-between">
+          <div className="bg-gray-50 px-4 py-3 border-b font-medium text-gray-700 flex items-center justify-between">
             <span>Slate 2 (Channels 9-16)</span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-green-700 border-green-200 hover:bg-green-50"
+                onClick={() => handleBulkSlateCommand(2, true)}
+                disabled={!!bulkToggling}>
+                {bulkToggling === 'slate2-on' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Power className="h-3 w-3" />}
+                All ON
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-red-700 border-red-200 hover:bg-red-50"
+                onClick={() => handleBulkSlateCommand(2, false)}
+                disabled={!!bulkToggling}>
+                {bulkToggling === 'slate2-off' ? <Loader2 className="h-3 w-3 animate-spin" /> : <PowerOff className="h-3 w-3" />}
+                All OFF
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-12 gap-4 px-4 py-2 border-b bg-gray-50/50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
             <div className="col-span-1">Ch</div>

@@ -827,6 +827,21 @@ export const SendControlCommandResponse = zod.object({
 
 
 /**
+ * @summary Queue an ALL-ON or ALL-OFF command for every relay on a device (or a single slate)
+ */
+export const SendDeviceCommandBody = zod.object({
+  "deviceId": zod.number(),
+  "slate": zod.number().optional().describe('If provided, only controls on this slate are toggled. Omit to toggle all slates.'),
+  "state": zod.enum(['on', 'off'])
+})
+
+export const SendDeviceCommandResponse = zod.object({
+  "queued": zod.number(),
+  "powerLogIds": zod.array(zod.number())
+})
+
+
+/**
  * @summary Assign multiple relay channels to rooms / load types in one batch
  */
 export const BulkUpdateControlsBody = zod.object({
@@ -1021,7 +1036,6 @@ export const ListUsersResponse = zod.array(ListUsersResponseItem)
 export const CreateUserBody = zod.object({
   "email": zod.string().min(1),
   "name": zod.string().min(1),
-  "phone": zod.string().nullish(),
   "roleId": zod.number().optional(),
   "isSuperAdmin": zod.boolean().optional(),
   "active": zod.boolean().optional(),
@@ -1050,7 +1064,6 @@ export const UpdateUserParams = zod.object({
 
 export const UpdateUserBody = zod.object({
   "name": zod.string().min(1).optional(),
-  "phone": zod.string().nullish(),
   "roleId": zod.number().nullish(),
   "isSuperAdmin": zod.boolean().optional(),
   "active": zod.boolean().optional(),
@@ -1171,10 +1184,6 @@ export const GetSettingsResponse = zod.object({
   "smtpFrom": zod.string().nullish(),
   "alertEmailEnabled": zod.boolean().optional(),
   "alertOfflineMinutes": zod.number().optional(),
-  "waApiUrl": zod.string().nullish(),
-  "waApiKeySet": zod.boolean().optional(),
-  "waPhoneNumberId": zod.string().nullish(),
-  "waOtpEnabled": zod.boolean().optional(),
   "updatedAt": zod.coerce.date().optional()
 })
 
@@ -1206,11 +1215,7 @@ export const UpdateSettingsBody = zod.object({
   "smtpPassword": zod.string().nullish(),
   "smtpFrom": zod.string().nullish(),
   "alertEmailEnabled": zod.boolean().optional(),
-  "alertOfflineMinutes": zod.number().min(1).optional(),
-  "waApiUrl": zod.string().nullish(),
-  "waApiKey": zod.string().nullish(),
-  "waPhoneNumberId": zod.string().nullish(),
-  "waOtpEnabled": zod.boolean().optional()
+  "alertOfflineMinutes": zod.number().min(1).optional()
 })
 
 export const UpdateSettingsResponse = zod.object({
