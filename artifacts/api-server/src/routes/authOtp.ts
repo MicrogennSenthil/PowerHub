@@ -174,6 +174,23 @@ router.post("/otp/verify", async (req, res) => {
   }
 });
 
+// GET /api/auth/wa-status — public: tells the login screen whether WA OTP is configured
+router.get("/wa-status", async (_req, res) => {
+  const settings = await db
+    .select({
+      waOtpEnabled: systemSettingsTable.waOtpEnabled,
+      waApiUrl: systemSettingsTable.waApiUrl,
+      waApiKey: systemSettingsTable.waApiKey,
+      waPhoneNumberId: systemSettingsTable.waPhoneNumberId,
+    })
+    .from(systemSettingsTable)
+    .where(eq(systemSettingsTable.id, SETTINGS_ID))
+    .limit(1);
+  const s = settings[0];
+  const enabled = !!(s?.waOtpEnabled && s.waApiUrl && s.waApiKey && s.waPhoneNumberId);
+  res.json({ enabled });
+});
+
 // GET /api/auth/reset/check?email=
 router.get("/reset/check", async (req, res) => {
   const email = typeof req.query.email === "string" ? req.query.email.toLowerCase().trim() : "";

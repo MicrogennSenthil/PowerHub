@@ -3,3 +3,4 @@
 - [MHMS PowerLog integration design](mhms-power-integration.md) — command queue/device protocol decisions, wattage-snapshot sessions, 30s auto-cutoff sweep, unique device codes, drizzle push unique-constraint gotcha.
 - [Multi-tenancy hardening](multitenancy-hardening.md) — roles are now property-scoped; default roles seeded on property creation; billing fields on properties; admin panel; user isolation pattern.
 - [Replit-managed Clerk key recovery](clerk-key-recovery.md) — overwritten Clerk keys can't be pasted back; fix with setupClerkWhitelabelAuth() + restart both workflows; never route managed keys through requestSecrets.
+- [WhatsApp OTP auth flow](whatsapp-otp-auth.md) — custom sign-in page, mwhatsapp API contract, Clerk ticket flow, superadmin reset block, phone field, WA settings.

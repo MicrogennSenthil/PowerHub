@@ -2,7 +2,7 @@
 // Custom sign-in page — email/password, Forgot Password (Clerk reset) and
 // WhatsApp OTP (via our backend ticket flow).
 // ---------------------------------------------------------------------------
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSignIn } from '@clerk/react';
 import { useLocation } from 'wouter';
 import { Loader2, MessageCircle, Lock, Mail, ArrowLeft, Eye, EyeOff, CheckCircle } from 'lucide-react';
@@ -34,6 +34,14 @@ export function CustomSignIn() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [maskedPhone, setMaskedPhone] = useState('');
   const [loading, setLoading] = useState(false);
+  const [waEnabled, setWaEnabled] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/auth/wa-status')
+      .then((r) => r.json())
+      .then((d) => setWaEnabled(!!d.enabled))
+      .catch(() => {});
+  }, []);
 
   async function handleEmailContinue(e: React.FormEvent) {
     e.preventDefault();
@@ -297,15 +305,17 @@ export function CustomSignIn() {
                 >
                   Forgot password?
                 </button>
-                <button
-                  type="button"
-                  onClick={handleRequestWhatsAppOtp}
-                  disabled={loading}
-                  className="flex items-center gap-1.5 text-sm text-green-600 hover:text-green-700 hover:underline disabled:opacity-50"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  Sign in with WhatsApp OTP instead
-                </button>
+                {waEnabled && (
+                  <button
+                    type="button"
+                    onClick={handleRequestWhatsAppOtp}
+                    disabled={loading}
+                    className="flex items-center gap-1.5 text-sm text-green-600 hover:text-green-700 hover:underline disabled:opacity-50"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Sign in with WhatsApp OTP instead
+                  </button>
+                )}
               </div>
             </form>
           )}
