@@ -132,6 +132,26 @@ mhmsRouter.post("/commands", requireApiKey, async (req, res) => {
 
 export const deviceRouter: IRouter = Router();
 
+// ---------------------------------------------------------------------------
+// Inter-command delay
+// ---------------------------------------------------------------------------
+// When a transfer (or any simultaneous opposite-direction change) queues two
+// commands for the same device (e.g. *0X00 to clear 101 then *0X21 to set
+// 106), the relay board can process both back-to-back in the same poll
+// cycle.  The first command pulses all relays OFF; the second immediately
+// re-energises the new room's channels — but the relay contacts haven't had
+// time to physically open, so the old room's channel can stay latched ON.
+//
+// Fix: after a command is acked, hold off returning the *next* pending
+// command for the same device for RELAY_SETTLE_MS.  This lets the physical
+// relay contacts fully separate before the next bitmask is applied.
+//
+// This is in-memory (no schema change required).  It resets on server
+// restart — the worst case is one transfer where the gap is skipped on the
+// first poll after a restart, which is acceptable.
+const RELAY_SETTLE_MS = 2_000; // 2 s — relay physical open/close settle time
+const deviceLastAckedMs = new Map<number, number>(); // deviceId → epoch ms
+
 // Simple in-memory rate limiter for the unauthenticated device endpoints:
 // max 30 requests per device-code+IP per 10 s window. Real boxes poll every
 // few seconds; this mainly blunts randomNo brute-forcing on the ack path.
@@ -219,6 +239,20 @@ deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
     res.type("text/plain").send("");
     return;
   }
+
+  // Inter-command relay settle delay: if this device had a command acked
+  // recently, hold off returning the next command so the relay contacts have
+  // time to physically open/close before the next bitmask is applied.
+  // Without this gap, a transfer queues *0X00 (clear all) then *0X21 (set
+  // new room) and the board processes both so fast the old room's relay never
+  // physically opens — it stays energised.
+  const lastAcked = deviceLastAckedMs.get(device.id);
+  if (lastAcked !== undefined && Date.now() - lastAcked < RELAY_SETTLE_MS) {
+    // Tell the board "nothing yet" — it will retry on its next poll cycle.
+    res.type("text/plain").send("");
+    return;
+  }
+
   const p = pending[0];
   // Exact legacy format: Device.Controlpush.Controlpull.'#'.RRRR.'+'
   // (no separators between fields; randomNo zero-padded to 4 digits).
@@ -283,6 +317,11 @@ deviceRouter.get(
       .update(devicesTable)
       .set({ lastSeenAt: now })
       .where(eq(devicesTable.id, device.id));
+
+    // Record ack time so the poll handler can impose the relay settle delay
+    // before serving the next pending command for this device.
+    deviceLastAckedMs.set(device.id, Date.now());
+
     // Legacy firmware expects the literal (misspelled) 'Succss' ack response.
     res.type("text/plain").send("Succss");
   },
