@@ -24,14 +24,32 @@ import { enqueueControlChange } from "../lib/powerQueue";
 import type { Response } from "express";
 
 /**
- * Ensure the stored MHMS URL has a scheme.
- * Users often paste "microgenn.in/api/..." without "https://", which causes
- * the Node fetch to throw "Failed to parse URL".  Prepend https:// if no
- * scheme is present, then strip any trailing slashes.
+ * Normalise a user-supplied MHMS base URL.
+ *
+ * Handles two common entry mistakes:
+ *  1. Missing scheme  — "microgenn.in/..."  → "https://microgenn.in/..."
+ *  2. user@host form  — "rangees@microgenn.in" → "https://rangees.microgenn.in"
+ *     The Fetch spec forbids requests to URLs that contain credentials
+ *     (user:password@host).  Users typing "rangees@microgenn.in" intend the
+ *     subdomain "rangees.microgenn.in", not a username.
  */
 function normaliseBaseUrl(raw: string): string {
   const trimmed = raw.trim();
   const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
+  // Parse to detect embedded credentials introduced by the @ interpretation.
+  try {
+    const parsed = new URL(withScheme);
+    if (parsed.username) {
+      // Rebuild treating the "username" as a subdomain label.
+      const port = parsed.port ? `:${parsed.port}` : "";
+      const path = parsed.pathname !== "/" ? parsed.pathname : "";
+      return `${parsed.protocol}//${parsed.username}.${parsed.hostname}${port}${path}`.replace(/\/+$/, "");
+    }
+  } catch {
+    // Not a parseable URL — fall through and return as-is after stripping slash.
+  }
+
   return withScheme.replace(/\/+$/, "");
 }
 
