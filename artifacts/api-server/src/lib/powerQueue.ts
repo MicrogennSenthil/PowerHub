@@ -27,21 +27,22 @@ export interface CommandMeta {
 
 function slateMaskHex(controls: ControlRow[], slate: number): string {
   // Active-high bitmask: relay ON = bit 1. Channel 1 → bit 0 (LSB).
-  // IMPORTANT: the relay board firmware parses the value with atoi() (decimal).
-  // The *0X prefix is a protocol literal that the firmware strips before parsing.
-  //   atoi("07") = 7  = 0b00000111 → Ch1+Ch2+Ch3  ✓
-  //   atoi("0F") = 0  (stops at non-digit 'F')     → all OFF ✗ (confirmed bug)
-  //   atoi("15") = 15 = 0b00001111 → Ch1+Ch2+Ch3+Ch4 ✓
-  // Values 0–9 are identical in decimal and hex so *0X07 works either way.
-  // Values ≥ 10 MUST be expressed in decimal (e.g. 15→"15", not "0F").
+  // IMPORTANT: the relay board firmware parses the value as HEXADECIMAL but
+  // only handles lowercase hex letters (a-f). Uppercase A-F stops the parser
+  // early (returns 0) → all relays off.
+  // This matches the legacy PHP: dechex() returns lowercase, so it always
+  // produced "*0X0f" (not "*0X0F") and 4-channel commands worked correctly.
+  //   "07" → 0x07 = 7  → Ch1+Ch2+Ch3           ✓
+  //   "0F" → firmware stops at 'F' → 0 → all off ✗ (uppercase breaks it)
+  //   "0f" → 0x0f = 15 → Ch1+Ch2+Ch3+Ch4        ✓ (lowercase works)
   let mask = 0;
   for (const c of controls) {
     if (c.slate === slate && c.state === 1) {
       mask |= 1 << (c.channel - 1);
     }
   }
-  // Decimal string, minimum 2 chars (e.g. 7→"07", 15→"15", 31→"31").
-  return mask.toString(10).padStart(2, "0");
+  // Lowercase hex, minimum 2 chars (e.g. 7→"07", 15→"0f", 31→"1f").
+  return mask.toString(16).toLowerCase().padStart(2, "0");
 }
 
 export function buildPush(controls: ControlRow[]): string {
