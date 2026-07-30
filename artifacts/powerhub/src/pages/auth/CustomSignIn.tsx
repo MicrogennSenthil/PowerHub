@@ -1,11 +1,11 @@
 // ---------------------------------------------------------------------------
-// Custom sign-in page — email/password, Forgot Password (Clerk reset) and
-// WhatsApp OTP (via our backend ticket flow).
+// Custom sign-in page — email/password and Forgot Password (Clerk reset flow).
+// WhatsApp OTP has been removed; only password-based sign-in is supported.
 // ---------------------------------------------------------------------------
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSignIn } from '@clerk/react';
 import { useLocation } from 'wouter';
-import { Loader2, MessageCircle, Lock, Mail, ArrowLeft, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { Loader2, Lock, Mail, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,11 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 type Step =
   | 'email'
   | 'password'
-  | 'forgot-check'
   | 'forgot-code'
-  | 'forgot-new-password'
-  | 'wa-otp-sent'
-  | 'done';
+  | 'forgot-new-password';
 
 export function CustomSignIn() {
   const { signIn, setActive } = useSignIn();
@@ -32,23 +29,16 @@ export function CustomSignIn() {
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [maskedPhone, setMaskedPhone] = useState('');
   const [loading, setLoading] = useState(false);
-  const [waEnabled, setWaEnabled] = useState(false);
 
-  useEffect(() => {
-    fetch('/api/auth/wa-status')
-      .then((r) => r.json())
-      .then((d) => setWaEnabled(!!d.enabled))
-      .catch(() => {});
-  }, []);
-
+  // ── Step 1: email ──────────────────────────────────────────────────────────
   async function handleEmailContinue(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
     setStep('password');
   }
 
+  // ── Step 2: password ───────────────────────────────────────────────────────
   async function handlePasswordSignIn(e: React.FormEvent) {
     e.preventDefault();
     if (!signIn) return;
@@ -65,8 +55,7 @@ export function CustomSignIn() {
         return;
       }
 
-      // Clerk may require an additional first factor (e.g. email code) for
-      // new device sessions even after password is accepted.
+      // Clerk requires an additional email code on new devices.
       if (result.status === 'needs_first_factor') {
         const emailFactor = result.supportedFirstFactors?.find(
           (f: any) => f.strategy === 'email_code',
@@ -80,34 +69,25 @@ export function CustomSignIn() {
             title: 'Verification required',
             description: 'A code has been sent to your email. Enter it below.',
           });
-          setStep('forgot-code'); // reuse the OTP entry step
+          setStep('forgot-code');
           setLoading(false);
           return;
         }
       }
 
-      // MFA required — surface a helpful message instead of a generic error.
-      if (result.status === 'needs_second_factor') {
-        toast({
-          title: 'Two-factor authentication required',
-          description: 'Please complete the second-factor verification.',
-          variant: 'destructive',
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Any other unexpected status — show the actual status for diagnosis.
-      console.error('[sign-in] unexpected Clerk status:', result.status, result);
+      // Any other status (needs_second_factor, etc.) — surface it clearly.
       toast({
         title: 'Sign in incomplete',
-        description: `Auth state: ${result.status ?? 'unknown'}. Please try again or contact support.`,
+        description: `Could not complete sign-in (state: ${result.status ?? 'unknown'}). Please contact your administrator.`,
         variant: 'destructive',
       });
     } catch (err: any) {
       toast({
         title: 'Sign in failed',
-        description: err?.errors?.[0]?.longMessage ?? err?.message ?? 'Invalid credentials',
+        description:
+          err?.errors?.[0]?.longMessage ??
+          err?.message ??
+          'Invalid email or password.',
         variant: 'destructive',
       });
     } finally {
@@ -115,11 +95,14 @@ export function CustomSignIn() {
     }
   }
 
+  // ── Forgot password: send reset code ───────────────────────────────────────
   async function handleForgotPassword() {
     if (!email.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/auth/reset/check?email=${encodeURIComponent(email.trim())}`);
+      const res = await fetch(
+        `/api/auth/reset/check?email=${encodeURIComponent(email.trim())}`,
+      );
       const data = await res.json();
       if (!data.eligible) {
         toast({
@@ -130,18 +113,24 @@ export function CustomSignIn() {
         setLoading(false);
         return;
       }
-      // Use Clerk's built-in email reset code flow
       if (!signIn) throw new Error('Sign-in not available');
       await signIn.create({
         strategy: 'reset_password_email_code',
         identifier: email.trim(),
       });
+      setOtp('');
       setStep('forgot-code');
-      toast({ title: 'Reset code sent', description: 'Check your email for the reset code.' });
+      toast({
+        title: 'Reset code sent',
+        description: 'Check your email for the 6-digit code.',
+      });
     } catch (err: any) {
       toast({
         title: 'Error',
-        description: err?.errors?.[0]?.longMessage ?? err?.message ?? 'Something went wrong',
+        description:
+          err?.errors?.[0]?.longMessage ??
+          err?.message ??
+          'Something went wrong',
         variant: 'destructive',
       });
     } finally {
@@ -149,6 +138,7 @@ export function CustomSignIn() {
     }
   }
 
+  // ── Forgot password: verify code ───────────────────────────────────────────
   async function handleForgotCodeVerify(e: React.FormEvent) {
     e.preventDefault();
     if (!signIn || !otp.trim()) return;
@@ -161,12 +151,17 @@ export function CustomSignIn() {
       if (result.status === 'needs_new_password') {
         setStep('forgot-new-password');
       } else {
-        toast({ title: 'Unexpected state', description: 'Please try again.', variant: 'destructive' });
+        toast({
+          title: 'Unexpected state',
+          description: 'Please try again.',
+          variant: 'destructive',
+        });
       }
     } catch (err: any) {
       toast({
         title: 'Invalid code',
-        description: err?.errors?.[0]?.longMessage ?? 'The code is incorrect or expired.',
+        description:
+          err?.errors?.[0]?.longMessage ?? 'The code is incorrect or expired.',
         variant: 'destructive',
       });
     } finally {
@@ -174,6 +169,7 @@ export function CustomSignIn() {
     }
   }
 
+  // ── Forgot password: set new password ─────────────────────────────────────
   async function handleSetNewPassword(e: React.FormEvent) {
     e.preventDefault();
     if (!signIn || !newPassword.trim()) return;
@@ -185,12 +181,19 @@ export function CustomSignIn() {
         toast({ title: 'Password updated', description: 'You are now signed in.' });
         setLocation('/dashboard');
       } else {
-        toast({ title: 'Unexpected state', description: 'Please try again.', variant: 'destructive' });
+        toast({
+          title: 'Unexpected state',
+          description: 'Please try again.',
+          variant: 'destructive',
+        });
       }
     } catch (err: any) {
       toast({
         title: 'Error',
-        description: err?.errors?.[0]?.longMessage ?? err?.message ?? 'Could not set new password',
+        description:
+          err?.errors?.[0]?.longMessage ??
+          err?.message ??
+          'Could not set new password',
         variant: 'destructive',
       });
     } finally {
@@ -198,70 +201,12 @@ export function CustomSignIn() {
     }
   }
 
-  async function handleRequestWhatsAppOtp() {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/auth/otp/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), purpose: 'login' }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: 'WhatsApp OTP failed', description: data.error ?? 'Could not send OTP', variant: 'destructive' });
-        return;
-      }
-      setMaskedPhone(data.maskedPhone ?? '');
-      setOtp('');
-      setStep('wa-otp-sent');
-      toast({ title: 'OTP sent', description: `Code sent to WhatsApp ${data.maskedPhone}` });
-    } catch (err: any) {
-      toast({ title: 'Error', description: err?.message ?? 'Network error', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleWhatsAppOtpVerify(e: React.FormEvent) {
-    e.preventDefault();
-    if (!otp.trim() || !signIn) return;
-    setLoading(true);
-    try {
-      const res = await fetch('/api/auth/otp/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), code: otp.trim(), purpose: 'login' }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: 'Invalid OTP', description: data.error ?? 'OTP incorrect or expired', variant: 'destructive' });
-        return;
-      }
-      // Sign in with the Clerk ticket
-      const result = await signIn.create({ strategy: 'ticket', ticket: data.ticket });
-      if (result.status === 'complete') {
-        await setActive!({ session: result.createdSessionId });
-        setLocation('/dashboard');
-      } else {
-        toast({ title: 'Unexpected state', description: 'Please try again.', variant: 'destructive' });
-      }
-    } catch (err: any) {
-      toast({
-        title: 'Error',
-        description: err?.errors?.[0]?.longMessage ?? err?.message ?? 'Sign-in failed',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // ---- Render ----
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm space-y-6">
-        {/* Logo / brand */}
+
+        {/* Brand */}
         <div className="text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
             <span className="text-xl font-bold text-primary-foreground">⚡</span>
@@ -292,7 +237,9 @@ export function CustomSignIn() {
                   />
                 </div>
               </div>
-              <Button type="submit" className="w-full">Continue</Button>
+              <Button type="submit" className="w-full">
+                Continue
+              </Button>
             </form>
           )}
 
@@ -326,7 +273,11 @@ export function CustomSignIn() {
                     onClick={() => setShowPassword((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -336,7 +287,7 @@ export function CustomSignIn() {
                 Sign in
               </Button>
 
-              <div className="flex flex-col items-center gap-2 pt-1">
+              <div className="flex justify-center pt-1">
                 <button
                   type="button"
                   onClick={handleForgotPassword}
@@ -345,34 +296,22 @@ export function CustomSignIn() {
                 >
                   Forgot password?
                 </button>
-                {waEnabled && (
-                  <button
-                    type="button"
-                    onClick={handleRequestWhatsAppOtp}
-                    disabled={loading}
-                    className="flex items-center gap-1.5 text-sm text-green-600 hover:text-green-700 hover:underline disabled:opacity-50"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    Sign in with WhatsApp OTP instead
-                  </button>
-                )}
               </div>
             </form>
           )}
 
-          {/* Step: Forgot — enter code from email */}
+          {/* Step: Enter reset code from email */}
           {step === 'forgot-code' && (
             <form onSubmit={handleForgotCodeVerify} className="space-y-4">
-              <div className="text-center">
-                <p className="text-sm text-gray-600">
-                  We sent a reset code to <strong>{email}</strong>. Enter it below.
-                </p>
-              </div>
+              <p className="text-sm text-gray-600 text-center">
+                We sent a reset code to <strong>{email}</strong>. Enter it below.
+              </p>
               <div className="space-y-2">
                 <Label htmlFor="reset-code">Reset code</Label>
                 <Input
                   id="reset-code"
                   placeholder="6-digit code"
+                  inputMode="numeric"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
                   autoFocus
@@ -393,12 +332,12 @@ export function CustomSignIn() {
             </form>
           )}
 
-          {/* Step: Forgot — set new password */}
+          {/* Step: Set new password */}
           {step === 'forgot-new-password' && (
             <form onSubmit={handleSetNewPassword} className="space-y-4">
-              <div className="text-center">
-                <p className="text-sm text-gray-600">Code verified. Enter a new password for your account.</p>
-              </div>
+              <p className="text-sm text-gray-600 text-center">
+                Code verified. Enter a new password for your account.
+              </p>
               <div className="space-y-2">
                 <Label htmlFor="new-password">New password</Label>
                 <div className="relative">
@@ -419,7 +358,11 @@ export function CustomSignIn() {
                     onClick={() => setShowNewPassword((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showNewPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -430,61 +373,6 @@ export function CustomSignIn() {
             </form>
           )}
 
-          {/* Step: WhatsApp OTP — enter code */}
-          {step === 'wa-otp-sent' && (
-            <form onSubmit={handleWhatsAppOtpVerify} className="space-y-4">
-              <div className="flex items-start gap-2 rounded-lg bg-green-50 border border-green-200 p-3">
-                <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
-                <p className="text-sm text-green-800">
-                  A 6-digit OTP was sent to WhatsApp number ending in <strong>{maskedPhone.slice(-4)}</strong>.
-                  It expires in 10 minutes.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="wa-otp">WhatsApp OTP</Label>
-                <Input
-                  id="wa-otp"
-                  placeholder="6-digit code"
-                  maxLength={6}
-                  inputMode="numeric"
-                  pattern="[0-9]{6}"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  autoFocus
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Verify &amp; sign in
-              </Button>
-              <div className="flex flex-col items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleRequestWhatsAppOtp}
-                  disabled={loading}
-                  className="text-sm text-primary hover:underline disabled:opacity-50"
-                >
-                  Resend OTP
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStep('password')}
-                  className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" /> Use password instead
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Success */}
-          {step === 'done' && (
-            <div className="flex flex-col items-center gap-3 py-4">
-              <CheckCircle className="h-10 w-10 text-green-500" />
-              <p className="text-sm text-gray-600">Signed in! Redirecting…</p>
-            </div>
-          )}
         </div>
 
         <p className="text-center text-xs text-gray-400">
