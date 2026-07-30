@@ -128,9 +128,23 @@ export async function enqueueControlChange(
           ),
         );
 
-      // randomNo only needs to be 4-digit (legacy firmware contract).
-      // No collision risk now since we just cleared all pending rows.
-      const randomNo = 1000 + Math.floor(Math.random() * 9000);
+      // randomNo must be 4-digit (legacy firmware contract: #RRRR in the
+      // command string). With room-level supersession, multiple rooms on the
+      // same device can have concurrent pending rows, so we must avoid
+      // collisions — an ack matches by (deviceId, randomNo, flag=0), so two
+      // pending rows sharing a randomNo would both get acked when the box
+      // acks only the first one, silently dropping the second command.
+      const usedNos = await tx
+        .select({ randomNo: powerLogsTable.randomNo })
+        .from(powerLogsTable)
+        .where(and(eq(powerLogsTable.deviceId, deviceId), eq(powerLogsTable.flag, 0)));
+      const usedSet = new Set(usedNos.map((r) => r.randomNo));
+      let randomNo = 1000 + Math.floor(Math.random() * 9000);
+      // 9000 possible values; at most a handful of concurrent pending rows →
+      // expected iterations ≈ 1; hard-cap at 50 to avoid infinite loops.
+      for (let i = 0; usedSet.has(randomNo) && i < 50; i++) {
+        randomNo = 1000 + Math.floor(Math.random() * 9000);
+      }
       const inserted = await tx
         .insert(powerLogsTable)
         .values({
