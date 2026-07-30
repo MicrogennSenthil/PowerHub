@@ -34,6 +34,7 @@ import { makeSimpleMasterRouter } from "./simpleMaster";
 import { requireAuth } from "../lib/auth";
 import adminPropertiesRouter from "./adminProperties";
 import authOtpRouter from "./authOtp";
+import storageRouter from "./storage";
 
 const router: IRouter = Router();
 
@@ -97,5 +98,6 @@ router.use("/integration/api-keys", apiKeysRouter);
 router.use("/power-logs", powerLogsRouter);
 router.use("/reports", reportsRouter);
 router.use("/admin/properties", adminPropertiesRouter);
+router.use(storageRouter);
 
 export default router;

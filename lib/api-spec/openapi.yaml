@@ -8,6 +8,8 @@ servers:
   - url: /api
     description: Base API path
 tags:
+  - name: Storage
+    description: Object storage upload and serving endpoints.
   - name: health
     description: Health operations
   - name: auth
@@ -48,6 +50,26 @@ tags:
     description: Usage / consumption reports
 
 paths:
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadUrlRequest'
+      responses:
+        '200':
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
   /healthz:
     get:
       operationId: healthCheck
@@ -1656,6 +1678,7 @@ components:
         controlTypeName: { type: ["string", "null"] }
         state: { type: integer }
         wattage: { type: ["integer", "null"] }
+        photoUrl: { type: ["string", "null"] }
     ControlUpdate:
       type: object
       properties:
@@ -1663,6 +1686,7 @@ components:
         roomId: { type: ["integer", "null"] }
         controlTypeId: { type: ["integer", "null"] }
         wattage: { type: ["integer", "null"] }
+        photoUrl: { type: ["string", "null"] }
     ControlBulkUpdateItem:
       type: object
       required: [id]
@@ -2114,3 +2138,18 @@ components:
         currency: { type: string }
         description: { type: string }
         paidAt: { type: ["string", "null"], format: date-time }
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name: { type: string, minLength: 1 }
+        size: { type: integer, minimum: 1 }
+        contentType: { type: string, minLength: 1 }
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL: { type: string }
+        objectPath: { type: string }
+        metadata:
+          $ref: '#/components/schemas/UploadUrlRequest'

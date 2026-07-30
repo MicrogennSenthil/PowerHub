@@ -103,3 +103,5 @@ export * from './systemSettingsUpdatePropertyCodeMode';
 export * from './trendDay';
 export * from './trendTotals';
 export * from './unauthorizedResponse';
+export * from './uploadUrlRequest';
+export * from './uploadUrlResponse';

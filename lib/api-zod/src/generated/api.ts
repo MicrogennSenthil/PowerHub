@@ -9,6 +9,36 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Request a presigned URL for file upload
+ */
+
+
+
+
+
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+})
+
+
+
+
+
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string(),
+  "objectPath": zod.string(),
+  "metadata": zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+}).optional()
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */
@@ -760,7 +790,8 @@ export const ListControlsResponseItem = zod.object({
   "controlTypeId": zod.number().nullish(),
   "controlTypeName": zod.string().nullish(),
   "state": zod.number(),
-  "wattage": zod.number().nullish()
+  "wattage": zod.number().nullish(),
+  "photoUrl": zod.string().nullish()
 })
 export const ListControlsResponse = zod.array(ListControlsResponseItem)
 
@@ -776,7 +807,8 @@ export const UpdateControlBody = zod.object({
   "label": zod.string().nullish(),
   "roomId": zod.number().nullish(),
   "controlTypeId": zod.number().nullish(),
-  "wattage": zod.number().nullish()
+  "wattage": zod.number().nullish(),
+  "photoUrl": zod.string().nullish()
 })
 
 export const UpdateControlResponse = zod.object({
@@ -791,7 +823,8 @@ export const UpdateControlResponse = zod.object({
   "controlTypeId": zod.number().nullish(),
   "controlTypeName": zod.string().nullish(),
   "state": zod.number(),
-  "wattage": zod.number().nullish()
+  "wattage": zod.number().nullish(),
+  "photoUrl": zod.string().nullish()
 })
 
 
@@ -821,7 +854,8 @@ export const SendControlCommandResponse = zod.object({
   "controlTypeId": zod.number().nullish(),
   "controlTypeName": zod.string().nullish(),
   "state": zod.number(),
-  "wattage": zod.number().nullish()
+  "wattage": zod.number().nullish(),
+  "photoUrl": zod.string().nullish()
 })
 })
 
@@ -882,7 +916,8 @@ export const BulkUpdateControlsResponseItem = zod.object({
   "controlTypeId": zod.number().nullish(),
   "controlTypeName": zod.string().nullish(),
   "state": zod.number(),
-  "wattage": zod.number().nullish()
+  "wattage": zod.number().nullish(),
+  "photoUrl": zod.string().nullish()
 })
 export const BulkUpdateControlsResponse = zod.array(BulkUpdateControlsResponseItem)
 

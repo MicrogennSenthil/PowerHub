@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'wouter';
 import { 
@@ -20,11 +20,16 @@ import { useProperty } from '@/contexts/PropertyContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Loader2, Save, Wifi, WifiOff, X, ListChecks, Power, PowerOff } from 'lucide-react';
+import { ArrowLeft, Camera, Loader2, Save, Trash2, Wifi, WifiOff, X, ListChecks, Power, PowerOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { BulkAssignDialog, BulkAssignItem } from './BulkAssignControls';
+
+/** Converts the objectPath stored in DB to the URL the browser can fetch. */
+function photoSrc(objectPath: string) {
+  return `/api/storage${objectPath}`;
+}
 
 function ChannelRow({ 
   control, 
@@ -43,13 +48,17 @@ function ChannelRow({
   toggling: boolean;
   deviceOnline: boolean;
 }) {
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [formData, setFormData] = useState({
     label: control.label || '',
     roomId: control.roomId?.toString() || '0',
     controlTypeId: control.controlTypeId?.toString() || '0',
-    wattage: control.wattage?.toString() || ''
+    wattage: control.wattage?.toString() || '',
+    photoUrl: control.photoUrl ?? null as string | null,
   });
 
   const handleSave = async () => {
@@ -59,60 +68,168 @@ function ChannelRow({
       roomId: formData.roomId !== '0' ? parseInt(formData.roomId, 10) : null,
       controlTypeId: formData.controlTypeId !== '0' ? parseInt(formData.controlTypeId, 10) : null,
       wattage: formData.wattage !== '' ? parseInt(formData.wattage, 10) || null : null,
+      photoUrl: formData.photoUrl ?? null,
     });
     setIsSaving(false);
     setIsEditing(false);
   };
 
+  /** Two-step presigned-URL upload: request URL → PUT file → store objectPath */
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset so the same file can be re-selected after an error
+    e.target.value = '';
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Images only', description: 'Please select a JPEG, PNG, or similar image.', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Maximum photo size is 5 MB.', variant: 'destructive' });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      // Step 1: get presigned PUT URL from our API
+      const urlRes = await fetch('/api/storage/uploads/request-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+      });
+      if (!urlRes.ok) throw new Error('Failed to get upload URL');
+      const { uploadURL, objectPath } = await urlRes.json();
+
+      // Step 2: PUT file directly to GCS via the presigned URL
+      const putRes = await fetch(uploadURL, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
+      if (!putRes.ok) throw new Error('Upload to storage failed');
+
+      setFormData(f => ({ ...f, photoUrl: objectPath }));
+      toast({ title: 'Photo uploaded', description: 'Click Save to apply.' });
+    } catch (err: any) {
+      toast({ title: 'Upload failed', description: err.message ?? 'Please try again.', variant: 'destructive' });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   if (isEditing) {
     return (
-      <div className="grid grid-cols-12 items-center gap-4 py-3 border-b px-4 bg-gray-50/80">
-        <div className="col-span-1 text-sm font-medium text-gray-500">Ch {control.channel}</div>
-        <div className="col-span-3 min-w-0">
-          <Input 
-            value={formData.label} 
-            onChange={(e) => setFormData({ ...formData, label: e.target.value })} 
-            placeholder="Label (e.g. Main AC)" 
-            className="h-8"
-          />
+      <div className="border-b px-4 py-3 bg-gray-50/80 space-y-3">
+        <div className="grid grid-cols-12 items-center gap-3">
+          <div className="col-span-1 text-sm font-medium text-gray-500">Ch {control.channel}</div>
+          <div className="col-span-3 min-w-0">
+            <Input 
+              value={formData.label} 
+              onChange={(e) => setFormData({ ...formData, label: e.target.value })} 
+              placeholder="Label (e.g. Main AC)" 
+              className="h-8"
+            />
+          </div>
+          <div className="col-span-2 min-w-0">
+            <Select value={formData.roomId} onValueChange={(v) => setFormData({ ...formData, roomId: v })}>
+              <SelectTrigger className="h-8"><SelectValue placeholder="Assign Room" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Unassigned (None)</SelectItem>
+                {rooms.map(r => <SelectItem key={r.id} value={r.id.toString()}>{r.roomNo}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="col-span-2 min-w-0">
+            <Select value={formData.controlTypeId} onValueChange={(v) => setFormData({ ...formData, controlTypeId: v })}>
+              <SelectTrigger className="h-8"><SelectValue placeholder="Type" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Unassigned (None)</SelectItem>
+                {controlTypes.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="col-span-1 min-w-0">
+            <Input
+              type="number"
+              min={0}
+              value={formData.wattage}
+              onChange={(e) => setFormData({ ...formData, wattage: e.target.value })}
+              placeholder="W"
+              className="h-8"
+              title="Rated wattage (for consumption reports)"
+            />
+          </div>
+          <div className="col-span-1" />
+          <div className="col-span-2 flex justify-end gap-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500" onClick={() => { setIsEditing(false); setFormData({ label: control.label || '', roomId: control.roomId?.toString() || '0', controlTypeId: control.controlTypeId?.toString() || '0', wattage: control.wattage?.toString() || '', photoUrl: control.photoUrl ?? null }); }} disabled={isSaving} title="Cancel">
+              <X className="h-4 w-4" />
+            </Button>
+            <Button size="icon" className="h-8 w-8" onClick={handleSave} disabled={isSaving || isUploading} title="Save">
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
-        <div className="col-span-2 min-w-0">
-          <Select value={formData.roomId} onValueChange={(v) => setFormData({ ...formData, roomId: v })}>
-            <SelectTrigger className="h-8"><SelectValue placeholder="Assign Room" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="0">Unassigned (None)</SelectItem>
-              {rooms.map(r => <SelectItem key={r.id} value={r.id.toString()}>{r.roomNo}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="col-span-2 min-w-0">
-          <Select value={formData.controlTypeId} onValueChange={(v) => setFormData({ ...formData, controlTypeId: v })}>
-            <SelectTrigger className="h-8"><SelectValue placeholder="Type" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="0">Unassigned (None)</SelectItem>
-              {controlTypes.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="col-span-1 min-w-0">
-          <Input
-            type="number"
-            min={0}
-            value={formData.wattage}
-            onChange={(e) => setFormData({ ...formData, wattage: e.target.value })}
-            placeholder="W"
-            className="h-8"
-            title="Rated wattage (for consumption reports)"
-          />
-        </div>
-        <div className="col-span-1" />
-        <div className="col-span-2 flex justify-end gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500" onClick={() => setIsEditing(false)} disabled={isSaving} title="Cancel">
-            <X className="h-4 w-4" />
-          </Button>
-          <Button size="icon" className="h-8 w-8" onClick={handleSave} disabled={isSaving} title="Save">
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          </Button>
+
+        {/* Photo upload row */}
+        <div className="flex items-center gap-3 pl-1">
+          <span className="text-xs text-gray-500 w-20 shrink-0">Photo</span>
+          {formData.photoUrl ? (
+            <div className="relative group">
+              <img
+                src={photoSrc(formData.photoUrl)}
+                alt="Channel photo"
+                className="h-16 w-24 object-cover rounded border border-gray-200 shadow-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setFormData(f => ({ ...f, photoUrl: null }))}
+                className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Remove photo"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <div className="h-16 w-24 rounded border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 text-gray-400">
+              <Camera className="h-5 w-5" />
+            </div>
+          )}
+          <div className="flex gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              disabled={isUploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {isUploading ? (
+                <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" />Uploading…</>
+              ) : (
+                <><Camera className="mr-1.5 h-3 w-3" />{formData.photoUrl ? 'Replace' : 'Upload photo'}</>
+              )}
+            </Button>
+            {formData.photoUrl && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs text-red-500 hover:text-red-600"
+                onClick={() => setFormData(f => ({ ...f, photoUrl: null }))}
+              >
+                <Trash2 className="mr-1 h-3 w-3" />Remove
+              </Button>
+            )}
+          </div>
+          <span className="text-xs text-gray-400">JPEG/PNG · max 5 MB</span>
         </div>
       </div>
     );
@@ -121,7 +238,20 @@ function ChannelRow({
   return (
     <div className="grid grid-cols-12 items-center gap-4 py-3 border-b px-4 hover:bg-gray-50">
       <div className="col-span-1 text-sm font-medium text-gray-500">Ch {control.channel}</div>
-      <div className="col-span-3 font-medium">{control.label || <span className="text-gray-400 italic">Unlabeled</span>}</div>
+      <div className="col-span-3 font-medium flex items-center gap-2">
+        {control.photoUrl ? (
+          <img
+            src={photoSrc(control.photoUrl)}
+            alt=""
+            className="h-6 w-8 object-cover rounded shadow-sm border border-gray-200 shrink-0"
+          />
+        ) : (
+          <span className="h-6 w-8 rounded border border-dashed border-gray-200 flex items-center justify-center shrink-0">
+            <Camera className="h-3 w-3 text-gray-300" />
+          </span>
+        )}
+        {control.label || <span className="text-gray-400 italic">Unlabeled</span>}
+      </div>
       <div className="col-span-2 text-sm">{control.roomNo ? `Room ${control.roomNo}` : <span className="text-gray-400">—</span>}</div>
       <div className="col-span-2 text-sm">{control.controlTypeName || <span className="text-gray-400">—</span>}</div>
       <div className="col-span-1 text-sm">{control.wattage != null ? `${control.wattage} W` : <span className="text-gray-400">—</span>}</div>

@@ -32,6 +32,7 @@ const selection = {
   controlTypeName: controlTypesTable.name,
   state: controlsTable.state,
   wattage: controlsTable.wattage,
+  photoUrl: controlsTable.photoUrl,
 };
 
 function withJoins() {
@@ -291,6 +292,7 @@ router.patch("/:id", requirePermission("controls.manage"), async (req, res) => {
         ? { controlTypeId: body.controlTypeId }
         : {}),
       ...(body.wattage !== undefined ? { wattage: body.wattage } : {}),
+      ...(body.photoUrl !== undefined ? { photoUrl: body.photoUrl } : {}),
     })
     .where(eq(controlsTable.id, id));
   const rows = await withJoins().where(eq(controlsTable.id, id));

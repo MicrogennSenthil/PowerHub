@@ -15,4 +15,6 @@ export interface ControlUpdate {
   controlTypeId?: number | null;
   /** @nullable */
   wattage?: number | null;
+  /** @nullable */
+  photoUrl?: string | null;
 }

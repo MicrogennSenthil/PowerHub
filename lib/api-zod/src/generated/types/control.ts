@@ -25,4 +25,6 @@ export interface Control {
   state: number;
   /** @nullable */
   wattage?: number | null;
+  /** @nullable */
+  photoUrl?: string | null;
 }
