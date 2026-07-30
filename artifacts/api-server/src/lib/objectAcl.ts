@@ -1,4 +1,5 @@
-import { File } from '@google-cloud/storage';
+// import type is erased at compile time — no runtime ESM binding in the bundle.
+import type { File } from '@google-cloud/storage';
 
 const ACL_POLICY_METADATA_KEY = 'custom:aclPolicy';
 

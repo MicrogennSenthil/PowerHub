@@ -1,6 +1,8 @@
+import { createRequire } from 'node:module';
 import { randomUUID } from 'crypto';
 import { Readable } from 'stream';
-import { File, Storage } from '@google-cloud/storage';
+// import type is erased at compile time — no runtime ESM binding in the bundle.
+import type { File } from '@google-cloud/storage';
 
 import {
   canAccessObject,
@@ -12,23 +14,40 @@ import {
 
 const REPLIT_SIDECAR_ENDPOINT = 'http://127.0.0.1:1106';
 
-export const objectStorageClient = new Storage({
-  credentials: {
-    audience: 'replit',
-    subject_token_type: 'access_token',
-    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
-    type: 'external_account',
-    credential_source: {
-      url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
-      format: {
-        type: 'json',
-        subject_token_field_name: 'access_token',
+// @google-cloud/storage is external (not bundled by esbuild) and only
+// available inside Replit.  We load it lazily via createRequire so that the
+// compiled dist/index.mjs has no top-level ESM import for this package.
+// A top-level import causes Node to fail on startup if the package is missing
+// (e.g. on the VPS before pnpm install is run).
+const _req = createRequire(import.meta.url);
+let _storageClient: ReturnType<typeof _createClient> | null = null;
+
+function _createClient() {
+  const { Storage } = _req('@google-cloud/storage') as typeof import('@google-cloud/storage');
+  return new Storage({
+    credentials: {
+      audience: 'replit',
+      subject_token_type: 'access_token',
+      token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
+      type: 'external_account',
+      credential_source: {
+        url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
+        format: {
+          type: 'json',
+          subject_token_field_name: 'access_token',
+        },
       },
-    },
-    universe_domain: 'googleapis.com',
-  },
-  projectId: '',
-});
+      universe_domain: 'googleapis.com',
+    } as any,
+    projectId: '',
+  });
+}
+
+/** Returns the GCS Storage client, initialising it on first call. */
+export function objectStorageClient() {
+  if (!_storageClient) _storageClient = _createClient();
+  return _storageClient;
+}
 
 export class ObjectNotFoundError extends Error {
   constructor() {
@@ -76,7 +95,7 @@ export class ObjectStorageService {
       const fullPath = `${searchPath}/${filePath}`;
 
       const { bucketName, objectName } = parseObjectPath(fullPath);
-      const bucket = objectStorageClient.bucket(bucketName);
+      const bucket = objectStorageClient().bucket(bucketName);
       const file = bucket.file(objectName);
 
       const [exists] = await file.exists();
@@ -150,7 +169,7 @@ export class ObjectStorageService {
     }
     const objectEntityPath = `${entityDir}${entityId}`;
     const { bucketName, objectName } = parseObjectPath(objectEntityPath);
-    const bucket = objectStorageClient.bucket(bucketName);
+    const bucket = objectStorageClient().bucket(bucketName);
     const objectFile = bucket.file(objectName);
     const [exists] = await objectFile.exists();
     if (!exists) {
