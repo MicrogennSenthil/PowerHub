@@ -12,7 +12,7 @@ import {
   roomsTable,
 } from "@workspace/db";
 import { requireApiKey } from "../lib/apiKeyAuth";
-import { enqueueControlChange } from "../lib/powerQueue";
+import { enqueueControlChange, buildPush, buildPull } from "../lib/powerQueue";
 import { validateBody } from "../lib/http";
 
 // ---------------------------------------------------------------------------
@@ -259,11 +259,33 @@ deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
   }
 
   const p = pending[0];
-  // Exact legacy format: Device.Controlpush.Controlpull.'#'.RRRR.'+'
-  // (no separators between fields; randomNo zero-padded to 4 digits).
+  // Re-derive the relay bitmask from live control states rather than using
+  // the snapshot stored at enqueue time.
+  //
+  // Race condition: when MHMS sends checkout (room A) + checkin (room B)
+  // simultaneously, two DB transactions run concurrently.  Transaction B
+  // reads the device's controls BEFORE transaction A commits, so it sees
+  // room A still state=1 and bakes that into controlPush.  The settle delay
+  // then correctly spaces the two commands 5 s apart — but the ON command
+  // still carries room A's bit, re-energising its relay after it went dark.
+  //
+  // By re-reading the controls here (after both transactions have committed
+  // and the settle window has elapsed) we always deliver a bitmask that
+  // reflects the true current state.
+  const liveControls = await db
+    .select()
+    .from(controlsTable)
+    .where(eq(controlsTable.deviceId, device.id));
+  const livePush = buildPush(liveControls);
+  const livePull = buildPull(liveControls);
   const rand = String(p.randomNo).padStart(4, "0");
-  const cmd = `${device.code}${p.controlPush}${p.controlPull}#${rand}+`;
-  console.log(`[poll] ${device.code} → ${cmd}`);
+  const cmd = `${device.code}${livePush}${livePull}#${rand}+`;
+  // Log both so we can spot any residual stale-snapshot divergence.
+  if (livePush !== p.controlPush || livePull !== p.controlPull) {
+    console.log(`[poll] ${device.code} → ${cmd}  (stored: ${p.controlPush}${p.controlPull} — stale snapshot corrected)`);
+  } else {
+    console.log(`[poll] ${device.code} → ${cmd}`);
+  }
   res.type("text/plain").send(cmd);
 });
 
