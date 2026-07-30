@@ -28,7 +28,6 @@ import { PowerAutomation } from '@/pages/integration/PowerAutomation';
 import { PowerUsageReport } from '@/pages/reports/PowerUsageReport';
 import { PropertyManagement } from '@/pages/admin/PropertyManagement';
 import { Welcome } from '@/pages/Welcome';
-import { CustomSignIn } from '@/pages/auth/CustomSignIn';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -107,7 +106,11 @@ const clerkAppearance = {
 };
 
 function SignInPage() {
-  return <CustomSignIn />;
+  return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-gray-50 px-4">
+      <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
+    </div>
+  );
 }
 
 function SignUpPage() {
