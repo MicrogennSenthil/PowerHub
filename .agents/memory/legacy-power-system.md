@@ -33,6 +33,13 @@ Source: CodeIgniter PHP + MSSQL (external instance). Rebuild target: Node/TS + R
 - Postgres, tenant-scoped from day one. React PWA (hybrid/installable) for front-desk.
 - User pasted the `sa` password in plain chat once — advised them to rotate it; never echo/store credentials.
 
+## Relay bitmask protocol — CONFIRMED hex, not decimal (July 2026)
+- The relay board firmware parses the value after `*0X` as **hexadecimal** (e.g. `strtol(val, NULL, 16)`).
+- `*0X07` → 0x07 = 7 = Ch1+Ch2+Ch3 ✓; `*0X0F` → 0x0F = 15 = Ch1–Ch4 ✓
+- Sending decimal "15" as `*0X15` → 0x15 = 21 = Ch1+Ch3+Ch5 ON — causes Ch2 to go off (confirmed live).
+- `slateMaskHex()` must format mask as uppercase hex padded to 2 chars (e.g. 15→"0F", 31→"1F").
+- The earlier `*0X0F`-all-off symptom was likely a race/supersede bug (no supersede logic existed then), not a parsing issue.
+
 ## Chip config-hotspot facts (confirmed on-site, July 2026)
 - In setup mode the ESP32 broadcasts SSID `mgennpowerconfig`; the config page is always at `x.x.x.217` on whatever subnet the hotspot hands out (seen: 192.168.250.217, 10.201.250.217).
 - The hotspot does NOT advertise a Default Gateway, so gateway-based detection fails; derive the address from the PC's own IPv4 (`.217` on same /24). The companion bridge does this automatically.
