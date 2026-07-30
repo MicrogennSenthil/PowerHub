@@ -223,9 +223,9 @@ deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
   // Exact legacy format: Device.Controlpush.Controlpull.'#'.RRRR.'+'
   // (no separators between fields; randomNo zero-padded to 4 digits).
   const rand = String(p.randomNo).padStart(4, "0");
-  res
-    .type("text/plain")
-    .send(`${device.code}${p.controlPush}${p.controlPull}#${rand}+`);
+  const cmd = `${device.code}${p.controlPush}${p.controlPull}#${rand}+`;
+  console.log(`[poll] ${device.code} → ${cmd}`);
+  res.type("text/plain").send(cmd);
 });
 
 // Some firmware states ack with an empty randomNo (e.g. after a failed parse).

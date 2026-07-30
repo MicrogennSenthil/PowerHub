@@ -26,14 +26,19 @@ export interface CommandMeta {
 }
 
 function slateMaskHex(controls: ControlRow[], slate: number): string {
-  let mask = 0;
-  for (const c of controls) {
-    if (c.slate === slate && c.state === 1) {
-      mask |= 1 << (c.channel - 1);
+  // Active-low bitmask: relay ON = bit '0', relay OFF = bit '1'.
+  // Channel 1 occupies the MSB (bit 7), channel 8 occupies the LSB (bit 0).
+  // Build position by position ch=1→ch=8, then convert the 8-bit pattern to hex.
+  let bits = 0;
+  for (let ch = 1; ch <= 8; ch++) {
+    const ctrl = controls.find((c) => c.slate === slate && c.channel === ch);
+    const isOn = ctrl?.state === 1;
+    if (!isOn) {
+      // OFF → this bit position is 1 (active-low means OFF = high)
+      bits |= 1 << (8 - ch); // ch=1 → bit7, ch=2 → bit6, …, ch=8 → bit0
     }
   }
-  const hex = mask.toString(16).toUpperCase().padStart(2, "0");
-  return hex;
+  return bits.toString(16).toUpperCase().padStart(2, "0");
 }
 
 export function buildPush(controls: ControlRow[]): string {
