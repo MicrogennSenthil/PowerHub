@@ -32,5 +32,10 @@ The original fix used an in-memory `deviceLastAckedMs` map. That map is wiped on
 ## Why 5 seconds
 Bumped from 2 s to 5 s: 5 s is imperceptible to guests but provides extra margin over any realistic relay coil settle time or board poll interval variation. Confirmed working in production on 30 Jul 2026.
 
+## Fourth bug — stale bitmask snapshot (concurrent transactions)
+When MHMS sends checkout + checkin simultaneously, two `enqueueControlChange` transactions run concurrently. The checkin transaction reads `controlsTable` **before** the checkout transaction commits, so it sees the old room still as `state=1` and bakes its channel bit into `controlPush`. The settle delay correctly spaces delivery 5 s apart, but the ON command still carries the old room's bit — re-energising its relay after it went dark.
+
+Fix: in the poll handler (`routes/integrationPower.ts`), discard the stored `controlPush`/`controlPull` snapshot and re-read all controls for the device live from the DB. By the time the board polls for the second command both transactions have long since committed, so the live bitmask is always accurate. A log line flags whenever the live mask diverges from the stored snapshot (`stale snapshot corrected`).
+
 ## Key invariant
-The `buildPush`/`buildPull` bitmasks in `slateMaskHex()` are full-state writes intended for the firmware (all channels set to the mask value). The settle delay is a safety net for firmware that may apply commands too fast for physical relay response.
+The `buildPush`/`buildPull` bitmasks in `slateMaskHex()` are full-state writes (all relay channels set simultaneously). The bitmask must reflect the **live** control states at delivery time — never the enqueue-time snapshot, which can be racily stale. The settle delay is a separate concern: it ensures the physical relay contacts have time to open before the next full-state write arrives.
