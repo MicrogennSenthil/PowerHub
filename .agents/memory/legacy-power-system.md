@@ -33,12 +33,12 @@ Source: CodeIgniter PHP + MSSQL (external instance). Rebuild target: Node/TS + R
 - Postgres, tenant-scoped from day one. React PWA (hybrid/installable) for front-desk.
 - User pasted the `sa` password in plain chat once — advised them to rotate it; never echo/store credentials.
 
-## Relay bitmask protocol — CONFIRMED hex, not decimal (July 2026)
-- The relay board firmware parses the value after `*0X` as **hexadecimal** (e.g. `strtol(val, NULL, 16)`).
-- `*0X07` → 0x07 = 7 = Ch1+Ch2+Ch3 ✓; `*0X0F` → 0x0F = 15 = Ch1–Ch4 ✓
-- Sending decimal "15" as `*0X15` → 0x15 = 21 = Ch1+Ch3+Ch5 ON — causes Ch2 to go off (confirmed live).
-- `slateMaskHex()` must format mask as uppercase hex padded to 2 chars (e.g. 15→"0F", 31→"1F").
-- The earlier `*0X0F`-all-off symptom was likely a race/supersede bug (no supersede logic existed then), not a parsing issue.
+## Relay bitmask protocol — CONFIRMED lowercase hex (July 2026)
+- Firmware parses the value after `*0X` as hex but only handles **lowercase** a-f. Uppercase A-F stops the parser → returns 0 → all relays off.
+- Legacy PHP `dechex()` returns lowercase by default — that's why the legacy system worked with `*0X0f` for 4 channels.
+- Our rebuild must use `.toString(16).toLowerCase().padStart(2, "0")` — never `.toUpperCase()`.
+- `*0X07` ✓, `*0X0f` ✓ (4 ch), `*0X0F` ✗ (uppercase F → all off), `*0X15` ✗ (parsed as hex 0x15=21, wrong channels).
+- Sending decimal "15" as `*0X15` → firmware reads as hex 0x15 = 21 = Ch1+Ch3+Ch5 → Ch2+Ch4 go off (confirmed).
 
 ## Chip config-hotspot facts (confirmed on-site, July 2026)
 - In setup mode the ESP32 broadcasts SSID `mgennpowerconfig`; the config page is always at `x.x.x.217` on whatever subnet the hotspot hands out (seen: 192.168.250.217, 10.201.250.217).
