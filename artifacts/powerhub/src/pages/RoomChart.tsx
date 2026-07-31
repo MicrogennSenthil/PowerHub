@@ -38,6 +38,7 @@ import {
   Timer,
   MousePointer,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
 } from 'lucide-react';
 
@@ -64,47 +65,73 @@ function DeviceStatusStrip({ propertyId }: { propertyId: number }) {
       },
     },
   );
+
+  const [expanded, setExpanded] = useState<boolean>(() => {
+    try { return localStorage.getItem('powerhub-hubs-strip') !== 'collapsed'; }
+    catch { return true; }
+  });
+
+  const toggle = () => {
+    const next = !expanded;
+    setExpanded(next);
+    try { localStorage.setItem('powerhub-hubs-strip', next ? 'expanded' : 'collapsed'); }
+    catch { /* ignore */ }
+  };
+
   if (!devices || devices.length === 0) return null;
-  
-  const onlineCount = devices.filter(d => d.online).length;
+
   const offlineCount = devices.filter(d => !d.online).length;
-  
+
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-2 bg-gray-50/50 dark:bg-gray-800/50 p-2 rounded-lg border border-gray-100 dark:border-gray-800">
-      <div className="flex items-center gap-2 px-2 border-r border-gray-200 dark:border-gray-700 mr-1">
-        <Activity className="h-4 w-4 text-primary" />
+    <div className="mt-4 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 overflow-hidden">
+      {/* Header row — always visible, acts as the toggle */}
+      <button
+        onClick={toggle}
+        className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100/70 dark:hover:bg-gray-700/50 transition-colors text-left"
+      >
+        <Activity className="h-3.5 w-3.5 text-primary shrink-0" />
         <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Hubs</span>
-      </div>
-      
-      {offlineCount > 0 && (
-        <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-destructive/10 text-destructive border border-destructive/20 text-xs font-bold animate-pulse">
-          <AlertTriangle className="h-3.5 w-3.5" />
-          {offlineCount} Offline
+
+        {/* Offline badge stays visible even when collapsed */}
+        {offlineCount > 0 && (
+          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20 text-[10px] font-bold animate-pulse ml-1">
+            <AlertTriangle className="h-3 w-3" />
+            {offlineCount} Offline
+          </div>
+        )}
+
+        <span className="ml-auto text-gray-400 dark:text-gray-500">
+          {expanded
+            ? <ChevronUp className="h-3.5 w-3.5" />
+            : <ChevronDown className="h-3.5 w-3.5" />}
+        </span>
+      </button>
+
+      {/* Collapsible device pills */}
+      {expanded && (
+        <div className="flex flex-wrap items-center gap-2 px-3 pb-2 pt-1 border-t border-gray-100 dark:border-gray-800">
+          {devices.map((d) => (
+            <div
+              key={d.id}
+              className={cn(
+                'flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold transition-colors duration-300 cursor-default hover-elevate',
+                d.online
+                  ? 'border-success/30 bg-success/10 text-success'
+                  : 'border-destructive/30 bg-destructive/10 text-destructive',
+              )}
+              title={
+                d.online
+                  ? `Box ${d.code} online — last poll ${timeAgo(d.lastSeenAt)} ago`
+                  : `Box ${d.code} OFFLINE — last poll ${timeAgo(d.lastSeenAt)} ago`
+              }
+            >
+              {d.online ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+              <span>{d.code}</span>
+              <span className="text-[10px] opacity-70 ml-1 font-mono">{timeAgo(d.lastSeenAt)}</span>
+            </div>
+          ))}
         </div>
       )}
-      
-      {devices.map((d) => (
-        <div
-          key={d.id}
-          className={cn(
-            'flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold transition-colors duration-300 cursor-default hover-elevate',
-            d.online
-              ? 'border-success/30 bg-success/10 text-success'
-              : 'border-destructive/30 bg-destructive/10 text-destructive',
-          )}
-          title={
-            d.online
-              ? `Box ${d.code} online — last poll ${timeAgo(d.lastSeenAt)} ago`
-              : `Box ${d.code} OFFLINE — last poll ${timeAgo(d.lastSeenAt)} ago`
-          }
-        >
-          {d.online ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-          <span>{d.code}</span>
-          <span className={cn('text-[10px] opacity-70 ml-1 font-mono')}>
-            {timeAgo(d.lastSeenAt)}
-          </span>
-        </div>
-      ))}
     </div>
   );
 }
