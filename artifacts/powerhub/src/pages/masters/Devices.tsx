@@ -28,7 +28,7 @@ import { formatDistanceToNow } from 'date-fns';
 export function Devices() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { selectedPropertyId } = useProperty();
+  const { selectedPropertyId, selectedProperty } = useProperty();
   
   const { data: devices, isLoading } = useListDevices(
     { propertyId: selectedPropertyId! },
@@ -56,14 +56,20 @@ export function Devices() {
   });
   const [codeError, setCodeError] = useState<string | null>(null);
 
-  /** Compute the next available 6-digit code from the loaded device list. */
+  /** Compute the next available code as <HOTELCODE><3-digit-seq>.
+   *  e.g. property code "KDS" → "KDS001", "KDS002", …
+   *  Falls back to plain 3-digit number if property has no code. */
   const nextCode = () => {
+    const prefix = (selectedProperty?.code ?? '').toUpperCase();
+    const pattern = prefix
+      ? new RegExp(`^${prefix}(\\d+)$`, 'i')
+      : /^(\d+)$/;
     const existing = (devices ?? [])
-      .map(d => d.code)
-      .filter(c => /^\d{6}$/.test(c))
-      .map(c => parseInt(c, 10));
+      .map(d => d.code.match(pattern))
+      .filter(Boolean)
+      .map(m => parseInt(m![1], 10));
     const max = existing.length > 0 ? Math.max(...existing) : 0;
-    return String(max + 1).padStart(6, '0');
+    return `${prefix}${String(max + 1).padStart(3, '0')}`;
   };
 
   const openNew = () => {
@@ -235,7 +241,7 @@ export function Devices() {
                   id="code"
                   value={formData.code}
                   onChange={(e) => handleCodeChange(e.target.value)}
-                  placeholder="e.g. 000001"
+                  placeholder={`e.g. ${(selectedProperty?.code ?? '').toUpperCase()}001`}
                   className={codeError ? 'border-destructive focus-visible:ring-destructive' : ''}
                 />
                 {codeError && (
