@@ -122,36 +122,47 @@ router.post("/", requirePermission("devices.manage"), async (req, res) => {
     res.status(400).json({ error: "floorId does not belong to this property" });
     return;
   }
-  const device = await db.transaction(async (tx) => {
-    const inserted = await tx
-      .insert(devicesTable)
-      .values({
-        propertyId: body.propertyId,
-        code: body.code,
-        ipAddress: body.ipAddress,
-        setupIp: body.setupIp,
-        description: body.description,
-        floorId: body.floorId ?? null,
-        active: body.active ?? true,
-      })
-      .returning();
-    const dev = inserted[0]!;
-    // Auto-provision the 16 relay channels (2 slates x 8 channels).
-    const channels = [];
-    for (let slate = 1; slate <= SLATES; slate++) {
-      for (let channel = 1; channel <= CHANNELS_PER_SLATE; channel++) {
-        channels.push({
-          propertyId: dev.propertyId,
-          deviceId: dev.id,
-          slate,
-          channel,
-        });
+  try {
+    const device = await db.transaction(async (tx) => {
+      const inserted = await tx
+        .insert(devicesTable)
+        .values({
+          propertyId: body.propertyId,
+          code: body.code,
+          ipAddress: body.ipAddress,
+          setupIp: body.setupIp,
+          description: body.description,
+          floorId: body.floorId ?? null,
+          active: body.active ?? true,
+        })
+        .returning();
+      const dev = inserted[0]!;
+      // Auto-provision the 16 relay channels (2 slates x 8 channels).
+      const channels = [];
+      for (let slate = 1; slate <= SLATES; slate++) {
+        for (let channel = 1; channel <= CHANNELS_PER_SLATE; channel++) {
+          channels.push({
+            propertyId: dev.propertyId,
+            deviceId: dev.id,
+            slate,
+            channel,
+          });
+        }
       }
+      await tx.insert(controlsTable).values(channels);
+      return dev;
+    });
+    res.status(201).json((await serializeMany([device]))[0]);
+  } catch (err: any) {
+    // PostgreSQL unique_violation on the code column
+    if (err?.code === "23505" && err?.constraint?.includes("code")) {
+      res.status(409).json({
+        error: `Device code '${body.code}' is already in use. Each relay board must have a globally unique code.`,
+      });
+      return;
     }
-    await tx.insert(controlsTable).values(channels);
-    return dev;
-  });
-  res.status(201).json((await serializeMany([device]))[0]);
+    throw err; // re-throw anything unexpected
+  }
 });
 
 router.patch("/:id", requirePermission("devices.manage"), async (req, res) => {
