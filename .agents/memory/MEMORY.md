@@ -5,3 +5,4 @@
 - [Replit-managed Clerk key recovery](clerk-key-recovery.md) — overwritten Clerk keys can't be pasted back; fix with setupClerkWhitelabelAuth() + restart both workflows; never route managed keys through requestSecrets.
 - [WhatsApp OTP auth flow](whatsapp-otp-auth.md) — custom sign-in page, mwhatsapp API contract, Clerk ticket flow, superadmin reset block, phone field, WA settings.
 - [Relay transfer race condition](relay-transfer-race.md) — three-layer bug in simultaneous MHMS checkout+checkin: wrong supersession scope, randomNo collision, relay settle timing; three fixes applied.
+- [NC relay wiring](nc-relay-wiring.md) — boards are Normally Closed; bitmask must be built from OFF channels (state=0), never ON; one fix in slateMaskHex covers all operations.
