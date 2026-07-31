@@ -5,6 +5,7 @@ interface PropertyContextType {
   selectedPropertyId: number | null;
   setSelectedPropertyId: (id: number | null) => void;
   selectedProperty: Property | null;
+  properties: Property[];
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
@@ -46,7 +47,7 @@ export function PropertyProvider({
   const selectedProperty = properties.find(p => p.id === selectedPropertyId) || null;
 
   return (
-    <PropertyContext.Provider value={{ selectedPropertyId, setSelectedPropertyId, selectedProperty }}>
+    <PropertyContext.Provider value={{ selectedPropertyId, setSelectedPropertyId, selectedProperty, properties }}>
       {children}
     </PropertyContext.Provider>
   );

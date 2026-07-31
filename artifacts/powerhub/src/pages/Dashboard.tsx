@@ -1,4 +1,4 @@
-import { useGetDashboardSummary, useGetDashboardTrends } from '@workspace/api-client-react';
+import { useGetDashboardSummary, useGetDashboardTrends, useListPowerLogs } from '@workspace/api-client-react';
 import { useProperty } from '@/contexts/PropertyContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,17 +14,46 @@ import {
   TrendingUp,
   Zap,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Clock,
+  LogIn,
+  LogOut,
+  Sparkles,
+  Users,
+  ArrowRightLeft,
+  MousePointer,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, 
-  BarChart, Bar, Legend, AreaChart, Area
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, 
+  BarChart, Bar, Legend
 } from 'recharts';
 import { cn } from '@/lib/utils';
 
+// Map a process name to icon + colour (mirrors RoomChart logic)
+function processStyle(name: string | null | undefined): {
+  Icon: React.ElementType;
+  color: string;
+} {
+  const n = (name ?? '').toLowerCase();
+  if (n.includes('checkin') || n.includes('check-in') || n.includes('walkin'))
+    return { Icon: LogIn,          color: 'text-green-700 bg-green-50 border-green-200' };
+  if (n.includes('checkout') || n.includes('check-out'))
+    return { Icon: LogOut,         color: 'text-red-700 bg-red-50 border-red-200' };
+  if (n.includes('clean'))
+    return { Icon: Sparkles,       color: 'text-blue-700 bg-blue-50 border-blue-200' };
+  if (n.includes('visit'))
+    return { Icon: Users,          color: 'text-purple-700 bg-purple-50 border-purple-200' };
+  if (n.includes('transfer'))
+    return { Icon: ArrowRightLeft, color: 'text-orange-700 bg-orange-50 border-orange-200' };
+  if (n.includes('auto') || n.includes('cutoff'))
+    return { Icon: Timer,          color: 'text-gray-600 bg-gray-50 border-gray-200' };
+  return   { Icon: MousePointer,   color: 'text-gray-600 bg-gray-50 border-gray-200' };
+}
+
 export function Dashboard() {
-  const { selectedPropertyId, selectedProperty } = useProperty();
+  const { selectedPropertyId, selectedProperty, properties } = useProperty();
+  const multiProperty = properties.length > 1;
   
   const { data: summary, isLoading: isLoadingSummary, error, refetch, isRefetching } = useGetDashboardSummary(
     { propertyId: selectedPropertyId! },
@@ -34,6 +63,11 @@ export function Dashboard() {
   const { data: trends, isLoading: isLoadingTrends, refetch: refetchTrends } = useGetDashboardTrends(
     { propertyId: selectedPropertyId! },
     { query: { enabled: !!selectedPropertyId, queryKey: ['getDashboardTrends', selectedPropertyId] } }
+  );
+
+  const { data: recentLogs, refetch: refetchLogs } = useListPowerLogs(
+    { propertyId: selectedPropertyId!, limit: 20 },
+    { query: { enabled: !!selectedPropertyId, queryKey: ['recentActivity', selectedPropertyId], refetchInterval: 15_000 } }
   );
 
   if (!selectedPropertyId) {
@@ -94,11 +128,7 @@ export function Dashboard() {
     if (!previous || previous === 0) return null;
     const pct = ((current - previous) / previous) * 100;
     if (pct === 0) return <span className="text-gray-400 text-xs font-medium ml-2">No change</span>;
-    
-    // For energy (kwh), lower is better (green), higher is worse (red) if inverse=true
-    // For rooms used, higher is better (green), lower is worse (red)
     const isPositive = inverse ? pct <= 0 : pct > 0;
-    
     return (
       <span className={cn("inline-flex items-center text-xs font-bold ml-2", isPositive ? "text-success" : "text-destructive")}>
         {pct > 0 ? <ArrowUpRight className="mr-0.5 h-3 w-3" /> : <ArrowDownRight className="mr-0.5 h-3 w-3" />}
@@ -109,6 +139,7 @@ export function Dashboard() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">Overview</h1>
@@ -116,7 +147,7 @@ export function Dashboard() {
         </div>
         <button
           type="button"
-          onClick={() => { refetch(); refetchTrends(); }}
+          onClick={() => { refetch(); refetchTrends(); refetchLogs(); }}
           disabled={isRefetching}
           className="inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-all hover-elevate"
         >
@@ -173,9 +204,7 @@ export function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-              {summary.controlsOn}
-            </div>
+            <div className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{summary.controlsOn}</div>
             <p className="text-xs font-medium text-gray-500 mt-2">Out of {summary.controls} configured channels</p>
           </CardContent>
         </Card>
@@ -194,7 +223,7 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Weekly Trends Insight */}
+      {/* Weekly Trends */}
       {trends && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
@@ -217,7 +246,7 @@ export function Dashboard() {
                 <CardDescription>Daily energy usage compared to last week</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[280px] w-full mt-4">
+                <div className="h-[260px] w-full mt-4">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={trends.days} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
@@ -234,7 +263,7 @@ export function Dashboard() {
                       <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{fontSize: 12, fill: 'hsl(var(--muted-foreground))'}} dy={10} />
                       <YAxis tickLine={false} axisLine={false} tick={{fontSize: 12, fill: 'hsl(var(--muted-foreground))'}} />
                       <RechartsTooltip 
-                        contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--foreground))', boxShadow: 'var(--shadow-md)' }}
+                        contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--foreground))' }}
                         itemStyle={{ fontWeight: 600 }}
                       />
                       <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
@@ -246,7 +275,7 @@ export function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Room Usage Chart */}
+            {/* Room Activity Chart */}
             <Card className="shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-bold text-gray-800 dark:text-gray-100 flex items-center justify-between">
@@ -259,7 +288,7 @@ export function Dashboard() {
                 <CardDescription>Unique rooms active per day</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[280px] w-full mt-4">
+                <div className="h-[260px] w-full mt-4">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={trends.days} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
@@ -267,7 +296,7 @@ export function Dashboard() {
                       <YAxis tickLine={false} axisLine={false} tick={{fontSize: 12, fill: 'hsl(var(--muted-foreground))'}} />
                       <RechartsTooltip 
                         cursor={{fill: 'hsl(var(--muted)/0.4)'}}
-                        contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--foreground))', boxShadow: 'var(--shadow-md)' }}
+                        contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--foreground))' }}
                         itemStyle={{ fontWeight: 600 }}
                       />
                       <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
@@ -281,6 +310,145 @@ export function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Recent Activity Feed */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Clock className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Recent Activity</h2>
+          <span className="text-sm font-medium text-gray-500 ml-2">Last 20 commands · refreshes every 15 s</span>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-gray-50/80 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-800">
+                <tr>
+                  <th className="px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">Time</th>
+                  {multiProperty && (
+                    <th className="px-4 py-3 font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">Property</th>
+                  )}
+                  <th className="px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Room</th>
+                  <th className="px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Action</th>
+                  <th className="px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Process</th>
+                  <th className="px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Guest</th>
+                  <th className="px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">By</th>
+                  <th className="px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Source</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {recentLogs && recentLogs.length > 0 ? (
+                  recentLogs.map((log) => {
+                    const { Icon, color } = processStyle(log.processName);
+                    return (
+                      <tr key={log.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                        {/* Time */}
+                        <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                          <div className="font-medium text-gray-700 dark:text-gray-300">
+                            {new Date(log.rdate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                          <div className="text-[10px] mt-0.5">
+                            {formatDistanceToNow(new Date(log.rdate), { addSuffix: true })}
+                          </div>
+                        </td>
+
+                        {/* Property (multi-property mode) */}
+                        {multiProperty && (
+                          <td className="px-4 py-3 text-xs font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                            {selectedProperty?.name ?? '—'}
+                          </td>
+                        )}
+
+                        {/* Room */}
+                        <td className="px-4 py-3">
+                          {log.roomNo ? (
+                            <span className="inline-flex items-center rounded-md bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-bold text-gray-800 dark:text-gray-200">
+                              {log.roomNo}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">—</span>
+                          )}
+                        </td>
+
+                        {/* Action ON / OFF */}
+                        <td className="px-4 py-3">
+                          <span className={cn(
+                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-extrabold border',
+                            log.state === 1
+                              ? 'bg-green-50 text-green-700 border-green-200'
+                              : 'bg-red-50 text-red-700 border-red-200'
+                          )}>
+                            <span className={cn('h-1.5 w-1.5 rounded-full', log.state === 1 ? 'bg-green-500' : 'bg-red-500')} />
+                            {log.state === 1 ? 'ON' : 'OFF'}
+                          </span>
+                        </td>
+
+                        {/* Process */}
+                        <td className="px-4 py-3">
+                          {log.processName ? (
+                            <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold', color)}>
+                              <Icon className="h-3 w-3 shrink-0" />
+                              {log.processName}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">—</span>
+                          )}
+                        </td>
+
+                        {/* Guest / GRC */}
+                        <td className="px-4 py-3 text-xs text-gray-700 dark:text-gray-300">
+                          {log.guestName ? (
+                            <div>
+                              <div className="font-medium truncate max-w-[120px]">{log.guestName}</div>
+                              {log.grcNo && <div className="text-[10px] text-gray-400 mt-0.5">{log.grcNo}</div>}
+                            </div>
+                          ) : log.grcNo ? (
+                            <span className="text-gray-500">{log.grcNo}</span>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+
+                        {/* Triggered by */}
+                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">
+                          {log.requestedBy ? (
+                            <span className="font-medium">{log.requestedBy}</span>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+
+                        {/* Source */}
+                        <td className="px-4 py-3">
+                          <Badge variant="outline" className={cn(
+                            'text-[10px] font-semibold',
+                            log.source === 'mhms'       && 'bg-blue-50 text-blue-700 border-blue-200',
+                            log.source === 'hms-sync'   && 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                            log.source === 'auto-cutoff'&& 'bg-gray-50 text-gray-600 border-gray-200',
+                            log.source === 'ui'         && 'bg-amber-50 text-amber-700 border-amber-200',
+                          )}>
+                            {log.source}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={multiProperty ? 8 : 7} className="px-5 py-12 text-center text-gray-500">
+                      <div className="flex flex-col items-center justify-center">
+                        <Activity className="h-10 w-10 text-gray-300 mb-3" />
+                        <p className="font-medium text-gray-900 dark:text-white">No activity yet</p>
+                        <p className="text-sm mt-1">Commands will appear here as rooms are switched on and off.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
       
       {/* Device Health Table */}
       <div className="space-y-4">
