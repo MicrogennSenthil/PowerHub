@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { 
@@ -55,6 +55,8 @@ export function Devices() {
     active: true 
   });
   const [codeError, setCodeError] = useState<string | null>(null);
+  const [codeChecking, setCodeChecking] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** Compute the next available code as <HOTELCODE><3-digit-seq>.
    *  e.g. property code "KDS" → "KDS001", "KDS002", …
@@ -75,6 +77,8 @@ export function Devices() {
   const openNew = () => {
     setEditingRecord(null);
     setCodeError(null);
+    setCodeChecking(false);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     setFormData({ code: nextCode(), ipAddress: '', setupIp: '', description: '', floorId: '0', active: true });
     setIsEditorOpen(true);
   };
@@ -82,6 +86,8 @@ export function Devices() {
   const openEdit = (device: Device) => {
     setEditingRecord(device);
     setCodeError(null);
+    setCodeChecking(false);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     setFormData({ 
       code: device.code, 
       ipAddress: device.ipAddress || '', 
@@ -95,15 +101,33 @@ export function Devices() {
 
   const handleCodeChange = (value: string) => {
     setFormData(f => ({ ...f, code: value }));
-    // Inline duplicate check against the already-loaded device list
-    const duplicate = (devices ?? []).find(
-      d => d.code === value.trim() && d.id !== editingRecord?.id
-    );
-    setCodeError(
-      duplicate
-        ? `Code "${value.trim()}" is already used by another device. Choose a different code.`
-        : null,
-    );
+    setCodeError(null);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    const trimmed = value.trim();
+    if (!trimmed) return;
+
+    setCodeChecking(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const excludeParam = editingRecord ? `&excludeId=${editingRecord.id}` : '';
+        const res = await fetch(
+          `/api/devices/check-code?code=${encodeURIComponent(trimmed)}${excludeParam}`,
+          { credentials: 'include' },
+        );
+        if (res.ok) {
+          const { available } = await res.json();
+          setCodeError(
+            available
+              ? null
+              : `Code "${trimmed}" is already in use. Please choose a different code.`,
+          );
+        }
+      } finally {
+        setCodeChecking(false);
+      }
+    }, 400);
   };
 
   const confirmDelete = (device: Device) => {
@@ -283,8 +307,8 @@ export function Devices() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditorOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending || !!codeError}>
-              {createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save Device'}
+            <Button onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending || !!codeError || codeChecking}>
+              {createMutation.isPending || updateMutation.isPending ? 'Saving…' : codeChecking ? 'Checking…' : 'Save Device'}
             </Button>
           </DialogFooter>
         </DialogContent>

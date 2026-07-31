@@ -86,6 +86,29 @@ router.get("/", requirePermission("devices.view"), async (req, res) => {
   res.json(await serializeMany(rows));
 });
 
+// Lightweight availability check — called on every keystroke in the UI.
+// ?code=xxx  required
+// ?excludeId=N  optional — skip this device id (used when editing an existing device)
+router.get("/check-code", requirePermission("devices.view"), async (req, res) => {
+  const code = typeof req.query.code === "string" ? req.query.code.trim() : null;
+  if (!code) {
+    res.status(400).json({ error: "code query param is required" });
+    return;
+  }
+  const excludeId = typeof req.query.excludeId === "string"
+    ? parseInt(req.query.excludeId, 10)
+    : null;
+
+  const rows = await db
+    .select({ id: devicesTable.id })
+    .from(devicesTable)
+    .where(eq(devicesTable.code, code))
+    .limit(1);
+
+  const conflict = rows[0] && (excludeId === null || rows[0].id !== excludeId);
+  res.json({ available: !conflict });
+});
+
 router.get("/:id", requirePermission("devices.view"), async (req, res) => {
   const id = parseId(req.params.id);
   if (id === null) {
