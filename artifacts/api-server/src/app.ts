@@ -93,10 +93,13 @@ app.use(
   ) => {
     logger.error({ err }, "Unhandled request error");
 
+    // Drizzle wraps PostgreSQL errors — code may be on err directly or on err.cause
+    const pgCode: string | undefined = err?.code ?? err?.cause?.code;
+    const pgConstraint: string | undefined = err?.constraint ?? err?.cause?.constraint ?? "";
+
     // PostgreSQL unique_violation (23505)
-    if (err?.code === "23505") {
-      const column = err?.constraint ?? "";
-      if (column.includes("code")) {
+    if (pgCode === "23505") {
+      if (pgConstraint.includes("code")) {
         res.status(409).json({
           error: "A device with this code already exists. Each relay board must have a globally unique code.",
         });

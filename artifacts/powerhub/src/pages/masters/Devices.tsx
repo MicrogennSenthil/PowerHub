@@ -54,15 +54,28 @@ export function Devices() {
     floorId: '0', 
     active: true 
   });
+  const [codeError, setCodeError] = useState<string | null>(null);
+
+  /** Compute the next available 6-digit code from the loaded device list. */
+  const nextCode = () => {
+    const existing = (devices ?? [])
+      .map(d => d.code)
+      .filter(c => /^\d{6}$/.test(c))
+      .map(c => parseInt(c, 10));
+    const max = existing.length > 0 ? Math.max(...existing) : 0;
+    return String(max + 1).padStart(6, '0');
+  };
 
   const openNew = () => {
     setEditingRecord(null);
-    setFormData({ code: '', ipAddress: '', setupIp: '', description: '', floorId: '0', active: true });
+    setCodeError(null);
+    setFormData({ code: nextCode(), ipAddress: '', setupIp: '', description: '', floorId: '0', active: true });
     setIsEditorOpen(true);
   };
 
   const openEdit = (device: Device) => {
     setEditingRecord(device);
+    setCodeError(null);
     setFormData({ 
       code: device.code, 
       ipAddress: device.ipAddress || '', 
@@ -72,6 +85,19 @@ export function Devices() {
       active: device.active 
     });
     setIsEditorOpen(true);
+  };
+
+  const handleCodeChange = (value: string) => {
+    setFormData(f => ({ ...f, code: value }));
+    // Inline duplicate check against the already-loaded device list
+    const duplicate = (devices ?? []).find(
+      d => d.code === value.trim() && d.id !== editingRecord?.id
+    );
+    setCodeError(
+      duplicate
+        ? `Code "${value.trim()}" is already used by another device. Choose a different code.`
+        : null,
+    );
   };
 
   const confirmDelete = (device: Device) => {
@@ -205,7 +231,16 @@ export function Devices() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="code">Device Code (MAC/Serial)</Label>
-                <Input id="code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="e.g. BOX-01" />
+                <Input
+                  id="code"
+                  value={formData.code}
+                  onChange={(e) => handleCodeChange(e.target.value)}
+                  placeholder="e.g. 000001"
+                  className={codeError ? 'border-destructive focus-visible:ring-destructive' : ''}
+                />
+                {codeError && (
+                  <p className="text-xs text-destructive">{codeError}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ip">IP Address (Static)</Label>
@@ -242,7 +277,9 @@ export function Devices() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditorOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending}>{createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save Device'}</Button>
+            <Button onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending || !!codeError}>
+              {createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save Device'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
