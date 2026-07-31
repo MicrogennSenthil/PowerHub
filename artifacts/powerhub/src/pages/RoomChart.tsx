@@ -346,6 +346,7 @@ export function RoomChart() {
   const [floorFilter, setFloorFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [hmsSyncing, setHmsSyncing] = useState(false);
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
   // collapsible: sets of "blockName" or "blockName::floorName" keys
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
   const [collapsedFloors, setCollapsedFloors] = useState<Set<string>>(new Set());
@@ -460,82 +461,96 @@ export function RoomChart() {
   return (
     <div className="animate-in fade-in duration-500 -mx-4 md:-mx-6 lg:-mx-8 -mt-4 md:-mt-6 lg:-mt-8 flex flex-col">
       {/* Sticky header — breaks out of AppShell padding so it pins edge-to-edge */}
-      <div className="sticky top-0 z-20 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 md:px-6 lg:px-8 py-4 shadow-sm">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white flex items-center gap-3">
-              Power Matrix
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 text-success border border-success/20 text-xs font-bold tracking-wide">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
-                </span>
-                {activeRooms} / {totalRooms} ACTIVE
-              </div>
-            </h1>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">
-              Live room &amp; device status monitor
-            </p>
+      <div className="sticky top-0 z-20 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+        {/* Collapsed mini-bar: always visible */}
+        <div className="flex items-center gap-3 px-4 md:px-6 lg:px-8 py-2">
+          <button
+            onClick={() => setHeaderCollapsed(c => !c)}
+            className="flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-primary transition-colors"
+            title={headerCollapsed ? 'Expand header' : 'Collapse header'}
+          >
+            {headerCollapsed
+              ? <ChevronDown className="h-4 w-4" />
+              : <ChevronUp className="h-4 w-4" />}
+            <span className="text-sm font-bold tracking-tight">Power Matrix</span>
+          </button>
+
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/20 text-xs font-bold tracking-wide">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success"></span>
+            </span>
+            {activeRooms} / {totalRooms} ACTIVE
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Legend />
-            <Button
-              variant="outline" size="sm"
-              onClick={handleHmsSync}
-              disabled={hmsSyncing || isFetching}
-              className="font-semibold shadow-sm hover-elevate border-blue-200 text-blue-700 hover:bg-blue-50 h-8 text-xs"
-            >
-              {hmsSyncing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <ArrowRightLeft className="mr-1.5 h-3.5 w-3.5" />}
-              Sync HMS
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}
-              className="font-semibold shadow-sm hover-elevate h-8 text-xs">
-              <RefreshCw className={cn('mr-1.5 h-3.5 w-3.5', isFetching && 'animate-spin')} />
-              Sync Grid
-            </Button>
-          </div>
-        </div>
-
-        {/* Device strip + filters on one compact row */}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <DeviceStatusStrip propertyId={selectedPropertyId} />
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-2 h-3.5 w-3.5 text-gray-400" />
-            <Input
-              placeholder="Search room..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 w-40 sm:w-52 pl-8 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 font-medium text-xs focus-visible:ring-primary/50"
-            />
-          </div>
-          {hasBlocks && (
-            <Select value={blockFilter} onValueChange={setBlockFilter}>
-              <SelectTrigger className="h-8 w-36 bg-gray-50 dark:bg-gray-800 font-medium border-gray-200 dark:border-gray-700 text-xs">
-                <SelectValue placeholder="All blocks" />
+          {/* Search + filters always visible in mini-bar */}
+          <div className="flex flex-wrap items-center gap-2 ml-auto">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-2 h-3.5 w-3.5 text-gray-400" />
+              <Input
+                placeholder="Search room..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8 w-36 sm:w-44 pl-8 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 font-medium text-xs focus-visible:ring-primary/50"
+              />
+            </div>
+            {hasBlocks && (
+              <Select value={blockFilter} onValueChange={setBlockFilter}>
+                <SelectTrigger className="h-8 w-32 bg-gray-50 dark:bg-gray-800 font-medium border-gray-200 dark:border-gray-700 text-xs">
+                  <SelectValue placeholder="All blocks" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="font-medium text-xs">All blocks</SelectItem>
+                  {blockOptions.map((b) => (
+                    <SelectItem key={b} value={b} className="font-medium text-xs">{b}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={floorFilter} onValueChange={setFloorFilter}>
+              <SelectTrigger className="h-8 w-32 bg-gray-50 dark:bg-gray-800 font-medium border-gray-200 dark:border-gray-700 text-xs">
+                <SelectValue placeholder="All floors" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all" className="font-medium text-xs">All blocks</SelectItem>
-                {blockOptions.map((b) => (
-                  <SelectItem key={b} value={b} className="font-medium text-xs">{b}</SelectItem>
+                <SelectItem value="all" className="font-medium text-xs">All floors</SelectItem>
+                {floorOptions.map((f) => (
+                  <SelectItem key={f} value={f} className="font-medium text-xs">{f}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          )}
-          <Select value={floorFilter} onValueChange={setFloorFilter}>
-            <SelectTrigger className="h-8 w-36 bg-gray-50 dark:bg-gray-800 font-medium border-gray-200 dark:border-gray-700 text-xs">
-              <SelectValue placeholder="All floors" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" className="font-medium text-xs">All floors</SelectItem>
-              {floorOptions.map((f) => (
-                <SelectItem key={f} value={f} className="font-medium text-xs">{f}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          </div>
         </div>
+
+        {/* Expandable detail panel — hidden when collapsed */}
+        {!headerCollapsed && (
+          <div className="px-4 md:px-6 lg:px-8 pb-3 border-t border-gray-100 dark:border-gray-800 pt-2">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                Live room &amp; device status monitor
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Legend />
+                <Button
+                  variant="outline" size="sm"
+                  onClick={handleHmsSync}
+                  disabled={hmsSyncing || isFetching}
+                  className="font-semibold shadow-sm hover-elevate border-blue-200 text-blue-700 hover:bg-blue-50 h-8 text-xs"
+                >
+                  {hmsSyncing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <ArrowRightLeft className="mr-1.5 h-3.5 w-3.5" />}
+                  Sync HMS
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}
+                  className="font-semibold shadow-sm hover-elevate h-8 text-xs">
+                  <RefreshCw className={cn('mr-1.5 h-3.5 w-3.5', isFetching && 'animate-spin')} />
+                  Sync Grid
+                </Button>
+              </div>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <DeviceStatusStrip propertyId={selectedPropertyId} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Scrollable room grid — just natural page scroll, no inner ScrollArea */}
