@@ -87,28 +87,69 @@ router.get("/", requirePermission("devices.view"), async (req, res) => {
 });
 
 // Lightweight availability check — called on every keystroke in the UI.
-// Codes are globally unique because the relay box poll endpoint has no
-// property context — two boxes with the same code would share commands.
-// ?code=xxx      required
-// ?excludeId=N   optional — skip this device id (used when editing)
+// Uniqueness is per-property: the same code may exist in different properties
+// (each maps to a physically distinct relay box on a different site).
+// A cross-property collision is allowed but returns a warning so the operator
+// knows that the relay poll heuristic will be used if codes clash globally.
+// ?code=xxx        required
+// ?propertyId=N    required — scope the uniqueness check to this property
+// ?excludeId=N     optional — skip this device id (used when editing)
 router.get("/check-code", requirePermission("devices.view"), async (req, res) => {
   const code = typeof req.query.code === "string" ? req.query.code.trim() : null;
   if (!code) {
     res.status(400).json({ error: "code query param is required" });
     return;
   }
-  const excludeId = typeof req.query.excludeId === "string"
-    ? parseInt(req.query.excludeId, 10)
-    : null;
+  const propertyId =
+    typeof req.query.propertyId === "string"
+      ? parseInt(req.query.propertyId, 10)
+      : null;
+  if (!propertyId || !Number.isInteger(propertyId)) {
+    res.status(400).json({ error: "propertyId query param is required" });
+    return;
+  }
+  if (!canAccessProperty(req.currentUser!, propertyId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const excludeId =
+    typeof req.query.excludeId === "string"
+      ? parseInt(req.query.excludeId, 10)
+      : null;
 
-  const rows = await db
+  // 1. Same-property check — blocking: code must be unique within this property.
+  const sameProperty = await db
     .select({ id: devicesTable.id })
     .from(devicesTable)
-    .where(eq(devicesTable.code, code))
+    .where(and(eq(devicesTable.propertyId, propertyId), eq(devicesTable.code, code)))
     .limit(1);
+  const sameConflict =
+    sameProperty[0] && (excludeId === null || sameProperty[0].id !== excludeId);
 
-  const conflict = rows[0] && (excludeId === null || rows[0].id !== excludeId);
-  res.json({ available: !conflict });
+  // 2. Cross-property check — non-blocking warning only.
+  // The relay poll endpoint is global, so boxes sharing a code get
+  // best-effort command delivery (server prefers the box with a pending cmd).
+  // Recommend using a property-prefix code (e.g. KDS001) to avoid ambiguity.
+  let crossPropertyWarning = false;
+  if (!sameConflict) {
+    const others = await db
+      .select({ id: devicesTable.id })
+      .from(devicesTable)
+      .where(
+        and(
+          eq(devicesTable.code, code),
+          // any row NOT belonging to this property
+          sql`${devicesTable.propertyId} != ${propertyId}`,
+        ),
+      )
+      .limit(1);
+    crossPropertyWarning = !!others[0];
+  }
+
+  res.json({
+    available: !sameConflict,
+    crossPropertyWarning,
+  });
 });
 
 router.get("/:id", requirePermission("devices.view"), async (req, res) => {

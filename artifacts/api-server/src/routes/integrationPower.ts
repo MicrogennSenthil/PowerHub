@@ -209,17 +209,37 @@ deviceRouter.use("/PowerDeviceStatusApi", (req, res, next) => {
 
 // Legacy poll: returns "DEVICE+push+pull#RRRR+" for the oldest pending command,
 // or "NOCMD" when the queue is empty. Also serves as the heartbeat.
+//
+// When multiple properties share the same device code (allowed — uniqueness is
+// per-property), we pick the device that has a pending command so that relay
+// commands are actually delivered.  If several have pending commands we pick
+// the one whose command is oldest (lowest log id) to maintain FIFO fairness.
+// If none have pending commands we fall back to the first row by id so that
+// heartbeats are still recorded for at least one device.
 deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
   const code = req.params.deviceCode;
-  const devices = await db
+  const allDevices = await db
     .select()
     .from(devicesTable)
-    .where(eq(devicesTable.code, code))
-    .limit(1);
-  const device = devices[0];
-  if (!device) {
+    .where(eq(devicesTable.code, code));
+  if (allDevices.length === 0) {
     res.status(404).type("text/plain").send("UNKNOWN");
     return;
+  }
+
+  // Pick the best device: prefer one with a pending command, then by id asc.
+  let device = allDevices[0]!;
+  if (allDevices.length > 1) {
+    const deviceIds = allDevices.map((d) => d.id);
+    const pendingRows = await db
+      .select({ deviceId: powerLogsTable.deviceId })
+      .from(powerLogsTable)
+      .where(and(inArray(powerLogsTable.deviceId, deviceIds), eq(powerLogsTable.flag, 0)))
+      .orderBy(asc(powerLogsTable.id))
+      .limit(1);
+    if (pendingRows[0]) {
+      device = allDevices.find((d) => d.id === pendingRows[0]!.deviceId) ?? device;
+    }
   }
   // Bridge forwards the box's LAN IP in x-device-ip; record it when present.
   // Strictly validate as an IP address (net.isIP) — this endpoint is

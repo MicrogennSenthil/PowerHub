@@ -54,7 +54,8 @@ export function Devices() {
     floorId: '0', 
     active: true 
   });
-  const [codeError, setCodeError] = useState<string | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);     // blocking — same property
+  const [codeWarning, setCodeWarning] = useState<string | null>(null); // advisory — cross-property
   const [codeChecking, setCodeChecking] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -77,6 +78,7 @@ export function Devices() {
   const openNew = () => {
     setEditingRecord(null);
     setCodeError(null);
+    setCodeWarning(null);
     setCodeChecking(false);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setFormData({ code: nextCode(), ipAddress: '', setupIp: '', description: '', floorId: '0', active: true });
@@ -86,6 +88,7 @@ export function Devices() {
   const openEdit = (device: Device) => {
     setEditingRecord(device);
     setCodeError(null);
+    setCodeWarning(null);
     setCodeChecking(false);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setFormData({ 
@@ -102,6 +105,7 @@ export function Devices() {
   const handleCodeChange = (value: string) => {
     setFormData(f => ({ ...f, code: value }));
     setCodeError(null);
+    setCodeWarning(null);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -113,16 +117,23 @@ export function Devices() {
       try {
         const excludeParam = editingRecord ? `&excludeId=${editingRecord.id}` : '';
         const res = await fetch(
-          `/api/devices/check-code?code=${encodeURIComponent(trimmed)}${excludeParam}`,
+          `/api/devices/check-code?code=${encodeURIComponent(trimmed)}&propertyId=${selectedPropertyId}${excludeParam}`,
           { credentials: 'include' },
         );
         if (res.ok) {
-          const { available } = await res.json();
-          setCodeError(
-            available
-              ? null
-              : `Code "${trimmed}" is already in use. Please choose a different code.`,
-          );
+          const { available, crossPropertyWarning } = await res.json();
+          if (!available) {
+            setCodeError(`Code "${trimmed}" is already used by another device in this property.`);
+            setCodeWarning(null);
+          } else if (crossPropertyWarning) {
+            setCodeError(null);
+            setCodeWarning(
+              `Code "${trimmed}" is already used in another property. Each relay box must have a unique code on the server — consider using a property prefix (e.g. ${(selectedProperty?.code ?? 'MDM').toUpperCase()}001).`,
+            );
+          } else {
+            setCodeError(null);
+            setCodeWarning(null);
+          }
         }
       } finally {
         setCodeChecking(false);
@@ -266,10 +277,13 @@ export function Devices() {
                   value={formData.code}
                   onChange={(e) => handleCodeChange(e.target.value)}
                   placeholder={`e.g. ${(selectedProperty?.code ?? '').toUpperCase()}001`}
-                  className={codeError ? 'border-destructive focus-visible:ring-destructive' : ''}
+                  className={codeError ? 'border-destructive focus-visible:ring-destructive' : codeWarning ? 'border-amber-400 focus-visible:ring-amber-400' : ''}
                 />
                 {codeError && (
                   <p className="text-xs text-destructive">{codeError}</p>
+                )}
+                {!codeError && codeWarning && (
+                  <p className="text-xs text-amber-600">⚠ {codeWarning}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -308,7 +322,7 @@ export function Devices() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditorOpen(false)}>Cancel</Button>
             <Button onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending || !!codeError || codeChecking}>
-              {createMutation.isPending || updateMutation.isPending ? 'Saving…' : codeChecking ? 'Checking…' : 'Save Device'}
+              {createMutation.isPending || updateMutation.isPending ? 'Saving…' : codeChecking ? 'Checking…' : codeWarning ? 'Save Anyway' : 'Save Device'}
             </Button>
           </DialogFooter>
         </DialogContent>
