@@ -80,4 +80,40 @@ app.use(
 
 app.use("/api", router);
 
+// Global error handler — catches any unhandled error from async route handlers
+// (Express 5 forwards them automatically). Returns JSON instead of the default
+// HTML 500 page so the frontend can display a readable message.
+app.use(
+  (
+    err: any,
+    _req: express.Request,
+    res: express.Response,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _next: express.NextFunction,
+  ) => {
+    logger.error({ err }, "Unhandled request error");
+
+    // PostgreSQL unique_violation (23505)
+    if (err?.code === "23505") {
+      const column = err?.constraint ?? "";
+      if (column.includes("code")) {
+        res.status(409).json({
+          error: "A device with this code already exists. Each relay board must have a globally unique code.",
+        });
+        return;
+      }
+      res.status(409).json({ error: "A record with that value already exists." });
+      return;
+    }
+
+    const status: number =
+      typeof err?.status === "number" ? err.status :
+      typeof err?.statusCode === "number" ? err.statusCode : 500;
+
+    res.status(status).json({
+      error: err?.message ?? "Internal server error",
+    });
+  },
+);
+
 export default app;
