@@ -1,4 +1,4 @@
-import { and, eq, isNull, lte, inArray } from "drizzle-orm";
+import { and, eq, isNull, lte, inArray, sql } from "drizzle-orm";
 import {
   db,
   controlsTable,
@@ -24,6 +24,35 @@ let timer: NodeJS.Timeout | null = null;
 
 export async function sweepAutoCutoff(): Promise<number> {
   const now = new Date();
+
+  // Diagnostic: count sessions that are open but have no cutoffDueAt set.
+  // This happens when the MHMS event name didn't match any process type
+  // (e.g. case mismatch: MHMS sent "visiting", DB has "Visiting").
+  // We log this periodically (odd 30-s ticks) so it shows up in PM2 logs
+  // without flooding them.
+  if (now.getSeconds() < 30) {
+    const noTimer = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(powerSessionsTable)
+      .where(
+        and(
+          isNull(powerSessionsTable.endedAt),
+          isNull(powerSessionsTable.cutoffDueAt),
+        ),
+      );
+    const n = noTimer[0]?.count ?? 0;
+    if (n > 0) {
+      logger.warn(
+        { openSessionsWithNoTimer: n },
+        "auto-cutoff: %d open session(s) have no cutoffDueAt — they will never be auto-cut. " +
+        "This usually means the MHMS event name did not match any process type with isAuto=true. " +
+        "Go to Masters → Process Types and make sure the Name matches exactly what MHMS sends " +
+        "(e.g. 'Visiting'), isAuto is on, and cutoffMinutes > 0.",
+        n,
+      );
+    }
+  }
+
   const due = await db
     .select({
       sessionId: powerSessionsTable.id,

@@ -1,7 +1,7 @@
 import net from "node:net";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import {
   db,
   controlsTable,
@@ -57,16 +57,35 @@ mhmsRouter.post("/commands", requireApiKey, async (req, res) => {
     return;
   }
 
-  // Resolve process type from event name (e.g. "checkin" → process named "Checkin").
+  // Resolve process type from event name (e.g. "visiting" → process named "Visiting").
+  // Match is case-insensitive so MHMS event names like "visiting" match a DB row named
+  // "Visiting" (or any other casing the admin typed). Without this, cutoffDueAt stays
+  // null and the auto-cutoff sweep never fires for visiting/cleaning sessions.
   let processType = null;
+  let processTypeWarning: string | null = null;
   if (body.event) {
+    const eventTrimmed = body.event.trim();
     const found = await db
       .select()
       .from(processTypesTable)
-      .where(and(eq(processTypesTable.propertyId, propertyId), eq(processTypesTable.name, body.event)))
+      .where(
+        and(
+          eq(processTypesTable.propertyId, propertyId),
+          sql`lower(${processTypesTable.name}) = lower(${eventTrimmed})`,
+        ),
+      )
       .limit(1);
-    // Soft-fail: unknown event names are accepted but logged without a process link.
-    if (found[0]) processType = found[0];
+    if (found[0]) {
+      processType = found[0];
+      // Warn if the process type exists but has no auto-cutoff configured — the caller
+      // might expect a timer but will get none.
+      if (processType.isAuto && processType.cutoffMinutes <= 0) {
+        processTypeWarning = `Process type "${processType.name}" has isAuto=true but cutoffMinutes=0 — no timer will fire. Set cutoffMinutes > 0 in Masters → Process Types.`;
+      }
+    } else {
+      // Soft-fail but surface in response so the caller can detect mismatches.
+      processTypeWarning = `No process type named "${eventTrimmed}" found for this property. Auto-cutoff will NOT fire. Create it in Masters → Process Types with isAuto=true and a cutoffMinutes value.`;
+    }
   }
 
   // Room controls, optionally filtered by control type names.
@@ -124,7 +143,12 @@ mhmsRouter.post("/commands", requireApiKey, async (req, res) => {
     event:       body.event ?? null,
     controls:    targets.map((t) => ({ id: t.control.id, label: t.control.label, type: t.typeName })),
     process:     processType?.name ?? null,
-    autoCutoffMinutes: state === 1 && processType?.isAuto ? processType.cutoffMinutes : null,
+    autoCutoffMinutes: state === 1 && processType?.isAuto && (processType.cutoffMinutes ?? 0) > 0
+      ? processType.cutoffMinutes
+      : null,
+    // Non-null when the event name didn't resolve or the process type has no timer configured.
+    // Check this field in MHMS logs to diagnose missing auto-cutoff.
+    warning: processTypeWarning ?? undefined,
   });
 });
 
