@@ -50,9 +50,11 @@ function ChannelRow({
 }) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const quickFileInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isQuickUploading, setIsQuickUploading] = useState(false);
   const [formData, setFormData] = useState({
     label: control.label || '',
     roomId: control.roomId?.toString() || '0',
@@ -72,6 +74,47 @@ function ChannelRow({
     });
     setIsSaving(false);
     setIsEditing(false);
+  };
+
+  /** Quick upload from view mode — uploads photo and auto-saves just the photoUrl. */
+  const handleQuickFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Images only', description: 'Please select a JPEG, PNG, or similar image.', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Maximum photo size is 5 MB.', variant: 'destructive' });
+      return;
+    }
+    setIsQuickUploading(true);
+    try {
+      const urlRes = await fetch('/api/storage/uploads/request-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+      });
+      if (!urlRes.ok) throw new Error('Failed to get upload URL');
+      const { uploadURL, objectPath } = await urlRes.json();
+      const putRes = await fetch(uploadURL, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+      if (!putRes.ok) throw new Error('Upload to storage failed');
+      // Auto-save — keep all existing field values, only update photoUrl
+      await onSave(control.id, {
+        label: control.label ?? null,
+        roomId: control.roomId ?? null,
+        controlTypeId: control.controlTypeId ?? null,
+        wattage: control.wattage ?? null,
+        photoUrl: objectPath,
+      });
+      setFormData(f => ({ ...f, photoUrl: objectPath }));
+      toast({ title: 'Photo saved' });
+    } catch (err: any) {
+      toast({ title: 'Upload failed', description: err.message ?? 'Please try again.', variant: 'destructive' });
+    } finally {
+      setIsQuickUploading(false);
+    }
   };
 
   /** Two-step presigned-URL upload: request URL → PUT file → store objectPath */
@@ -239,17 +282,37 @@ function ChannelRow({
     <div className="grid grid-cols-12 items-center gap-4 py-3 border-b px-4 hover:bg-gray-50">
       <div className="col-span-1 text-sm font-medium text-gray-500">Ch {control.channel}</div>
       <div className="col-span-3 font-medium flex items-center gap-2">
-        {control.photoUrl ? (
-          <img
-            src={photoSrc(control.photoUrl)}
-            alt=""
-            className="h-6 w-8 object-cover rounded shadow-sm border border-gray-200 shrink-0"
-          />
-        ) : (
-          <span className="h-6 w-8 rounded border border-dashed border-gray-200 flex items-center justify-center shrink-0">
-            <Camera className="h-3 w-3 text-gray-300" />
-          </span>
-        )}
+        {/* Clickable photo thumbnail / camera icon — opens file picker directly */}
+        <button
+          type="button"
+          onClick={() => quickFileInputRef.current?.click()}
+          disabled={isQuickUploading}
+          title={control.photoUrl ? 'Click to replace photo' : 'Click to add photo'}
+          className="shrink-0 relative group"
+        >
+          {isQuickUploading ? (
+            <span className="h-6 w-8 rounded border border-gray-200 flex items-center justify-center bg-gray-50">
+              <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
+            </span>
+          ) : control.photoUrl ? (
+            <img
+              src={photoSrc(control.photoUrl)}
+              alt=""
+              className="h-6 w-8 object-cover rounded shadow-sm border border-gray-200 group-hover:opacity-75 transition-opacity"
+            />
+          ) : (
+            <span className="h-6 w-8 rounded border border-dashed border-gray-200 flex items-center justify-center bg-gray-50 group-hover:border-primary group-hover:bg-primary/5 transition-colors">
+              <Camera className="h-3 w-3 text-gray-300 group-hover:text-primary transition-colors" />
+            </span>
+          )}
+        </button>
+        <input
+          ref={quickFileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleQuickFileChange}
+        />
         {control.label || <span className="text-gray-400 italic">Unlabeled</span>}
       </div>
       <div className="col-span-2 text-sm">{control.roomNo ? `Room ${control.roomNo}` : <span className="text-gray-400">—</span>}</div>
