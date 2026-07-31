@@ -26,18 +26,23 @@ export interface CommandMeta {
 }
 
 function slateMaskHex(controls: ControlRow[], slate: number): string {
-  // Active-high bitmask: relay ON = bit 1. Channel 1 → bit 0 (LSB).
+  // NC (Normally Closed) relay wiring — bit semantics are INVERTED vs active-high:
+  //   bit = 0 → relay de-energised → NC contacts CLOSED → room power ON  ✓
+  //   bit = 1 → relay energised    → NC contacts OPEN   → room power OFF ✓
+  //
+  // Therefore we set bits for channels that are OFF (state=0), not ON.
+  // A channel with state=1 (ON) keeps its bit at 0, leaving the NC contact
+  // closed so current flows to the room.
+  //
   // IMPORTANT: the relay board firmware parses the value as HEXADECIMAL but
   // only handles lowercase hex letters (a-f). Uppercase A-F stops the parser
-  // early (returns 0) → all relays off.
-  // This matches the legacy PHP: dechex() returns lowercase, so it always
-  // produced "*0X0f" (not "*0X0F") and 4-channel commands worked correctly.
-  //   "07" → 0x07 = 7  → Ch1+Ch2+Ch3           ✓
-  //   "0F" → firmware stops at 'F' → 0 → all off ✗ (uppercase breaks it)
-  //   "0f" → 0x0f = 15 → Ch1+Ch2+Ch3+Ch4        ✓ (lowercase works)
+  // early (returns 0) → all relays de-energised → all NC closed → all ON.
+  //   "07" → 0x07 = 7  → Ch1+Ch2+Ch3 relays energised (those rooms OFF)  ✓
+  //   "0F" → firmware stops at 'F' → 0 → all de-energised → all ON       ✗
+  //   "0f" → 0x0f = 15 → Ch1–Ch4 energised (those rooms OFF)             ✓
   let mask = 0;
   for (const c of controls) {
-    if (c.slate === slate && c.state === 1) {
+    if (c.slate === slate && c.state === 0) {
       mask |= 1 << (c.channel - 1);
     }
   }
