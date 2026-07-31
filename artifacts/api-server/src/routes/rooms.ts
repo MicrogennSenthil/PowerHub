@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, asc, desc, and, inArray, ilike } from "drizzle-orm";
+import { eq, asc, desc, and, inArray, ilike, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   db,
@@ -222,7 +222,11 @@ router.get("/chart", requirePermission("rooms.view"), async (req, res) => {
       .leftJoin(devicesTable, eq(controlsTable.deviceId, devicesTable.id))
       .where(eq(controlsTable.propertyId, propertyId))
       .orderBy(asc(controlsTable.slate), asc(controlsTable.channel)),
-    // Latest power log per room — gives us last process, guest name, grc
+    // Latest process-bearing power log per room — gives us last process name,
+    // guest name, and GRC to display on the room card.
+    // We filter to rows where processTypeId IS NOT NULL so that a manual UI
+    // toggle (no process context) never clears the activity badge that was set
+    // by a prior checkin/visiting/cleaning MHMS event.
     db
       .selectDistinctOn([powerLogsTable.roomId], {
         roomId: powerLogsTable.roomId,
@@ -236,7 +240,12 @@ router.get("/chart", requirePermission("rooms.view"), async (req, res) => {
         processTypesTable,
         eq(powerLogsTable.processTypeId, processTypesTable.id),
       )
-      .where(eq(powerLogsTable.propertyId, propertyId))
+      .where(
+        and(
+          eq(powerLogsTable.propertyId, propertyId),
+          isNotNull(powerLogsTable.processTypeId),
+        ),
+      )
       .orderBy(powerLogsTable.roomId, desc(powerLogsTable.rdate)),
     getOfflineThresholdMinutes(),
   ]);
@@ -351,12 +360,24 @@ router.post(
       return;
     }
 
-    // Load all rooms for the property so we can match by room number.
-    const propertyRooms = await db
-      .select({ id: roomsTable.id, roomNo: roomsTable.roomNo })
-      .from(roomsTable)
-      .where(eq(roomsTable.propertyId, propertyId));
+    // Load all rooms and process types for the property in parallel.
+    const [propertyRooms, propertyProcessTypes] = await Promise.all([
+      db
+        .select({ id: roomsTable.id, roomNo: roomsTable.roomNo })
+        .from(roomsTable)
+        .where(eq(roomsTable.propertyId, propertyId)),
+      db
+        .select()
+        .from(processTypesTable)
+        .where(eq(processTypesTable.propertyId, propertyId)),
+    ]);
     const roomByNo = new Map(propertyRooms.map((r) => [r.roomNo.toLowerCase(), r.id]));
+    // Case-insensitive map: lower(name) → process type row.
+    // Used to attach a process type to HMS-sync commands so the command log
+    // and room chart activity badge show the correct process name (e.g. "Checkin").
+    const processTypeByName = new Map(
+      propertyProcessTypes.map((pt) => [pt.name.toLowerCase(), pt]),
+    );
 
     // Load all controls for the property to enqueue commands.
     const allControls = await db
@@ -394,7 +415,11 @@ router.post(
 
       synced++;
       try {
+        // Resolve a process type from the HMS status name so the command log
+        // and room-chart activity badge show the correct event (e.g. "Checkin").
+        const processType = processTypeByName.get(statusRaw) ?? null;
         await enqueueControlChange(controls, targetState, {
+          processType,
           source: "hms-sync",
           requestedBy: "HMS Sync",
           grcNo: item.grcNo ?? null,
