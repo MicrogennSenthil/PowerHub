@@ -32,7 +32,8 @@ const selection = {
   controlTypeName: controlTypesTable.name,
   state: controlsTable.state,
   wattage: controlsTable.wattage,
-  photoUrl: controlsTable.photoUrl,
+  // photoUrl is excluded from the default selection until the production
+  // database has been migrated to add the photo_url column (task #17).
 };
 
 function withJoins() {
