@@ -5,21 +5,20 @@ import {
   boolean,
   integer,
   timestamp,
-  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { propertiesTable } from "./properties";
 import { floorsTable } from "./floors";
 
-export const devicesTable = pgTable(
-  "devices",
-  {
+export const devicesTable = pgTable("devices", {
   id: serial("id").primaryKey(),
   propertyId: integer("property_id")
     .notNull()
     .references(() => propertiesTable.id, { onDelete: "cascade" }),
-  // Unique per property — two different properties may reuse the same code.
-  // The combined (property_id, code) pair is what must be unique.
-  code: text("code").notNull(),
+  // Globally unique — the relay box identifies itself solely by this code
+  // in the unauthenticated poll endpoint. Two boxes with the same code would
+  // share the same command queue and cross-contaminate relay commands across
+  // properties. Use hotelCode+number (e.g. KDS001) to stay unique globally.
+  code: text("code").notNull().unique(),
   ipAddress: text("ip_address"),
   // IP the box last connected from, as reported by the companion bridge
   // (x-device-ip header). Updated on every poll.
@@ -39,15 +38,6 @@ export const devicesTable = pgTable(
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-  },
-  (t) => ({
-    // Code must be unique within a property; two different properties may
-    // legitimately use the same code (e.g. both having "000001").
-    propertyCodeUnique: uniqueIndex("devices_property_code_unique").on(
-      t.propertyId,
-      t.code,
-    ),
-  }),
-);
+});
 
 export type DeviceRow = typeof devicesTable.$inferSelect;
