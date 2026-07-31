@@ -113,7 +113,7 @@ export function Devices() {
       try {
         const excludeParam = editingRecord ? `&excludeId=${editingRecord.id}` : '';
         const res = await fetch(
-          `/api/devices/check-code?code=${encodeURIComponent(trimmed)}${excludeParam}`,
+          `/api/devices/check-code?code=${encodeURIComponent(trimmed)}&propertyId=${selectedPropertyId}${excludeParam}`,
           { credentials: 'include' },
         );
         if (res.ok) {

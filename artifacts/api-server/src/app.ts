@@ -99,9 +99,9 @@ app.use(
 
     // PostgreSQL unique_violation (23505)
     if (pgCode === "23505") {
-      if (pgConstraint.includes("code")) {
+      if (pgConstraint.includes("property_code") || pgConstraint.includes("code")) {
         res.status(409).json({
-          error: "A device with this code already exists. Each relay board must have a globally unique code.",
+          error: "A device with this code already exists in this property. Please choose a different code.",
         });
         return;
       }

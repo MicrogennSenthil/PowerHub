@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, sql, inArray } from "drizzle-orm";
+import { eq, sql, inArray, and } from "drizzle-orm";
 import {
   db,
   devicesTable,
@@ -87,14 +87,28 @@ router.get("/", requirePermission("devices.view"), async (req, res) => {
 });
 
 // Lightweight availability check — called on every keystroke in the UI.
-// ?code=xxx  required
-// ?excludeId=N  optional — skip this device id (used when editing an existing device)
+// ?code=xxx        required
+// ?propertyId=N    required — uniqueness is scoped per property
+// ?excludeId=N     optional — skip this device id (used when editing an existing device)
 router.get("/check-code", requirePermission("devices.view"), async (req, res) => {
   const code = typeof req.query.code === "string" ? req.query.code.trim() : null;
+  const propertyId = typeof req.query.propertyId === "string"
+    ? parseInt(req.query.propertyId, 10)
+    : null;
+
   if (!code) {
     res.status(400).json({ error: "code query param is required" });
     return;
   }
+  if (!propertyId || isNaN(propertyId)) {
+    res.status(400).json({ error: "propertyId query param is required" });
+    return;
+  }
+  if (!canAccessProperty(req.currentUser!, propertyId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
   const excludeId = typeof req.query.excludeId === "string"
     ? parseInt(req.query.excludeId, 10)
     : null;
@@ -102,7 +116,10 @@ router.get("/check-code", requirePermission("devices.view"), async (req, res) =>
   const rows = await db
     .select({ id: devicesTable.id })
     .from(devicesTable)
-    .where(eq(devicesTable.code, code))
+    .where(and(
+      eq(devicesTable.propertyId, propertyId),
+      eq(devicesTable.code, code),
+    ))
     .limit(1);
 
   const conflict = rows[0] && (excludeId === null || rows[0].id !== excludeId);
