@@ -1,6 +1,6 @@
 {
-  "_readme": "Edit powerhubUrl and propertyId for this site, then save and restart the bridge.",
-  "_howto_find_propertyId": "In PowerHub go to Masters → Properties. The number in the URL when you hover/click a property row is its ID. Your super-admin can also tell you the ID.",
+  "_readme": "Edit powerhubUrl and propertyCode for this site, then save and restart the bridge.",
+  "_howto_find_propertyCode": "In PowerHub go to Masters -> Properties. Use the short property CODE shown there (e.g. KDS, MDM). Not case-sensitive.",
   "_examples": {
     "replit_production" : "https://power.microgenn.com",
     "replit_dev"        : "https://xxxx.sisko.replit.dev",
@@ -8,6 +8,6 @@
   },
   "powerhubUrl": "https://power.microgenn.com",
   "listenPort": 8085,
-  "propertyId": 0,
-  "_propertyId_note": "Set this to the numeric ID of the property where this bridge is installed (e.g. 3). Leave as 0 to use the old heuristic (not recommended when multiple properties share a device code)."
+  "propertyCode": "",
+  "_propertyCode_note": "REQUIRED for multi-property setups. Set to this hotel's property code from PowerHub (e.g. \"KDS\"). Every relay command lookup is scoped to this property, so the same device number can safely exist at other properties."
 }

@@ -9,8 +9,36 @@ import {
   devicesTable,
   powerLogsTable,
   processTypesTable,
+  propertiesTable,
   roomsTable,
 } from "@workspace/db";
+import type { Request } from "express";
+
+// Resolve which property a bridge request belongs to.
+// Preferred: x-property-code header (new bridge) — the hotel's short code
+// (e.g. "KDS"), matched case-insensitively against properties.code.
+// Fallback: x-property-id numeric header (older bridge builds).
+// Returns null when neither header is usable (legacy bridge → heuristic).
+async function resolveBridgePropertyId(req: Request): Promise<number | null> {
+  const codeHeader = req.headers["x-property-code"];
+  if (typeof codeHeader === "string" && codeHeader.trim()) {
+    const propCode = codeHeader.trim();
+    const rows = await db
+      .select({ id: propertiesTable.id })
+      .from(propertiesTable)
+      .where(sql`lower(${propertiesTable.code}) = lower(${propCode})`)
+      .limit(1);
+    if (rows[0]) return rows[0].id;
+    // Unknown property code — treat as unresolved rather than silently
+    // falling back, so the caller can decide (poll returns UNKNOWN).
+    return -1;
+  }
+  const idHeader = req.headers["x-property-id"];
+  if (typeof idHeader === "string" && /^\d+$/.test(idHeader.trim())) {
+    return parseInt(idHeader.trim(), 10);
+  }
+  return null;
+}
 import { requireApiKey } from "../lib/apiKeyAuth";
 import { enqueueControlChange, buildPush, buildPull } from "../lib/powerQueue";
 import { validateBody } from "../lib/http";
@@ -211,20 +239,22 @@ deviceRouter.use("/PowerDeviceStatusApi", (req, res, next) => {
 // or "NOCMD" when the queue is empty. Also serves as the heartbeat.
 //
 // Device resolution strategy (in priority order):
-//  1. x-property-id header present (new bridge v2+): exact lookup by
-//     (code, property_id) — unambiguous, no heuristic needed.
-//  2. No header (old bridge): fall back to heuristic — prefer the device
+//  1. x-property-code header (new bridge): resolve property by its short
+//     code (e.g. "KDS"), then exact device lookup by (code, property_id).
+//  2. x-property-id header (older bridge builds): same, by numeric ID.
+//  3. No header (legacy bridge): fall back to heuristic — prefer the device
 //     that has a pending command; if several do, pick the oldest command;
 //     if none do, pick by id asc so at least one device gets its heartbeat.
 deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
   const code = req.params.deviceCode;
 
-  // --- Strategy 1: property-scoped lookup (new bridge sends x-property-id) ---
-  const xPropId = req.headers["x-property-id"];
-  const bridgePropertyId =
-    typeof xPropId === "string" && /^\d+$/.test(xPropId.trim())
-      ? parseInt(xPropId.trim(), 10)
-      : null;
+  // --- Strategy 1/2: property-scoped lookup (bridge identifies its property) ---
+  const bridgePropertyId = await resolveBridgePropertyId(req);
+  if (bridgePropertyId === -1) {
+    // Bridge sent a property code the server doesn't know — misconfiguration.
+    res.status(404).type("text/plain").send("UNKNOWN");
+    return;
+  }
 
   let device: typeof devicesTable.$inferSelect | undefined;
 
@@ -373,12 +403,13 @@ deviceRouter.get(
       res.status(400).type("text/plain").send("BADREQ");
       return;
     }
-    // Use x-property-id (new bridge) for exact lookup; fall back to LIMIT 1.
-    const xPropId = req.headers["x-property-id"];
-    const bridgePropertyId =
-      typeof xPropId === "string" && /^\d+$/.test(xPropId.trim())
-        ? parseInt(xPropId.trim(), 10)
-        : null;
+    // Use x-property-code / x-property-id (new bridge) for exact lookup;
+    // fall back to LIMIT 1 for legacy bridges.
+    const bridgePropertyId = await resolveBridgePropertyId(req);
+    if (bridgePropertyId === -1) {
+      res.status(404).type("text/plain").send("UNKNOWN");
+      return;
+    }
     const whereClause = bridgePropertyId
       ? and(eq(devicesTable.code, code), eq(devicesTable.propertyId, bridgePropertyId))
       : eq(devicesTable.code, code);

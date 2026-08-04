@@ -64,17 +64,24 @@ if (!TARGET.startsWith("https://")) {
 }
 const targetHost = new URL(TARGET).host;
 
-// Property ID for this installation — tells the server exactly which property's
-// device to look up when multiple properties share the same box code.
-// Set "propertyId" in config.json to the numeric ID of this property (e.g. 3).
-// Leave as 0 (or omit) to fall back to the old heuristic.
+// Property identity for this installation — tells the server exactly which
+// property's device to look up when multiple properties share a box code.
+// Preferred: "propertyCode" in config.json — the hotel's short code shown in
+// PowerHub → Masters → Properties (e.g. "KDS"). Case-insensitive.
+// Legacy: numeric "propertyId" is still supported for old configs.
+const PROPERTY_CODE =
+  typeof cfg.propertyCode === "string" && cfg.propertyCode.trim()
+    ? cfg.propertyCode.trim()
+    : null;
 const PROPERTY_ID = Number.isInteger(cfg.propertyId) && cfg.propertyId > 0
   ? cfg.propertyId
   : null;
-if (PROPERTY_ID) {
+if (PROPERTY_CODE) {
+  console.log("  Property scope: code", PROPERTY_CODE, "(x-property-code header will be sent)");
+} else if (PROPERTY_ID) {
   console.log("  Property scope: ID", PROPERTY_ID, "(x-property-id header will be sent)");
 } else {
-  console.log("  Property scope: NOT SET — edit propertyId in config.json for multi-property setups");
+  console.log("  Property scope: NOT SET — edit propertyCode in config.json for multi-property setups");
 }
 
 // ---------------------------------------------------------------------------
@@ -161,11 +168,14 @@ const server = http.createServer((req, res) => {
   delete fwdHeaders["x-device-ip"];
   delete fwdHeaders["x-setup-ip"];
   delete fwdHeaders["x-property-id"];
+  delete fwdHeaders["x-property-code"];
   fwdHeaders["x-device-ip"] = deviceIp;
   // Tell the server exactly which property this bridge belongs to so it can
-  // scope device lookups to (code + property_id) — eliminates any ambiguity
+  // scope device lookups to (property + code) — eliminates any ambiguity
   // when multiple properties use the same box code (e.g. 000001).
-  if (PROPERTY_ID) {
+  if (PROPERTY_CODE) {
+    fwdHeaders["x-property-code"] = PROPERTY_CODE;
+  } else if (PROPERTY_ID) {
     fwdHeaders["x-property-id"] = String(PROPERTY_ID);
   }
   const opts = {
