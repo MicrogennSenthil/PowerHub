@@ -1,10 +1,13 @@
 {
-  "_readme": "Change powerhubUrl whenever you move servers. That is the ONLY line you need to edit.",
+  "_readme": "Edit powerhubUrl and propertyId for this site, then save and restart the bridge.",
+  "_howto_find_propertyId": "In PowerHub go to Masters → Properties. The number in the URL when you hover/click a property row is its ID. Your super-admin can also tell you the ID.",
   "_examples": {
     "replit_production" : "https://power.microgenn.com",
     "replit_dev"        : "https://xxxx.sisko.replit.dev",
     "your_vps"          : "https://power.microgenn.com or http://YOUR_VPS_IP:PORT"
   },
   "powerhubUrl": "https://power.microgenn.com",
-  "listenPort": 8085
+  "listenPort": 8085,
+  "propertyId": 0,
+  "_propertyId_note": "Set this to the numeric ID of the property where this bridge is installed (e.g. 3). Leave as 0 to use the old heuristic (not recommended when multiple properties share a device code)."
 }

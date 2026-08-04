@@ -210,35 +210,59 @@ deviceRouter.use("/PowerDeviceStatusApi", (req, res, next) => {
 // Legacy poll: returns "DEVICE+push+pull#RRRR+" for the oldest pending command,
 // or "NOCMD" when the queue is empty. Also serves as the heartbeat.
 //
-// When multiple properties share the same device code (allowed — uniqueness is
-// per-property), we pick the device that has a pending command so that relay
-// commands are actually delivered.  If several have pending commands we pick
-// the one whose command is oldest (lowest log id) to maintain FIFO fairness.
-// If none have pending commands we fall back to the first row by id so that
-// heartbeats are still recorded for at least one device.
+// Device resolution strategy (in priority order):
+//  1. x-property-id header present (new bridge v2+): exact lookup by
+//     (code, property_id) — unambiguous, no heuristic needed.
+//  2. No header (old bridge): fall back to heuristic — prefer the device
+//     that has a pending command; if several do, pick the oldest command;
+//     if none do, pick by id asc so at least one device gets its heartbeat.
 deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
   const code = req.params.deviceCode;
-  const allDevices = await db
-    .select()
-    .from(devicesTable)
-    .where(eq(devicesTable.code, code));
-  if (allDevices.length === 0) {
-    res.status(404).type("text/plain").send("UNKNOWN");
-    return;
-  }
 
-  // Pick the best device: prefer one with a pending command, then by id asc.
-  let device = allDevices[0]!;
-  if (allDevices.length > 1) {
-    const deviceIds = allDevices.map((d) => d.id);
-    const pendingRows = await db
-      .select({ deviceId: powerLogsTable.deviceId })
-      .from(powerLogsTable)
-      .where(and(inArray(powerLogsTable.deviceId, deviceIds), eq(powerLogsTable.flag, 0)))
-      .orderBy(asc(powerLogsTable.id))
+  // --- Strategy 1: property-scoped lookup (new bridge sends x-property-id) ---
+  const xPropId = req.headers["x-property-id"];
+  const bridgePropertyId =
+    typeof xPropId === "string" && /^\d+$/.test(xPropId.trim())
+      ? parseInt(xPropId.trim(), 10)
+      : null;
+
+  let device: typeof devicesTable.$inferSelect | undefined;
+
+  if (bridgePropertyId) {
+    const rows = await db
+      .select()
+      .from(devicesTable)
+      .where(
+        and(eq(devicesTable.code, code), eq(devicesTable.propertyId, bridgePropertyId)),
+      )
       .limit(1);
-    if (pendingRows[0]) {
-      device = allDevices.find((d) => d.id === pendingRows[0]!.deviceId) ?? device;
+    device = rows[0];
+    if (!device) {
+      res.status(404).type("text/plain").send("UNKNOWN");
+      return;
+    }
+  } else {
+    // --- Strategy 2: global lookup with heuristic (old bridge, no header) ---
+    const allDevices = await db
+      .select()
+      .from(devicesTable)
+      .where(eq(devicesTable.code, code));
+    if (allDevices.length === 0) {
+      res.status(404).type("text/plain").send("UNKNOWN");
+      return;
+    }
+    device = allDevices[0]!;
+    if (allDevices.length > 1) {
+      const deviceIds = allDevices.map((d) => d.id);
+      const pendingRows = await db
+        .select({ deviceId: powerLogsTable.deviceId })
+        .from(powerLogsTable)
+        .where(and(inArray(powerLogsTable.deviceId, deviceIds), eq(powerLogsTable.flag, 0)))
+        .orderBy(asc(powerLogsTable.id))
+        .limit(1);
+      if (pendingRows[0]) {
+        device = allDevices.find((d) => d.id === pendingRows[0]!.deviceId) ?? device;
+      }
     }
   }
   // Bridge forwards the box's LAN IP in x-device-ip; record it when present.
@@ -349,10 +373,19 @@ deviceRouter.get(
       res.status(400).type("text/plain").send("BADREQ");
       return;
     }
+    // Use x-property-id (new bridge) for exact lookup; fall back to LIMIT 1.
+    const xPropId = req.headers["x-property-id"];
+    const bridgePropertyId =
+      typeof xPropId === "string" && /^\d+$/.test(xPropId.trim())
+        ? parseInt(xPropId.trim(), 10)
+        : null;
+    const whereClause = bridgePropertyId
+      ? and(eq(devicesTable.code, code), eq(devicesTable.propertyId, bridgePropertyId))
+      : eq(devicesTable.code, code);
     const devices = await db
       .select()
       .from(devicesTable)
-      .where(eq(devicesTable.code, code))
+      .where(whereClause)
       .limit(1);
     const device = devices[0];
     if (!device) {

@@ -64,6 +64,19 @@ if (!TARGET.startsWith("https://")) {
 }
 const targetHost = new URL(TARGET).host;
 
+// Property ID for this installation — tells the server exactly which property's
+// device to look up when multiple properties share the same box code.
+// Set "propertyId" in config.json to the numeric ID of this property (e.g. 3).
+// Leave as 0 (or omit) to fall back to the old heuristic.
+const PROPERTY_ID = Number.isInteger(cfg.propertyId) && cfg.propertyId > 0
+  ? cfg.propertyId
+  : null;
+if (PROPERTY_ID) {
+  console.log("  Property scope: ID", PROPERTY_ID, "(x-property-id header will be sent)");
+} else {
+  console.log("  Property scope: NOT SET — edit propertyId in config.json for multi-property setups");
+}
+
 // ---------------------------------------------------------------------------
 // Setup-hotspot watcher (Windows): when this PC joins the chip's config WiFi
 // (SSID containing "powerconfig"), detect the gateway IP — that IS the chip's
@@ -142,12 +155,19 @@ const server = http.createServer((req, res) => {
   // Tell PowerHub which local IP the relay box connected from, so the
   // dashboard can display the box's real network address.
   const deviceIp = (req.socket.remoteAddress || "").replace(/^::ffff:/, "");
-  // Never pass through x-device-ip / x-setup-ip supplied by the caller —
-  // the bridge is the only authority for these values.
+  // Never pass through x-device-ip / x-setup-ip / x-property-id supplied by
+  // the caller — the bridge is the only authority for these values.
   const fwdHeaders = { ...req.headers, host: targetHost };
   delete fwdHeaders["x-device-ip"];
   delete fwdHeaders["x-setup-ip"];
+  delete fwdHeaders["x-property-id"];
   fwdHeaders["x-device-ip"] = deviceIp;
+  // Tell the server exactly which property this bridge belongs to so it can
+  // scope device lookups to (code + property_id) — eliminates any ambiguity
+  // when multiple properties use the same box code (e.g. 000001).
+  if (PROPERTY_ID) {
+    fwdHeaders["x-property-id"] = String(PROPERTY_ID);
+  }
   const opts = {
     hostname: targetHost,
     port: 443,
