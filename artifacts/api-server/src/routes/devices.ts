@@ -88,9 +88,7 @@ router.get("/", requirePermission("devices.view"), async (req, res) => {
 
 // Lightweight availability check — called on every keystroke in the UI.
 // Uniqueness is per-property: the same code may exist in different properties
-// (each maps to a physically distinct relay box on a different site).
-// A cross-property collision is allowed but returns a warning so the operator
-// knows that the relay poll heuristic will be used if codes clash globally.
+// (each bridge sends x-property-id, so the server resolves the right device).
 // ?code=xxx        required
 // ?propertyId=N    required — scope the uniqueness check to this property
 // ?excludeId=N     optional — skip this device id (used when editing)
@@ -117,7 +115,8 @@ router.get("/check-code", requirePermission("devices.view"), async (req, res) =>
       ? parseInt(req.query.excludeId, 10)
       : null;
 
-  // 1. Same-property check — blocking: code must be unique within this property.
+  // Within-property uniqueness only — cross-property duplicates are fine
+  // because each bridge identifies itself with the x-property-id header.
   const sameProperty = await db
     .select({ id: devicesTable.id })
     .from(devicesTable)
@@ -126,30 +125,7 @@ router.get("/check-code", requirePermission("devices.view"), async (req, res) =>
   const sameConflict =
     sameProperty[0] && (excludeId === null || sameProperty[0].id !== excludeId);
 
-  // 2. Cross-property check — non-blocking warning only.
-  // The relay poll endpoint is global, so boxes sharing a code get
-  // best-effort command delivery (server prefers the box with a pending cmd).
-  // Recommend using a property-prefix code (e.g. KDS001) to avoid ambiguity.
-  let crossPropertyWarning = false;
-  if (!sameConflict) {
-    const others = await db
-      .select({ id: devicesTable.id })
-      .from(devicesTable)
-      .where(
-        and(
-          eq(devicesTable.code, code),
-          // any row NOT belonging to this property
-          sql`${devicesTable.propertyId} != ${propertyId}`,
-        ),
-      )
-      .limit(1);
-    crossPropertyWarning = !!others[0];
-  }
-
-  res.json({
-    available: !sameConflict,
-    crossPropertyWarning,
-  });
+  res.json({ available: !sameConflict });
 });
 
 router.get("/:id", requirePermission("devices.view"), async (req, res) => {
