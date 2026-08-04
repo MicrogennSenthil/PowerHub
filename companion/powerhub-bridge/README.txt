@@ -16,9 +16,27 @@ REQUIREMENTS
 FIRST-TIME SETUP
 ----------------
 1. Install Node.js if not already installed.
-2. Double-click  install.bat
+
+2. Open  config.json  in Notepad and set your property ID:
+
+     "propertyId": 3
+
+   Replace 3 with the numeric ID of THIS property.
+   HOW TO FIND YOUR PROPERTY ID:
+     - Log in to https://power.microgenn.com
+     - Go to Masters → Properties
+     - The number shown in the URL when you click your property row
+       is its ID.  (e.g. the URL ends in /properties/3 → ID is 3)
+
+   Leave "powerhubUrl" and "listenPort" unchanged unless instructed.
+
+3. Double-click  install.bat
    - Registers the bridge to auto-start on Windows login.
    - Starts the bridge immediately in the background.
+
+   When the bridge starts you will see:
+     Property scope: ID 3 (x-property-id header will be sent)
+   This confirms the bridge is correctly linked to your property.
 
 DAILY USE
 ---------
@@ -37,15 +55,47 @@ In each relay box's WiFi configuration page, enter:
   PORT : 8085
 
 Test the connection from any browser on the local network:
-  http://<this-PC-IP>:8085/api/PowerDeviceApi/000010
+  http://<this-PC-IP>:8085/api/PowerDeviceApi/000001
   (should return NOCMD or a command string)
 
 STOPPING THE BRIDGE
 -------------------
-Open Task Manager → find  node.exe → End Task.
+Run  stop-bridge.bat  or open Task Manager → find node.exe → End Task.
+Then run  start-bridge.bat  (or  debug.bat  to see logs) to restart.
 
-CONFIG
-------
-config.json controls where requests are forwarded and which port to listen on.
-  "powerhubUrl"  : https://power.microgenn.com  (do not change unless server moves)
-  "listenPort"   : 8085  (change if port conflicts with another app)
+CONFIG REFERENCE  (config.json)
+---------------------------------
+  "powerhubUrl"  : Server address. Do not change unless the server moves.
+                   Default: https://power.microgenn.com
+
+  "listenPort"   : Port the bridge listens on for relay box connections.
+                   Default: 8085. Change only if another app uses 8085.
+
+  "propertyId"   : Numeric ID of the property where this bridge is
+                   installed. MUST be set correctly so relay commands
+                   go to the right property. Find it in
+                   Masters → Properties on the PowerHub dashboard.
+
+UPGRADING FROM AN OLDER BRIDGE
+-------------------------------
+If you received a previous version of this package without propertyId:
+1. Copy your existing config.json "powerhubUrl" value.
+2. Replace config.json with the new one from this package.
+3. Paste your powerhubUrl back in.
+4. Add "propertyId" with the correct value for this site.
+5. Restart: stop-bridge.bat then start-bridge.bat
+
+TROUBLESHOOTING
+---------------
+- Bridge says "Property scope: NOT SET":
+    Open config.json and set "propertyId" to your property's numeric ID.
+
+- Relay box not polling (device shows Offline in PowerHub):
+    1. Check the box's WiFi config page — HOST must be this PC's IP,
+       PORT must be 8085.
+    2. Run debug.bat and watch for incoming poll requests.
+    3. Make sure this PC and the relay box are on the same local network.
+
+- "Cannot reach PowerHub server":
+    Check internet connectivity on this PC.
+    Verify "powerhubUrl" in config.json is https://power.microgenn.com
