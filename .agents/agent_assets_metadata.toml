@@ -59,13 +59,15 @@ title = "PowerHub Bridge (auto-detects chip setup IP)"
 id = "6qQ86fRQAdP2EU-ju3Str"
 uri = "file://docs/PowerHub-MHMS-Front-Office-SOP.md"
 type = "text"
-title = "PowerHub × MHMS — Front Office SOP"
+title = "PowerHub × MHMS Front Office SOP"
+description = "Front office operations document — what happens automatically and what the front office team is responsible for"
 
 [[outputs]]
 id = "rSED5wGtphxpojM0rMnd1"
 uri = "file://docs/MHMS-PowerHub-Integration-Guide.md"
 type = "text"
-title = "MHMS × PowerHub Integration Guide (for front office team)"
+title = "MHMS PowerHub Integration Guide"
+description = "Technical API guide for the MHMS development team — how to call PowerHub for checkin, checkout, cleaning, visiting, maintenance"
 
 [[outputs]]
 id = "qVpC9hwHC6vYEFGVD0-to"
