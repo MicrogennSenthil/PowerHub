@@ -173,14 +173,15 @@ export function hasPermission(user: CurrentUser, key: string): boolean {
   return user.isSuperAdmin || user.permissions.includes(key);
 }
 
-export function requirePermission(key: string) {
+export function requirePermission(key: string | string[]) {
+  const keys = Array.isArray(key) ? key : [key];
   return (req: Request, res: Response, next: NextFunction): void => {
     const user = req.currentUser;
     if (!user) {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
-    if (!hasPermission(user, key)) {
+    if (!keys.some((k) => hasPermission(user, k))) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }

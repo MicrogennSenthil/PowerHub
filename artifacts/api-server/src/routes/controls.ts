@@ -76,7 +76,7 @@ router.get("/", requirePermission("devices.view"), async (req, res) => {
 // before "/:id" so the literal paths are not parsed as ids.
 router.post(
   "/device-command",
-  requirePermission("controls.manage"),
+  requirePermission(["controls.operate", "controls.manage"]),
   async (req, res) => {
     const { deviceId, slate, state: stateStr } = req.body as {
       deviceId: unknown;
@@ -209,7 +209,7 @@ router.patch("/bulk", requirePermission("controls.manage"), async (req, res) => 
 // Queues a command through the same pipeline the relay box already polls.
 router.post(
   "/:id/command",
-  requirePermission("controls.manage"),
+  requirePermission(["controls.operate", "controls.manage"]),
   async (req, res) => {
     const id = parseId(req.params.id);
     if (id === null) {
