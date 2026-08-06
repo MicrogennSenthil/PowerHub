@@ -6,6 +6,12 @@ import { logger } from "./logger";
 // At startup we only *sync* newly introduced permission keys into the
 // existing seeded system roles, so deployments don't require manual SQL.
 export async function seedSystemRoles(): Promise<void> {
+  // Schema sync: columns added after the last manual prod migration.
+  // Idempotent — safe to run on every startup.
+  await db.execute(sql`
+    ALTER TABLE devices ADD COLUMN IF NOT EXISTS is_online boolean NOT NULL DEFAULT false
+  `);
+
   // controls.operate (relay ON/OFF) was split out of controls.manage.
   // Grant it to the default staff roles that should be able to flip relays.
   const result = await db.execute(sql`
