@@ -307,9 +307,27 @@ deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
   // -------------------------------------------------------------------------
   const offlineMins = await getOfflineThresholdMinutes();
   const wasOffline =
-    !!device.lastSeenAt &&
-    Date.now() - device.lastSeenAt.getTime() > offlineMins * 60_000;
+    !device.isOnline ||
+    (!!device.lastSeenAt &&
+      Date.now() - device.lastSeenAt.getTime() > offlineMins * 60_000);
   if (wasOffline) {
+    // Status record: box reported back in — visible in the command report.
+    await db.insert(powerLogsTable).values({
+      propertyId: device.propertyId,
+      deviceId: device.id,
+      deviceCode: device.code,
+      roomId: null,
+      controlId: null,
+      processTypeId: null,
+      state: 1,
+      controlPush: "-",
+      controlPull: "-",
+      randomNo: 0,
+      flag: 1, // status record only — never served as a command
+      source: "box-online",
+      requestedBy: "system (status monitor)",
+      receivedAt: new Date(),
+    });
     const hasPending = await db
       .select({ id: powerLogsTable.id })
       .from(powerLogsTable)
@@ -367,6 +385,7 @@ deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
     .update(devicesTable)
     .set({
       lastSeenAt: new Date(),
+      isOnline: true,
       ...(reportedIp ? { reportedIp } : {}),
       ...(ipChanged && device.reportedIp
         ? { previousReportedIp: device.reportedIp }
@@ -398,7 +417,15 @@ deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
   const lastDelivered = await db
     .select({ receivedAt: powerLogsTable.receivedAt })
     .from(powerLogsTable)
-    .where(and(eq(powerLogsTable.deviceId, device.id), eq(powerLogsTable.flag, 1)))
+    .where(
+      and(
+        eq(powerLogsTable.deviceId, device.id),
+        eq(powerLogsTable.flag, 1),
+        // Status records (box-online / box-offline) are not relay commands —
+        // they must not trigger the inter-command settle delay.
+        sql`${powerLogsTable.source} NOT IN ('box-online', 'box-offline')`,
+      ),
+    )
     .orderBy(desc(powerLogsTable.id))
     .limit(1);
   const lastAckedAt = lastDelivered[0]?.receivedAt;

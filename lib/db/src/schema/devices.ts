@@ -40,6 +40,10 @@ export const devicesTable = pgTable(
     }),
     active: boolean("active").notNull().default(true),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+    // Persisted online/offline status so transitions can be detected and
+    // logged. Set true on every poll; the status sweep flips it false when
+    // the box hasn't polled within the offline threshold.
+    isOnline: boolean("is_online").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

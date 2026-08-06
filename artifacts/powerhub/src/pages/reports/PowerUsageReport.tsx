@@ -54,7 +54,8 @@ export function PowerUsageReport() {
     { query: { enabled: !!selectedPropertyId, queryKey: getListRoomsQueryKey({ propertyId: selectedPropertyId! }) } },
   );
 
-  const currencySymbol = report?.currency === 'INR' ? '₹' : (report?.currency ?? '');
+  const CURRENCY_SYMBOLS: Record<string, string> = { INR: '₹', USD: '$', EUR: '€', GBP: '£', AED: 'د.إ' };
+  const currencySymbol = report?.currency ? (CURRENCY_SYMBOLS[report.currency] ?? report.currency + ' ') : '';
 
   const exportCsv = () => {
     if (!report) return;

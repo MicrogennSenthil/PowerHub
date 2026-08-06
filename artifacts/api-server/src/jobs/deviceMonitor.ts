@@ -1,8 +1,56 @@
-import { db, devicesTable, appUsersTable, userPropertiesTable, systemSettingsTable } from "@workspace/db";
+import { db, devicesTable, powerLogsTable, appUsersTable, userPropertiesTable, systemSettingsTable } from "@workspace/db";
 import { eq, lt, and, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { sendMail } from "../lib/mailer";
-import { SETTINGS_ID } from "../lib/settings";
+import { SETTINGS_ID, getOfflineThresholdMinutes } from "../lib/settings";
+
+// ---------------------------------------------------------------------------
+// Status sweep — runs every 30s. Any ONLINE device that hasn't polled within
+// the offline threshold gets flipped to offline, and a `box-offline` record
+// is written into power_logs so the command report shows exactly when each
+// box went dark. The matching `box-online` record is written by the poll
+// endpoint the moment the box reports back in.
+// ---------------------------------------------------------------------------
+export async function sweepDeviceStatus(): Promise<number> {
+  const thresholdMinutes = await getOfflineThresholdMinutes();
+  const cutoff = new Date(Date.now() - thresholdMinutes * 60 * 1000);
+
+  const wentOffline = await db
+    .update(devicesTable)
+    .set({ isOnline: false })
+    .where(
+      and(
+        eq(devicesTable.active, true),
+        eq(devicesTable.isOnline, true),
+        lt(devicesTable.lastSeenAt, cutoff),
+      ),
+    )
+    .returning();
+
+  for (const device of wentOffline) {
+    await db.insert(powerLogsTable).values({
+      propertyId: device.propertyId,
+      deviceId: device.id,
+      deviceCode: device.code,
+      roomId: null,
+      controlId: null,
+      processTypeId: null,
+      state: 0,
+      controlPush: "-",
+      controlPull: "-",
+      randomNo: 0,
+      flag: 1, // never a pending command — status record only
+      source: "box-offline",
+      requestedBy: "system (status monitor)",
+      receivedAt: new Date(),
+    });
+    logger.warn(
+      { deviceId: device.id, code: device.code, propertyId: device.propertyId, lastSeenAt: device.lastSeenAt },
+      "Device went OFFLINE — status logged",
+    );
+  }
+  return wentOffline.length;
+}
 
 // Track which devices have already triggered an alert in the current offline
 // window so we don't spam every check interval.
@@ -119,12 +167,19 @@ async function runCheck() {
 }
 
 export function startDeviceMonitor() {
-  // Check every 2 minutes; alert fires only when threshold is exceeded
+  // Status sweep: every 30s — flips is_online and writes box-offline records.
+  setInterval(() => {
+    sweepDeviceStatus().catch((err) =>
+      logger.warn({ err }, "deviceMonitor: status sweep failed"),
+    );
+  }, 30 * 1000);
+
+  // Email alerts: every 2 minutes; alert fires only when threshold is exceeded
   const INTERVAL_MS = 2 * 60 * 1000;
   setInterval(() => {
     runCheck().catch((err) =>
       logger.warn({ err }, "deviceMonitor: check failed"),
     );
   }, INTERVAL_MS);
-  logger.info("Device offline monitor started");
+  logger.info("Device status monitor started (30s sweep + email alerts)");
 }
