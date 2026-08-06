@@ -40,6 +40,7 @@ async function resolveBridgePropertyId(req: Request): Promise<number | null> {
   return null;
 }
 import { requireApiKey } from "../lib/apiKeyAuth";
+import { getOfflineThresholdMinutes } from "../lib/settings";
 import { enqueueControlChange, buildPush, buildPull } from "../lib/powerQueue";
 import { validateBody } from "../lib/http";
 
@@ -295,6 +296,57 @@ deviceRouter.get("/PowerDeviceApi/:deviceCode", async (req, res) => {
       }
     }
   }
+  // -------------------------------------------------------------------------
+  // Power-resume: if this box was OFFLINE (power cut / reboot) and is polling
+  // again, its relays came up in the hardware default state — NOT what the
+  // server believes. Queue a state-resume command rebuilt from the live
+  // control states so the box restores every relay to its last known state.
+  // Only needed when the queue is empty: any pending command already carries
+  // the full live bitmask (the poll re-derives it at delivery time), so
+  // pending commands double as the resume and then proceed as usual.
+  // -------------------------------------------------------------------------
+  const offlineMins = await getOfflineThresholdMinutes();
+  const wasOffline =
+    !!device.lastSeenAt &&
+    Date.now() - device.lastSeenAt.getTime() > offlineMins * 60_000;
+  if (wasOffline) {
+    const hasPending = await db
+      .select({ id: powerLogsTable.id })
+      .from(powerLogsTable)
+      .where(and(eq(powerLogsTable.deviceId, device.id), eq(powerLogsTable.flag, 0)))
+      .limit(1);
+    if (!hasPending[0]) {
+      const allControls = await db
+        .select()
+        .from(controlsTable)
+        .where(eq(controlsTable.deviceId, device.id));
+      // Only resume if at least one control should be ON — if everything is
+      // OFF, the hardware default (all relays de-energised) may differ per
+      // wiring, so still send the explicit OFF mask to be deterministic.
+      if (allControls.length > 0) {
+        const randomNo = 1000 + Math.floor(Math.random() * 9000);
+        await db.insert(powerLogsTable).values({
+          propertyId: device.propertyId,
+          deviceId: device.id,
+          deviceCode: device.code,
+          roomId: null,
+          controlId: null,
+          processTypeId: null,
+          state: allControls.some((c) => c.state === 1) ? 1 : 0,
+          controlPush: buildPush(allControls),
+          controlPull: buildPull(allControls),
+          randomNo,
+          flag: 0,
+          source: "power-resume",
+          requestedBy: "system (power restored)",
+        });
+        console.log(
+          `[power-resume] ${device.code} (property ${device.propertyId}) back online after ${Math.round((Date.now() - device.lastSeenAt!.getTime()) / 60_000)} min — queued state restore ${buildPush(allControls)}${buildPull(allControls)}`,
+        );
+      }
+    }
+  }
+
   // Bridge forwards the box's LAN IP in x-device-ip; record it when present.
   // Strictly validate as an IP address (net.isIP) — this endpoint is
   // unauthenticated legacy-protocol, so never persist arbitrary strings.
