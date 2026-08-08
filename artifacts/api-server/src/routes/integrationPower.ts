@@ -40,6 +40,7 @@ async function resolveBridgePropertyId(req: Request): Promise<number | null> {
   return null;
 }
 import { requireApiKey } from "../lib/apiKeyAuth";
+import { logger } from "../lib/logger";
 import { getOfflineThresholdMinutes } from "../lib/settings";
 import { enqueueControlChange, buildPush, buildPull } from "../lib/powerQueue";
 import { validateBody } from "../lib/http";
@@ -52,37 +53,71 @@ import { validateBody } from "../lib/http";
 //     GET /PowerDeviceStatusApi/:deviceCode/:randomNo
 // ---------------------------------------------------------------------------
 
-// Official M-HMS payload (v1.0 spec)
+// The MHMS integration guide documents { roomNo, state, process, username,
+// billNo }, while the original v1.0 spec used { roomNumber, action, event }.
+// Accept BOTH shapes so whichever the HMS sends, the process name, guest and
+// billing info always land in the logs and reports.
 const CommandBody = z.object({
-  roomNumber:   z.string().min(1),
-  action:       z.enum(["ON", "OFF"]),
+  roomNumber:   z.string().min(1).optional(),
+  roomNo:       z.union([z.string(), z.number()]).optional(),
+  action:       z.string().optional(),
+  state:        z.string().optional(),
   // Restrict to specific load types, e.g. ["Light","AC"]. Empty = all controls.
   controlTypes: z.array(z.string()).optional(),
   // Lifecycle event name — mapped to a PowerHub process type (checkin, checkout, etc.)
   event:        z.string().optional(),
+  process:      z.union([z.string(), z.number()]).optional(),
   hotelId:      z.string().optional(),
-  grcNo:        z.string().optional(),
+  grcNo:        z.union([z.string(), z.number()]).optional(),
+  billNo:       z.union([z.string(), z.number()]).optional(),
   guestName:    z.string().optional(),
+  username:     z.string().optional(),
   timestamp:    z.string().optional(),
 });
 
 export const mhmsRouter: IRouter = Router();
 
+// MHMS sometimes sends friendly labels such as "Visiting Mode"; Process Master
+// names are stored as "Visiting". Keep matching tolerant while retaining the
+// canonical master name in every log/session response.
+function processKey(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "").replace(/mode$/, "");
+}
+
 mhmsRouter.post("/commands", requireApiKey, async (req, res) => {
+  // Log the raw payload so mismatches between what MHMS sends and what we
+  // expect are visible in `pm2 logs` (no secrets in this body).
+  logger.info({ mhmsBody: req.body }, "MHMS command received");
   const body = validateBody(CommandBody, req, res);
   if (!body) return;
   const propertyId = req.apiKey!.propertyId;
+
+  // Normalize the two accepted payload shapes into one.
+  const roomNumber =
+    body.roomNumber ?? (body.roomNo != null ? String(body.roomNo) : undefined);
+  const actionRaw = (body.action ?? body.state ?? "").trim().toUpperCase();
+  if (!roomNumber || (actionRaw !== "ON" && actionRaw !== "OFF")) {
+    res.status(400).json({
+      error:
+        'Body must include a room number ("roomNo" or "roomNumber") and a state ("state"/"action": "on" or "off").',
+    });
+    return;
+  }
+  const eventName =
+    body.event ?? (body.process != null ? String(body.process) : undefined);
+  const grcNo = body.grcNo != null ? String(body.grcNo) : null;
+  const billNo = body.billNo != null ? String(body.billNo) : null;
 
   const rooms = await db
     .select()
     .from(roomsTable)
     .where(
-      and(eq(roomsTable.propertyId, propertyId), eq(roomsTable.roomNo, body.roomNumber)),
+      and(eq(roomsTable.propertyId, propertyId), eq(roomsTable.roomNo, roomNumber)),
     )
     .limit(1);
   const room = rooms[0];
   if (!room) {
-    res.status(404).json({ error: `Room ${body.roomNumber} not found` });
+    res.status(404).json({ error: `Room ${roomNumber} not found` });
     return;
   }
 
@@ -92,20 +127,19 @@ mhmsRouter.post("/commands", requireApiKey, async (req, res) => {
   // null and the auto-cutoff sweep never fires for visiting/cleaning sessions.
   let processType = null;
   let processTypeWarning: string | null = null;
-  if (body.event) {
-    const eventTrimmed = body.event.trim();
-    const found = await db
+  if (eventName) {
+    const eventTrimmed = eventName.trim();
+    const propertyProcesses = await db
       .select()
       .from(processTypesTable)
       .where(
         and(
           eq(processTypesTable.propertyId, propertyId),
-          sql`lower(${processTypesTable.name}) = lower(${eventTrimmed})`,
         ),
-      )
-      .limit(1);
-    if (found[0]) {
-      processType = found[0];
+      );
+    const found = propertyProcesses.find((pt) => processKey(pt.name) === processKey(eventTrimmed));
+    if (found) {
+      processType = found;
       // Warn if the process type exists but has no auto-cutoff configured — the caller
       // might expect a timer but will get none.
       if (processType.isAuto && processType.cutoffMinutes <= 0) {
@@ -132,7 +166,7 @@ mhmsRouter.post("/commands", requireApiKey, async (req, res) => {
       and(eq(controlsTable.propertyId, propertyId), eq(controlsTable.roomId, room.id)),
     );
   if (roomControls.length === 0) {
-    res.status(400).json({ error: `No controls mapped to room ${body.roomNumber}` });
+    res.status(400).json({ error: `No controls mapped to room ${roomNumber}` });
     return;
   }
   let targets = roomControls;
@@ -143,23 +177,23 @@ mhmsRouter.post("/commands", requireApiKey, async (req, res) => {
     );
     if (targets.length === 0) {
       res.status(400).json({
-        error: `Room ${body.roomNumber} has no controls of type(s): ${body.controlTypes.join(", ")}`,
+        error: `Room ${roomNumber} has no controls of type(s): ${body.controlTypes.join(", ")}`,
       });
       return;
     }
   }
 
-  const state = body.action === "ON" ? 1 : 0;
+  const state = actionRaw === "ON" ? 1 : 0;
   const logIds = await enqueueControlChange(
     targets.map((t) => t.control),
     state as 0 | 1,
     {
       processType,
       source: "mhms",
-      grcNo:       body.grcNo     ?? null,
-      billNo:      null,
+      grcNo,
+      billNo,
       guestName:   body.guestName ?? null,
-      requestedBy: null,
+      requestedBy: body.username ?? null,
     },
   );
 
@@ -167,9 +201,9 @@ mhmsRouter.post("/commands", requireApiKey, async (req, res) => {
   res.status(202).json({
     queued:      logIds.length,
     powerLogIds: logIds,
-    room:        body.roomNumber,
-    action:      body.action,
-    event:       body.event ?? null,
+    room:        roomNumber,
+    action:      actionRaw,
+    event:       eventName ?? null,
     controls:    targets.map((t) => ({ id: t.control.id, label: t.control.label, type: t.typeName })),
     process:     processType?.name ?? null,
     autoCutoffMinutes: state === 1 && processType?.isAuto && (processType.cutoffMinutes ?? 0) > 0

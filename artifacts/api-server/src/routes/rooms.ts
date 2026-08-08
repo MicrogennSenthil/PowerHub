@@ -53,10 +53,25 @@ function normaliseBaseUrl(raw: string): string {
   return withScheme.replace(/\/+$/, "");
 }
 
-// HMS status values that map to ON (guest is in room)
-const HMS_ON_STATUSES = new Set(["occupied", "checkin", "walkin", "group", "transfer", "partialcheckout"]);
+// Some HMS installations send lifecycle labels such as "Visiting Mode" rather
+// than the exact Process Master name "Visiting". Normalize both forms before
+// deciding the relay state or looking up the process type.
+function hmsProcessKey(value: unknown): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "")
+    .replace(/mode$/, "");
+}
+
+// HMS status values that map to ON. Cleaning, Visiting and Maintenance are
+// intentional: they are timed working modes, not vacant-room statuses.
+const HMS_ON_STATUSES = new Set([
+  "occupied", "checkin", "walkin", "group", "transfer", "partialcheckout",
+  "visiting", "cleaning", "maintenance",
+]);
 // HMS status values that map to OFF (room is empty)
-const HMS_OFF_STATUSES = new Set(["vacant", "checkout", "cleaning", "maintenance", "dirty", "inspect"]);
+const HMS_OFF_STATUSES = new Set(["vacant", "checkout", "dirty", "inspect"]);
 
 const router: IRouter = Router();
 
@@ -376,7 +391,7 @@ router.post(
     // Used to attach a process type to HMS-sync commands so the command log
     // and room chart activity badge show the correct process name (e.g. "Checkin").
     const processTypeByName = new Map(
-      propertyProcessTypes.map((pt) => [pt.name.toLowerCase(), pt]),
+      propertyProcessTypes.map((pt) => [hmsProcessKey(pt.name), pt]),
     );
 
     // Load all controls for the property to enqueue commands.
@@ -400,7 +415,7 @@ router.post(
     for (const item of rawRooms) {
       const roomNo = (item.roomNumber ?? "").toString().trim().toLowerCase();
       if (!roomNo) { skipped++; continue; }
-      const statusRaw = (item.status ?? "").toLowerCase().trim();
+      const statusRaw = hmsProcessKey(item.status);
 
       let targetState: 1 | 0 | null = null;
       if (HMS_ON_STATUSES.has(statusRaw)) targetState = 1;
