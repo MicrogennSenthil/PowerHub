@@ -1,5 +1,8 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { eq, inArray } from "drizzle-orm";
+import fs from "node:fs";
+import path from "node:path";
+import AdmZip from "adm-zip";
 import { db, propertiesTable } from "@workspace/db";
 import { CreatePropertyBody, UpdatePropertyBody } from "@workspace/api-zod";
 import { requirePermission, canAccessProperty } from "../lib/auth";
@@ -223,6 +226,63 @@ router.patch("/:id", requirePermission("properties.manage"), async (req, res) =>
     }
     throw err;
   }
+});
+
+// Download a property-scoped bridge package.
+// Reads the static powerhub-bridge.zip, patches config.json with the
+// property's code (so the bridge sends the correct x-property-code header),
+// and streams the modified zip back as a download.
+router.get("/:id/bridge-download", requirePermission("properties.view"), async (req, res) => {
+  const id = parseId(req.params.id);
+  if (id === null) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  if (!canAccessProperty(req.currentUser!, id)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const rows = await db
+    .select()
+    .from(propertiesTable)
+    .where(eq(propertiesTable.id, id))
+    .limit(1);
+  if (!rows[0]) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  const property = rows[0];
+
+  // Load the static base zip from the public directory.
+  const basePath = path.join(__dirname, "../../public/powerhub-bridge.zip");
+  if (!fs.existsSync(basePath)) {
+    res.status(500).json({ error: "Bridge package not found on server." });
+    return;
+  }
+
+  const zip = new AdmZip(basePath);
+
+  // Replace config.json with a version that includes propertyCode so the
+  // bridge sends the correct x-property-code header on every forwarded request.
+  const existingEntry = zip.getEntry("config.json");
+  const existingConfig = existingEntry
+    ? JSON.parse(existingEntry.getData().toString("utf8"))
+    : {};
+
+  const newConfig = {
+    ...existingConfig,
+    propertyCode: property.code,
+  };
+
+  zip.updateFile("config.json", Buffer.from(JSON.stringify(newConfig, null, 2), "utf8"));
+
+  const zipBuffer = zip.toBuffer();
+  const filename = `powerhub-bridge-${property.code.replace(/[^a-zA-Z0-9_-]/g, "_")}.zip`;
+
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.setHeader("Content-Length", zipBuffer.length);
+  res.send(zipBuffer);
 });
 
 router.delete("/:id", requireSuperAdmin, async (req, res) => {

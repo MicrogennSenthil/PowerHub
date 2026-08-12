@@ -128,7 +128,10 @@ export function PowerAutomation() {
 
   const baseUrl = `${window.location.origin}/api`;
 
-  const bridgeDownloadUrl = `${window.location.origin}/api/download/powerhub-bridge.zip`;
+  // Bridge download is scoped to the selected property — the server patches
+  // config.json with that property's code so the bridge sends the correct
+  // x-property-code header without any manual configuration.
+  const bridgeDownloadUrl = `${window.location.origin}/api/properties/${selectedPropertyId}/bridge-download`;
 
   return (
     <div className="space-y-6">
@@ -137,7 +140,7 @@ export function PowerAutomation() {
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Power Automation</h1>
           <p className="text-sm text-gray-500">Connect MHMS front office and relay boxes to PowerHub.</p>
         </div>
-        <a href={bridgeDownloadUrl} download="powerhub-bridge.zip">
+        <a href={bridgeDownloadUrl} download>
           <Button variant="outline" className="shrink-0">
             <Download className="mr-2 h-4 w-4" /> Download Bridge
           </Button>
