@@ -84,6 +84,25 @@ function processKey(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "").replace(/mode$/, "");
 }
 
+// ---------------------------------------------------------------------------
+// Check-in / Checkout state correction.
+//
+// Some MHMS builds still invert the state for check-in/checkout: they send
+// "off" at check-in and "on" at checkout. This dates back to the legacy relay
+// server, where the bitmask was built from ON channels on NC-wired boards —
+// power reacted inverted, and MHMS compensated by swapping the command. Now
+// that PowerHub handles NC wiring correctly, that old workaround double-
+// inverts ONLY these two events (the newer Cleaning/Visiting/Maintenance
+// flows send the true state).
+//
+// Semantically, check-in/walk-in can only ever mean power ON, and checkout
+// can only ever mean power OFF — so we enforce the canonical direction here
+// and surface a warning when we had to correct it. Once MHMS sends the true
+// state, this becomes a no-op. Exact-key match only: "MD Checkin" and other
+// processes are never touched.
+const FORCED_ON_EVENTS = new Set(["checkin", "walkin"]);
+const FORCED_OFF_EVENTS = new Set(["checkout"]);
+
 mhmsRouter.post("/commands", requireApiKey, async (req, res) => {
   // Log the raw payload so mismatches between what MHMS sends and what we
   // expect are visible in `pm2 logs` (no secrets in this body).
@@ -183,7 +202,30 @@ mhmsRouter.post("/commands", requireApiKey, async (req, res) => {
     }
   }
 
-  const state = actionRaw === "ON" ? 1 : 0;
+  // Enforce the canonical power direction for check-in/checkout regardless of
+  // the state MHMS sent (some MHMS builds still send it inverted — see the
+  // FORCED_*_EVENTS comment above). Cleaning/Visiting/Maintenance/MD Checkin
+  // pass through untouched: their ON and OFF are both legitimate.
+  let effectiveAction = actionRaw as "ON" | "OFF";
+  let stateCorrection: string | null = null;
+  if (eventName) {
+    const key = processKey(eventName);
+    if (FORCED_ON_EVENTS.has(key) && actionRaw !== "ON") {
+      effectiveAction = "ON";
+      stateCorrection = `MHMS sent state "${actionRaw.toLowerCase()}" for a check-in event — corrected to "on" (check-in always powers the room ON). Update MHMS to send the true state.`;
+    } else if (FORCED_OFF_EVENTS.has(key) && actionRaw !== "OFF") {
+      effectiveAction = "OFF";
+      stateCorrection = `MHMS sent state "${actionRaw.toLowerCase()}" for a checkout event — corrected to "off" (checkout always powers the room OFF). Update MHMS to send the true state.`;
+    }
+    if (stateCorrection) {
+      logger.warn(
+        { room: roomNumber, event: eventName, sent: actionRaw, applied: effectiveAction },
+        "MHMS check-in/checkout state inverted — auto-corrected",
+      );
+    }
+  }
+
+  const state = effectiveAction === "ON" ? 1 : 0;
   const logIds = await enqueueControlChange(
     targets.map((t) => t.control),
     state as 0 | 1,
@@ -202,16 +244,17 @@ mhmsRouter.post("/commands", requireApiKey, async (req, res) => {
     queued:      logIds.length,
     powerLogIds: logIds,
     room:        roomNumber,
-    action:      actionRaw,
+    action:      effectiveAction,
     event:       eventName ?? null,
     controls:    targets.map((t) => ({ id: t.control.id, label: t.control.label, type: t.typeName })),
     process:     processType?.name ?? null,
     autoCutoffMinutes: state === 1 && processType?.isAuto && (processType.cutoffMinutes ?? 0) > 0
       ? processType.cutoffMinutes
       : null,
-    // Non-null when the event name didn't resolve or the process type has no timer configured.
-    // Check this field in MHMS logs to diagnose missing auto-cutoff.
-    warning: processTypeWarning ?? undefined,
+    // Non-null when the event name didn't resolve, the process type has no
+    // timer configured, or the sent state was auto-corrected for
+    // check-in/checkout. Check this field in MHMS logs to diagnose issues.
+    warning: [stateCorrection, processTypeWarning].filter(Boolean).join(" | ") || undefined,
   });
 });
 
