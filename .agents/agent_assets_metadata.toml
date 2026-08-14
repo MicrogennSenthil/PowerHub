@@ -80,3 +80,10 @@ id = "XRS_5-z2JWl25rANOHLbO"
 uri = "file://attached_assets/MHMS-PowerHub-Integration-API-v1.1.pdf"
 type = "pdf"
 title = "M-HMS × PowerHub Integration API v1.1"
+
+[[outputs]]
+id = "QLcoiL008bod0sPbLirXI"
+uri = "file://attached_assets/generated/PowerHub-Brochure.pdf"
+type = "pdf"
+title = "PowerHub Marketing Brochure (final)"
+description = "Enterprise 3-page brochure — Microgenn branding, features, MHMS Cloud integration, benefits and ROI. Ready for WhatsApp & email blasts."
