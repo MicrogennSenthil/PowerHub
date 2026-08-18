@@ -254,7 +254,9 @@ router.get("/:id/bridge-download", requirePermission("properties.view"), async (
   const property = rows[0];
 
   // Load the static base zip from the public directory.
-  const basePath = path.join(__dirname, "../../public/powerhub-bridge.zip");
+  // The server runs from the bundled dist/ directory, so public/ is one level
+  // up (same resolution the static /api/download mount uses in app.ts).
+  const basePath = path.join(__dirname, "../public/powerhub-bridge.zip");
   if (!fs.existsSync(basePath)) {
     res.status(500).json({ error: "Bridge package not found on server." });
     return;

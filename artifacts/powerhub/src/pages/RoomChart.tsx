@@ -29,13 +29,15 @@ import {
   Activity,
   Zap,
   AlertTriangle,
-  LogIn,
-  LogOut,
-  Sparkles,
-  Users,
+  DoorOpen,
+  Luggage,
+  BrushCleaning,
+  Binoculars,
+  Wrench,
+  Crown,
+  TimerOff,
   ArrowRightLeft,
   UserCheck,
-  Timer,
   MousePointer,
   ChevronDown,
   ChevronUp,
@@ -151,20 +153,25 @@ function processConfig(name: string | null | undefined): {
   color: string;
 } {
   const n = (name ?? '').toLowerCase();
+  // MD Check-in before the generic checkin match so it gets its own crown icon.
+  if (n.includes('md') && (n.includes('checkin') || n.includes('check-in')))
+    return { Icon: Crown,           label: name!,  color: 'text-indigo-600 bg-indigo-50 border-indigo-200' };
   if (n.includes('checkin') || n.includes('check-in') || n.includes('walkin') || n.includes('walk-in'))
-    return { Icon: LogIn,           label: name!,  color: 'text-green-600 bg-green-50 border-green-200' };
+    return { Icon: DoorOpen,        label: name!,  color: 'text-green-600 bg-green-50 border-green-200' };
   if (n.includes('checkout') || n.includes('check-out'))
-    return { Icon: LogOut,          label: name!,  color: 'text-red-600 bg-red-50 border-red-200' };
+    return { Icon: Luggage,         label: name!,  color: 'text-red-600 bg-red-50 border-red-200' };
   if (n.includes('clean'))
-    return { Icon: Sparkles,        label: name!,  color: 'text-blue-600 bg-blue-50 border-blue-200' };
+    return { Icon: BrushCleaning,   label: name!,  color: 'text-blue-600 bg-blue-50 border-blue-200' };
   if (n.includes('visit'))
-    return { Icon: Users,           label: name!,  color: 'text-purple-600 bg-purple-50 border-purple-200' };
+    return { Icon: Binoculars,      label: name!,  color: 'text-purple-600 bg-purple-50 border-purple-200' };
+  if (n.includes('maint') || n.includes('repair') || n.includes('service'))
+    return { Icon: Wrench,          label: name!,  color: 'text-amber-600 bg-amber-50 border-amber-200' };
   if (n.includes('transfer'))
     return { Icon: ArrowRightLeft,  label: name!,  color: 'text-orange-600 bg-orange-50 border-orange-200' };
   if (n.includes('group'))
     return { Icon: UserCheck,       label: name!,  color: 'text-teal-600 bg-teal-50 border-teal-200' };
   if (n.includes('auto') || n.includes('cutoff'))
-    return { Icon: Timer,           label: name!,  color: 'text-gray-600 bg-gray-50 border-gray-200' };
+    return { Icon: TimerOff,        label: name!,  color: 'text-gray-600 bg-gray-50 border-gray-200' };
   if (name)
     return { Icon: MousePointer,    label: name,   color: 'text-gray-600 bg-gray-50 border-gray-200' };
   return { Icon: MousePointer, label: 'Manual', color: 'text-gray-500 bg-gray-50 border-gray-200' };
