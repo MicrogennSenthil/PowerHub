@@ -226,8 +226,19 @@ function RoomCard({ room }: { room: RoomChartRoom }) {
   const allOffline = room.controls.length > 0 && room.controls.every((c) => !c.deviceOnline);
   const anyOffline = room.controls.some((c) => !c.deviceOnline);
 
-  // Determine card colour state
-  const state: 'on' | 'offline' | 'off' = anyOn ? 'on' : allOffline ? 'offline' : 'off';
+  // Determine card colour state.
+  // vacant = power off AND no active guest process (last process was a
+  // checkout, or the room has no process at all) — shown in grey so staff can
+  // tell "empty room, off as expected" (grey) apart from "power cut" (red).
+  const lp = (room.lastProcessName ?? '').toLowerCase();
+  const isVacantProcess = !room.lastProcessName || lp.includes('checkout') || lp.includes('check-out');
+  const state: 'on' | 'offline' | 'vacant' | 'off' = anyOn
+    ? 'on'
+    : allOffline
+    ? 'offline'
+    : isVacantProcess
+    ? 'vacant'
+    : 'off';
 
   return (
     <div
@@ -237,13 +248,15 @@ function RoomCard({ room }: { room: RoomChartRoom }) {
           ? 'border-green-400 bg-green-50 dark:bg-green-950 shadow-[0_4px_20px_-4px_rgba(34,197,94,0.3)]'
           : state === 'offline'
           ? 'border-amber-400 bg-amber-50 dark:bg-amber-950'
+          : state === 'vacant'
+          ? 'border-slate-300 bg-slate-50 dark:bg-slate-900 dark:border-slate-700'
           : 'border-red-300 bg-red-50 dark:bg-red-950',
       )}
     >
       {/* Subtle top stripe as status band */}
       <div className={cn(
         'absolute top-0 left-0 right-0 h-1 rounded-t-xl',
-        state === 'on' ? 'bg-green-500' : state === 'offline' ? 'bg-amber-500' : 'bg-red-500',
+        state === 'on' ? 'bg-green-500' : state === 'offline' ? 'bg-amber-500' : state === 'vacant' ? 'bg-slate-400' : 'bg-red-500',
       )} />
 
       <div className="mb-3 flex items-start justify-between gap-2 relative z-10 pt-1">
@@ -255,6 +268,8 @@ function RoomCard({ room }: { room: RoomChartRoom }) {
                 ? 'bg-green-500 text-white'
                 : state === 'offline'
                 ? 'bg-amber-400/30 text-amber-600 dark:text-amber-400'
+                : state === 'vacant'
+                ? 'bg-slate-400/20 text-slate-500 dark:text-slate-400'
                 : 'bg-red-400/30 text-red-600 dark:text-red-400',
             )}
           >
@@ -268,6 +283,8 @@ function RoomCard({ room }: { room: RoomChartRoom }) {
                 ? 'text-green-700 dark:text-green-300'
                 : state === 'offline'
                 ? 'text-amber-700 dark:text-amber-300'
+                : state === 'vacant'
+                ? 'text-slate-600 dark:text-slate-300'
                 : 'text-red-700 dark:text-red-300',
             )}>
               {room.roomNo}
@@ -277,6 +294,7 @@ function RoomCard({ room }: { room: RoomChartRoom }) {
                 "text-[11px] font-semibold mt-0.5 uppercase tracking-wide",
                 state === 'on' ? 'text-green-600/80 dark:text-green-400/80'
                 : state === 'offline' ? 'text-amber-600/80 dark:text-amber-400/80'
+                : state === 'vacant' ? 'text-slate-500/80 dark:text-slate-400/80'
                 : 'text-red-500/80 dark:text-red-400/80',
               )}>{room.roomTypeName}</div>
             )}
@@ -289,9 +307,11 @@ function RoomCard({ room }: { room: RoomChartRoom }) {
             ? 'bg-green-500 text-white border-green-600'
             : state === 'offline'
             ? 'bg-amber-100 text-amber-700 border-amber-400 dark:bg-amber-900 dark:text-amber-300'
+            : state === 'vacant'
+            ? 'bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600'
             : 'bg-red-100 text-red-700 border-red-400 dark:bg-red-900 dark:text-red-300',
         )}>
-          {state === 'on' ? 'Live' : state === 'offline' ? 'Offline' : 'Off'}
+          {state === 'on' ? 'Live' : state === 'offline' ? 'Offline' : state === 'vacant' ? 'Vacant' : 'Off'}
         </span>
       </div>
 
@@ -318,6 +338,7 @@ function RoomCard({ room }: { room: RoomChartRoom }) {
         "mt-auto relative z-10 pt-2 border-t",
         state === 'on' ? 'border-green-200 dark:border-green-800'
         : state === 'offline' ? 'border-amber-200 dark:border-amber-800'
+        : state === 'vacant' ? 'border-slate-200 dark:border-slate-700'
         : 'border-red-200 dark:border-red-800',
       )}>
         {room.controls.length === 0 ? (
@@ -671,10 +692,13 @@ function Legend() {
   return (
     <div className="flex items-center gap-4 text-xs font-bold text-gray-500 bg-gray-100/80 dark:bg-gray-800/80 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700">
       <span className="flex items-center gap-2">
-        <span className="h-3 w-3 rounded-full bg-success shadow-[0_0_8px_hsl(var(--success)/0.6)]" /> Live Load
+        <span className="h-3 w-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" /> Power On
       </span>
       <span className="flex items-center gap-2">
-        <span className="h-3 w-3 rounded-full bg-gray-300 dark:bg-gray-600" /> Standby
+        <span className="h-3 w-3 rounded-full bg-red-500" /> Power Cut
+      </span>
+      <span className="flex items-center gap-2">
+        <span className="h-3 w-3 rounded-full bg-slate-400" /> Vacant
       </span>
       <span className="flex items-center gap-1.5 text-warning">
         <AlertTriangle className="h-3.5 w-3.5" /> Offline
