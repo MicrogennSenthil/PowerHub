@@ -6,5 +6,5 @@
 - [WhatsApp OTP auth flow](whatsapp-otp-auth.md) — custom sign-in page, mwhatsapp API contract, Clerk ticket flow, superadmin reset block, phone field, WA settings.
 - [Relay transfer race condition](relay-transfer-race.md) — three-layer bug in simultaneous MHMS checkout+checkin: wrong supersession scope, randomNo collision, relay settle timing; three fixes applied.
 - [Bridge property scoping](bridge-property-scoping.md) — duplicate device codes across properties are by design; bridge sends x-property-code, server scopes lookups; never re-add global uniqueness or warnings.
-- [VPS deploy quirks](vps-deploy-quirks.md) — prod shell has no DATABASE_URL (PM2 cluster hides env); ship data fixes as idempotent startup sync in the app, never manual psql.
+- [VPS deploy quirks](vps-deploy-quirks.md) — SSH access via secrets works; deploy = push to GitHub + pull/build/pm2 restart; DATABASE_URL lives in api-server/.env, not the shell.
 - [NC relay wiring](nc-relay-wiring.md) — boards are Normally Closed; bitmask must be built from OFF channels (state=0), never ON; one fix in slateMaskHex covers all operations.
