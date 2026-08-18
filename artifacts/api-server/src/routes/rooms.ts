@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, asc, desc, and, inArray, ilike, isNotNull, sql } from "drizzle-orm";
+import { eq, asc, desc, and, inArray, ilike, isNotNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   db,
@@ -237,17 +237,20 @@ router.get("/chart", requirePermission("rooms.view"), async (req, res) => {
       .leftJoin(devicesTable, eq(controlsTable.deviceId, devicesTable.id))
       .where(eq(controlsTable.propertyId, propertyId))
       .orderBy(asc(controlsTable.slate), asc(controlsTable.channel)),
-    // Latest process-bearing power log per room — gives us last process name,
-    // guest name, and GRC to display on the room card.
-    // We filter to rows where processTypeId IS NOT NULL so that a manual UI
-    // toggle (no process context) never clears the activity badge that was set
-    // by a prior checkin/visiting/cleaning MHMS event.
+    // Latest process-relevant power log per room — gives us the CURRENT
+    // process (if any) to display on the room card.
+    // We ignore manual UI toggles (source='ui') so a quick manual switch never
+    // clears an active checkin/visiting/cleaning badge — but we DO include
+    // auto-cutoff and MHMS OFF events: once a session is ended (timer expired
+    // or guest checked out) the badge must disappear, so the card reflects the
+    // room's current status instead of a stale "last process".
     db
       .selectDistinctOn([powerLogsTable.roomId], {
         roomId: powerLogsTable.roomId,
         processName: processTypesTable.name,
         guestName: powerLogsTable.guestName,
         grcNo: powerLogsTable.grcNo,
+        state: powerLogsTable.state,
         rdate: powerLogsTable.rdate,
       })
       .from(powerLogsTable)
@@ -258,7 +261,7 @@ router.get("/chart", requirePermission("rooms.view"), async (req, res) => {
       .where(
         and(
           eq(powerLogsTable.propertyId, propertyId),
-          isNotNull(powerLogsTable.processTypeId),
+          ne(powerLogsTable.source, "ui"),
         ),
       )
       .orderBy(powerLogsTable.roomId, desc(powerLogsTable.rdate)),
@@ -292,12 +295,17 @@ router.get("/chart", requirePermission("rooms.view"), async (req, res) => {
   res.json(
     roomRows.map((r) => {
       const log = logByRoom.get(r.id);
+      // A process badge is only "current" while the session is live (the
+      // latest non-UI event turned power ON). An OFF event — auto-cutoff after
+      // a Visiting/Cleaning timer or an MHMS Checkout — ends the session, so
+      // the room shows its current status (vacant) instead of a stale process.
+      const active = log != null && log.state === 1;
       return {
         ...r,
         controls: byRoom.get(r.id) ?? [],
-        lastProcessName: log?.processName ?? null,
-        lastGuestName: log?.guestName ?? null,
-        lastGrcNo: log?.grcNo ?? null,
+        lastProcessName: active ? (log.processName ?? null) : null,
+        lastGuestName: active ? (log.guestName ?? null) : null,
+        lastGrcNo: active ? (log.grcNo ?? null) : null,
         lastEventAt: log?.rdate?.toISOString() ?? null,
       };
     }),
