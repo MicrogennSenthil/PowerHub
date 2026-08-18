@@ -321,9 +321,9 @@ function RoomCard({ room }: { room: RoomChartRoom }) {
           {(() => {
             const { Icon, label, color } = processConfig(room.lastProcessName);
             return (
-              <div className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold', color)}
+              <div className={cn('inline-flex items-center gap-2 rounded-full border-2 px-3 py-1.5 text-xs font-bold shadow-sm', color)}
                 title={[label, room.lastGuestName, room.lastGrcNo].filter(Boolean).join(' · ')}>
-                <Icon className="h-3 w-3 shrink-0" />
+                <Icon className="h-4.5 w-4.5 shrink-0" strokeWidth={2.5} />
                 <span>{label}</span>
                 {room.lastGuestName && (
                   <span className="opacity-70 truncate max-w-[90px]">· {room.lastGuestName}</span>
