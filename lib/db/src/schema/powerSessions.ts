@@ -44,7 +44,7 @@ export const powerSessionsTable = pgTable("power_sessions", {
   // When the auto-cutoff engine should force this session off (start + the
   // process type's cutoffMinutes, only when the process has isAuto=true).
   cutoffDueAt: timestamp("cutoff_due_at", { withTimezone: true }),
-  // 'manual' | 'mhms' | 'auto-cutoff'
+  // 'manual' | 'mhms' | 'auto-cutoff' | 'process-overridden'
   endReason: text("end_reason"),
 }, (t) => [
   // At most ONE open session per control — backstops the race where two

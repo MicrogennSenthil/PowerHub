@@ -231,6 +231,7 @@ mhmsRouter.post("/commands", requireApiKey, async (req, res) => {
     state as 0 | 1,
     {
       processType,
+      processEvent: eventName ?? null,
       source: "mhms",
       grcNo,
       billNo,

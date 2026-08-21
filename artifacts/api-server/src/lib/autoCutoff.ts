@@ -92,6 +92,7 @@ export async function sweepAutoCutoff(): Promise<number> {
         .where(inArray(roomsTable.id, roomIds))
     : [];
   const roomById = new Map(roomRows.map((r) => [r.id, r]));
+  let switchedOff = 0;
 
   // Group by property so each enqueue stays tenant-scoped; per control we use
   // its own session's process type for the audit row.
@@ -114,14 +115,20 @@ export async function sweepAutoCutoff(): Promise<number> {
             .limit(1)
         )[0]
       : undefined;
-    await enqueueControlChange([control], 0, {
+    const queuedLogIds = await enqueueControlChange([control], 0, {
       processType: pt ?? null,
       source: "auto-cutoff",
+      expectedSessionId: d.sessionId,
       grcNo: d.grcNo ?? null,
       billNo: null,
       guestName: d.guestName ?? null,
       requestedBy: null,
     });
+    // The session may have been superseded by a Walk-in/Checkin after this
+    // sweep took its initial snapshot. enqueueControlChange rechecks it under
+    // the control lock; no queued command means the cutoff is obsolete.
+    if (queuedLogIds.length === 0) continue;
+    switchedOff += 1;
 
     // Notify MHMS so their room chart updates icon/colour immediately
     const room = control.roomId != null ? roomById.get(control.roomId) : undefined;
@@ -137,8 +144,8 @@ export async function sweepAutoCutoff(): Promise<number> {
       }).catch(() => {/* already logged inside notifyMhms */});
     }
   }
-  logger.info({ count: due.length }, "Auto-cutoff sweep switched off sessions");
-  return due.length;
+  logger.info({ count: switchedOff }, "Auto-cutoff sweep switched off sessions");
+  return switchedOff;
 }
 
 export function startAutoCutoffEngine(): void {

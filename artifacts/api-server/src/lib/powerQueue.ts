@@ -8,6 +8,7 @@ import {
   type ControlRow,
   type ProcessTypeRow,
 } from "@workspace/db";
+import { shouldReplaceOpenSession } from "./sessionTransition";
 
 // ---------------------------------------------------------------------------
 // Power command queue. Mirrors the legacy firmware contract: any state change
@@ -18,7 +19,14 @@ import {
 
 export interface CommandMeta {
   processType?: ProcessTypeRow | null;
+  // Raw process/event name from an integration. This lets a real process
+  // transition supersede a timed session even when its Process Master row is
+  // missing (for example, MHMS sends "Walkin" but only "Checkin" is configured).
+  processEvent?: string | null;
   source: "mhms" | "ui" | "auto-cutoff" | "hms-sync";
+  // Auto-cutoff safety guard: only switch the control off if this exact
+  // session is still the current open session after the control row is locked.
+  expectedSessionId?: number;
   grcNo?: string | null;
   billNo?: string | null;
   guestName?: string | null;
@@ -75,8 +83,40 @@ export async function enqueueControlChange(
   await db.transaction(async (tx) => {
     const ids = targetControls.map((c) => c.id);
 
-    // Only controls actually changing state get sessions opened/closed.
-    const changing = targetControls.filter((c) => c.state !== state);
+    // Serialize all state/session transitions for these controls. In
+    // particular this prevents a due Visiting cutoff from racing a Walk-in:
+    // whichever obtains the control lock first completes, and the later
+    // auto-cutoff can verify that its original session is still current.
+    const lockedControls = await tx
+      .select()
+      .from(controlsTable)
+      .where(inArray(controlsTable.id, ids))
+      .for("update");
+    const lockedById = new Map(lockedControls.map((c) => [c.id, c]));
+    const currentTargets = targetControls
+      .map((c) => lockedById.get(c.id))
+      .filter((c): c is ControlRow => c != null);
+    if (currentTargets.length === 0) return;
+
+    if (meta.expectedSessionId != null) {
+      const expectedOpen = await tx
+        .select({ id: powerSessionsTable.id })
+        .from(powerSessionsTable)
+        .where(
+          and(
+            eq(powerSessionsTable.id, meta.expectedSessionId),
+            inArray(powerSessionsTable.controlId, ids),
+            isNull(powerSessionsTable.endedAt),
+          ),
+        )
+        .limit(1);
+      // A newer process (such as Walk-in/Checkin) already replaced the timed
+      // session. Its old timer is obsolete and must not cut room power.
+      if (!expectedOpen[0]) return;
+    }
+
+    // Only controls actually changing state get OFF sessions closed.
+    const changing = currentTargets.filter((c) => c.state !== state);
 
     await tx
       .update(controlsTable)
@@ -84,7 +124,7 @@ export async function enqueueControlChange(
       .where(inArray(controlsTable.id, ids));
 
     // Rebuild full bitmasks per device (post-update view of ALL its controls).
-    const deviceIds = [...new Set(targetControls.map((c) => c.deviceId))];
+    const deviceIds = [...new Set(currentTargets.map((c) => c.deviceId))];
     for (const deviceId of deviceIds) {
       const deviceRows = await tx
         .select()
@@ -97,7 +137,7 @@ export async function enqueueControlChange(
         .select()
         .from(controlsTable)
         .where(eq(controlsTable.deviceId, deviceId));
-      const first = targetControls.find((c) => c.deviceId === deviceId)!;
+      const first = currentTargets.find((c) => c.deviceId === deviceId)!;
       // Each new command carries the COMPLETE relay bitmask for this device,
       // so any older pending command for the SAME ROOM is now obsolete —
       // applying it after the new one would put relays into a stale
@@ -157,7 +197,7 @@ export async function enqueueControlChange(
           deviceId,
           deviceCode: device.code,
           roomId: first.roomId ?? null,
-          controlId: targetControls.length === 1 ? first.id : null,
+          controlId: currentTargets.length === 1 ? first.id : null,
           processTypeId: meta.processType?.id ?? null,
           state,
           controlPush: buildPush(allControls),
@@ -175,10 +215,21 @@ export async function enqueueControlChange(
     }
 
     if (state === 1) {
-      // Open a session per control switching on (skip if one is already open).
-      for (const c of changing) {
+      // A process can change while the relay is already ON. For example, a
+      // Visiting session (with a 10-minute cutoff) becomes Walk-in/Checkin
+      // before the timer expires. This must replace the session — simply
+      // skipping it because the control state is already ON leaves the old
+      // cutoff alive and will unexpectedly cut a checked-in guest's power.
+      //
+      // Repeated commands for the SAME process intentionally keep their
+      // session. Only a genuine process transition closes the old session and
+      // starts a new one with the incoming process' timer rules.
+      for (const c of currentTargets) {
         const open = await tx
-          .select({ id: powerSessionsTable.id })
+          .select({
+            id: powerSessionsTable.id,
+            processTypeId: powerSessionsTable.processTypeId,
+          })
           .from(powerSessionsTable)
           .where(
             and(
@@ -187,7 +238,28 @@ export async function enqueueControlChange(
             ),
           )
           .limit(1);
-        if (open[0]) continue;
+        const existing = open[0];
+        const incomingProcessTypeId = meta.processType?.id ?? null;
+        const hasIncomingProcess =
+          incomingProcessTypeId != null ||
+          Boolean(meta.processEvent?.trim());
+        const isProcessChange =
+          existing != null &&
+          shouldReplaceOpenSession(
+            existing.processTypeId,
+            incomingProcessTypeId,
+            hasIncomingProcess,
+          );
+
+        if (existing && !isProcessChange) continue;
+
+        if (existing) {
+          await tx
+            .update(powerSessionsTable)
+            .set({ endedAt: now, endReason: "process-overridden" })
+            .where(eq(powerSessionsTable.id, existing.id));
+        }
+
         const pt = meta.processType;
         const cutoffDueAt =
           pt && pt.isAuto && pt.cutoffMinutes > 0
@@ -198,18 +270,18 @@ export async function enqueueControlChange(
         await tx
           .insert(powerSessionsTable)
           .values({
-          propertyId,
-          roomId: c.roomId ?? null,
-          controlId: c.id,
-          processTypeId: pt?.id ?? null,
-          grcNo: meta.grcNo ?? null,
-          billNo: meta.billNo ?? null,
-          guestName: meta.guestName ?? null,
-          requestedBy: meta.requestedBy ?? null,
-          wattage: c.wattage ?? null,
-          startedAt: now,
-          cutoffDueAt,
-        })
+            propertyId,
+            roomId: c.roomId ?? null,
+            controlId: c.id,
+            processTypeId: pt?.id ?? null,
+            grcNo: meta.grcNo ?? null,
+            billNo: meta.billNo ?? null,
+            guestName: meta.guestName ?? null,
+            requestedBy: meta.requestedBy ?? null,
+            wattage: c.wattage ?? null,
+            startedAt: now,
+            cutoffDueAt,
+          })
           .onConflictDoNothing();
       }
     } else {
