@@ -2,6 +2,9 @@
 
 **Version 1.0 — July 2026**
 **Audience:** MHMS front-office development team
+**Canonical M‑HMS source:** `https://github.com/MicrogennSenthil/Final-M-HMS-Running07082026` (`main`)
+
+PowerHub integration changes must be coordinated against this repository and branch only.
 
 ---
 

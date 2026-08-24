@@ -26,7 +26,8 @@ _Populate as you build — short repo map plus pointers to the source-of-truth f
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- M‑HMS is an external integration. Its only canonical source repository is `https://github.com/MicrogennSenthil/Final-M-HMS-Running07082026`, branch `main`.
+- Never use another M‑HMS repository as a source, reference, deployment base, or target for PowerHub integration work.
 
 ## Product
 
@@ -42,4 +43,6 @@ _Populate as you build — sharp edges, "always run X before Y" rules._
 
 ## Pointers
 
+- M‑HMS source: `https://github.com/MicrogennSenthil/Final-M-HMS-Running07082026` (`main`)
+- PowerHub ↔ M‑HMS API contract: `docs/MHMS-PowerHub-Integration-Guide.md`
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details

@@ -1,5 +1,6 @@
 # PowerHub × MHMS — Power Automation SOP
 **Property:** Hotel Vinayak &nbsp;|&nbsp; **Device:** Relay Box 000010 &nbsp;|&nbsp; **Date:** 21 July 2026
+**Canonical M‑HMS source:** `https://github.com/MicrogennSenthil/Final-M-HMS-Running07082026` (`main`)
 
 This document explains what happens automatically when the front office performs actions in MHMS, what PowerHub (the automation system) does, and what the front office team is responsible for.
 
