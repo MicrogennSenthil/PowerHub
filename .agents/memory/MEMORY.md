@@ -1,10 +1,11 @@
-- [Legacy PHP power-automation system](legacy-power-system.md) — reverse-engineered MSSQL/CodeIgniter hotel relay-control app we're rebuilding in Node/React/Postgres; device protocol, masters, and the auto-cutoff gap.
-- [PowerHub multi-tenant integrity](powerhub-multitenancy.md) — isolation/RBAC invariants: validate cross-property FKs, super-admin-only isSuperAdmin, atomic first-user bootstrap, zod z.infer wrapper gotcha.
-- [MHMS PowerLog integration design](mhms-power-integration.md) — command queue/device protocol decisions, wattage-snapshot sessions, 30s auto-cutoff sweep, unique device codes, drizzle push unique-constraint gotcha.
+- [Legacy PHP power-automation system](legacy-power-system.md) — reverse-engineered hotel relay app; device protocol, masters, and auto-cutoff gap.
+- [PowerHub multi-tenant integrity](powerhub-multitenancy.md) — tenant FK/RBAC invariants, super-admin bootstrap, and Zod wrapper gotcha.
+- [MHMS PowerLog integration design](mhms-power-integration.md) — command/session protocol plus occupancy-sync mapping and current-over-legacy API-key precedence.
 - [Multi-tenancy hardening](multitenancy-hardening.md) — roles are now property-scoped; default roles seeded on property creation; billing fields on properties; admin panel; user isolation pattern.
-- [Replit-managed Clerk key recovery](clerk-key-recovery.md) — overwritten Clerk keys can't be pasted back; fix with setupClerkWhitelabelAuth() + restart both workflows; never route managed keys through requestSecrets.
+- [Replit-managed Clerk key recovery](clerk-key-recovery.md) — recover overwritten managed keys through whitelabel setup, never secret entry.
 - [WhatsApp OTP auth flow](whatsapp-otp-auth.md) — custom sign-in page, mwhatsapp API contract, Clerk ticket flow, superadmin reset block, phone field, WA settings.
-- [Relay transfer race condition](relay-transfer-race.md) — three-layer bug in simultaneous MHMS checkout+checkin: wrong supersession scope, randomNo collision, relay settle timing; three fixes applied.
-- [Bridge property scoping](bridge-property-scoping.md) — duplicate device codes across properties are by design; bridge sends x-property-code, server scopes lookups; never re-add global uniqueness or warnings.
-- [VPS deploy quirks](vps-deploy-quirks.md) — SSH access via secrets works; deploy = push to GitHub + pull/build/pm2 restart; DATABASE_URL lives in api-server/.env, not the shell.
+- [Relay transfer race condition](relay-transfer-race.md) — simultaneous checkout/checkin needs scoped supersession, unique randomNo, and settle timing.
+- [Bridge property scoping](bridge-property-scoping.md) — duplicate codes across properties are valid; bridge/server must scope by property.
+- [VPS deploy quirks](vps-deploy-quirks.md) — PowerHub VPS environment gotchas; verify SSH credentials each session and verify every Git push reached origin.
+- [M-HMS release provenance](mhms-release-provenance.md) — canonical repo/main, Git-only staged releases, backend-only frontend preservation, and historical LFS archive limits.
 - [NC relay wiring](nc-relay-wiring.md) — boards are Normally Closed; bitmask must be built from OFF channels (state=0), never ON; one fix in slateMaskHex covers all operations.

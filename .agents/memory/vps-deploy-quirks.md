@@ -11,7 +11,9 @@ description: Hostinger VPS production environment gotchas — no shell DB access
 - gitPush can report success while origin/main stays behind (happened twice). After EVERY push, verify with `git fetch origin main && git merge-base --is-ancestor HEAD origin/main`; re-push if behind. Symptom: user deploys honestly but the fix "isn't working".
 - Schema changes still need attention: drizzle push is dev-only; new columns must be added idempotently too (prefer `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` via startup code or the pending auto-migration task).
 
-## Direct SSH access (working)
-- Agent can SSH from the workspace: `sshpass -e ssh root@$VPS_HOST` using secrets VPS_HOST / VPS_USER / VPS_ROOT_PASSWORD (Hostinger, srv1163666).
+## Direct SSH access
+- Treat SSH availability as something to verify each session. The stored host/password can become stale or non-routable; failed authentication is not permission to bypass Git release controls or copy files directly.
+- **Why:** a later release-provenance audit found the configured host non-routable and the documented host rejecting the stored password.
+- **How to apply:** attempt a read-only connection first; if it fails, leave production unchanged and report the blocked VPS provenance step.
 - Deploy = push workspace main to GitHub (`git push https://x-access-token:$GITHUB_PAT@github.com/MicrogennSenthil/PowerHub.git main` — workspace has no github remote, only gitsafe backup), then on VPS: git pull, pnpm install, build powerhub + api-server, `pm2 restart powerhub-api`.
 - `pm2 env <id>` output is polluted by a version-mismatch banner and unreliable for grabbing DATABASE_URL; read it from `/var/www/powerhub/artifacts/api-server/.env` instead.
