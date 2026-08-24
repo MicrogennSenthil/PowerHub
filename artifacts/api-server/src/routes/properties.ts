@@ -116,6 +116,12 @@ router.post("/", requireSuperAdmin, async (req, res) => {
     tariffPerKwh: body.tariffPerKwh ?? 0,
     timezone: body.timezone ?? "Asia/Kolkata",
     active: body.active ?? true,
+    ...(typeof body.mhmsApiUrl === "string" && body.mhmsApiUrl.trim() !== ""
+      ? { mhmsApiUrl: body.mhmsApiUrl.trim() }
+      : {}),
+    ...(typeof body.mhmsApiKey === "string" && body.mhmsApiKey.trim() !== ""
+      ? { mhmsApiKey: body.mhmsApiKey.trim() }
+      : {}),
   };
 
   // Resolve the property code according to the Software Setup configuration:

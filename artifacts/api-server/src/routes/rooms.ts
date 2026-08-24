@@ -21,7 +21,11 @@ import { refBelongsToProperty } from "../lib/integrity";
 import { getOfflineThresholdMinutes } from "../lib/settings";
 import { isDeviceOnline } from "../lib/serialize";
 import { enqueueControlChange } from "../lib/powerQueue";
-import { parseHmsOccupancyBody, type HmsOccupancyRoom } from "../lib/hmsOccupancy";
+import {
+  hmsProcessEvent,
+  parseHmsOccupancyBody,
+  type HmsOccupancyRoom,
+} from "../lib/hmsOccupancy";
 import type { Response } from "express";
 
 /**
@@ -447,6 +451,7 @@ router.post(
         const processType = processTypeByName.get(statusRaw) ?? null;
         await enqueueControlChange(controls, targetState, {
           processType,
+          processEvent: hmsProcessEvent(item.status),
           source: "hms-sync",
           requestedBy: "HMS Sync",
           grcNo: item.grcNo ?? null,

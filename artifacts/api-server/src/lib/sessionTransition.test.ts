@@ -6,7 +6,7 @@ test("Walk-in replaces a timed Visiting session", () => {
   assert.equal(shouldReplaceOpenSession(10, 20, true), true);
 });
 
-test("an unconfigured Walk-in event still replaces Visiting", () => {
+test("an HMS Checkin event without a Process Master still replaces Visiting", () => {
   assert.equal(shouldReplaceOpenSession(10, null, true), true);
 });
 

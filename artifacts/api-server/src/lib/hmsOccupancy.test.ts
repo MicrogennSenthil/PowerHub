@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseHmsOccupancyBody } from "./hmsOccupancy";
+import { hmsProcessEvent, parseHmsOccupancyBody } from "./hmsOccupancy";
 
 test("accepts a valid JSON occupancy response", () => {
   assert.deepEqual(
@@ -48,4 +48,9 @@ test("rejects non-JSON and malformed JSON contracts", () => {
   const missingRooms = parseHmsOccupancyBody('{"status":"ok"}', "application/json");
   assert.equal(missingRooms.ok, false);
   assert.match(missingRooms.ok ? "" : missingRooms.error, /missing the rooms list/i);
+});
+
+test("preserves an unmatched HMS status as a real process event", () => {
+  assert.equal(hmsProcessEvent(" Checkin "), "Checkin");
+  assert.equal(hmsProcessEvent("  "), null);
 });

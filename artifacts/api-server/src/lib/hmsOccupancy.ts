@@ -15,6 +15,11 @@ function looksLikeHtml(body: string): boolean {
   return start.startsWith("<!doctype html") || start.startsWith("<html");
 }
 
+export function hmsProcessEvent(status: string): string | null {
+  const event = String(status ?? "").trim();
+  return event || null;
+}
+
 export function parseHmsOccupancyBody(
   body: string,
   contentType: string | null,
