@@ -8,6 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "test:session-transition": "esbuild src/lib/sessionTransition.test.ts --bundle --platform=node --format=cjs --log-level=error --outfile=/tmp/powerhub-session-transition.test.cjs && node --test /tmp/powerhub-session-transition.test.cjs; code=$?; rm -f /tmp/powerhub-session-transition.test.cjs; exit $code",
+    "test:hms-occupancy": "esbuild src/lib/hmsOccupancy.test.ts --bundle --platform=node --format=cjs --log-level=error --outfile=/tmp/powerhub-hms-occupancy.test.cjs && node --test /tmp/powerhub-hms-occupancy.test.cjs; code=$?; rm -f /tmp/powerhub-hms-occupancy.test.cjs; exit $code",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

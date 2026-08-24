@@ -47,3 +47,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Separate production-aligned M-HMS checkout
+/mhms-work/

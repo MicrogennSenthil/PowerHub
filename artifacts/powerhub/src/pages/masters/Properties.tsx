@@ -337,7 +337,7 @@ export function Properties() {
 
             {/* MHMS integration */}
             <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 space-y-3 mt-2">
-              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">MHMS Integration (Room Import)</p>
+              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">MHMS Integration</p>
               <div className="space-y-2">
                 <Label htmlFor="mhmsApiUrl" className="text-sm">MHMS Server URL</Label>
                 <Input
@@ -347,7 +347,7 @@ export function Properties() {
                   placeholder="http://192.168.1.100/mhms"
                   className="font-mono text-sm"
                 />
-                <p className="text-xs text-blue-600">Base URL of the MHMS server. PowerHub will call <code className="bg-blue-100 px-1 rounded">{'{url}'}/api/rooms</code> to fetch the room list.</p>
+                <p className="text-xs text-blue-600">Base URL of the MHMS server. Room Chart sync calls <code className="bg-blue-100 px-1 rounded">{'{url}'}/api/integration/power/occupancy</code>.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="mhmsApiKey" className="text-sm">
@@ -359,9 +359,10 @@ export function Properties() {
                   type="password"
                   value={formData.mhmsApiKey}
                   onChange={(e) => setFormData({ ...formData, mhmsApiKey: e.target.value })}
-                  placeholder={editingRecord?.mhmsApiKeySet ? '(leave blank to keep current)' : 'API key provided by MHMS team'}
+                  placeholder={editingRecord?.mhmsApiKeySet ? '(leave blank to keep current)' : 'Same key used by M-HMS Power Automation'}
                   className="font-mono text-sm"
                 />
+                <p className="text-xs text-blue-600">Use the same API key configured in M-HMS → Microgenn Integrations → Power Automation.</p>
               </div>
             </div>
           </div>

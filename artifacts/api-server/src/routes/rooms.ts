@@ -21,6 +21,7 @@ import { refBelongsToProperty } from "../lib/integrity";
 import { getOfflineThresholdMinutes } from "../lib/settings";
 import { isDeviceOnline } from "../lib/serialize";
 import { enqueueControlChange } from "../lib/powerQueue";
+import { parseHmsOccupancyBody, type HmsOccupancyRoom } from "../lib/hmsOccupancy";
 import type { Response } from "express";
 
 /**
@@ -351,13 +352,7 @@ router.post(
     // Expected response: { rooms: [{ roomNumber, status, grcNo?, guestName?, billNo? }] }
     const base = normaliseBaseUrl(prop.mhmsApiUrl);
     const url = `${base}/api/integration/power/occupancy`;
-    let rawRooms: {
-      roomNumber: string;
-      status: string;
-      grcNo?: string;
-      guestName?: string;
-      billNo?: string;
-    }[] = [];
+    let rawRooms: HmsOccupancyRoom[] = [];
 
     try {
       const headers: Record<string, string> = { Accept: "application/json" };
@@ -366,20 +361,29 @@ router.post(
         headers,
         signal: AbortSignal.timeout(15_000),
       });
+      const body = await resp.text();
       if (!resp.ok) {
-        res
-          .status(400)
-          .json({
-            error: `HMS returned HTTP ${resp.status}. Check the API URL and key.`,
-          });
+        const error =
+          resp.status === 401 || resp.status === 403
+            ? "MHMS rejected the API key. Save the same key used in M-HMS Power Automation under Settings → Properties."
+            : `MHMS returned HTTP ${resp.status}. Check the MHMS Server URL and API key.`;
+        res.status(400).json({ error });
         return;
       }
-      const raw = (await resp.json()) as any;
-      rawRooms = Array.isArray(raw?.rooms) ? raw.rooms : [];
+
+      const parsed = parseHmsOccupancyBody(body, resp.headers.get("content-type"));
+      if (!parsed.ok) {
+        res.status(400).json({ error: parsed.error });
+        return;
+      }
+      rawRooms = parsed.rooms;
     } catch (err: any) {
-      res
-        .status(400)
-        .json({ error: `Could not reach HMS: ${err.message}` });
+      const timedOut = err?.name === "TimeoutError" || err?.name === "AbortError";
+      res.status(400).json({
+        error: timedOut
+          ? "MHMS did not respond within 15 seconds. Check the MHMS Server URL."
+          : "Could not reach MHMS. Check the MHMS Server URL and network connection.",
+      });
       return;
     }
 

@@ -403,7 +403,15 @@ export function RoomChart() {
         ].filter(Boolean).join(' · ') || 'No changes queued.',
       });
     } catch (err: any) {
-      toast({ title: 'HMS Sync failed', description: err.message, variant: 'destructive' });
+      const apiMessage =
+        err?.data && typeof err.data === 'object' && typeof err.data.error === 'string'
+          ? err.data.error
+          : null;
+      toast({
+        title: 'HMS Sync failed',
+        description: apiMessage || err?.message || 'Could not sync room status from MHMS.',
+        variant: 'destructive',
+      });
     } finally {
       setHmsSyncing(false);
     }
