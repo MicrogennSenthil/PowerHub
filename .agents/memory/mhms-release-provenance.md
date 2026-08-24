@@ -5,7 +5,7 @@ description: Canonical repository, Git-only release invariants, frontend preserv
 
 # M-HMS release provenance
 
-- **Rule:** The only canonical M-HMS repository is `MicrogennSenthil/Final-M-HMS-Running07082026`, branch `main`.
+- **Rule:** The only canonical M-HMS repository is `https://github.com/MicrogennSenthil/Final-M-HMS-Running07082026`, branch `main`.
 - **Why:** a reviewed occupancy release was first pushed to a superseded repository, leaving production code and repository provenance inconsistent.
 - **How to apply:** start from current canonical `main`, push only reviewed commits there, fetch afterward, and require local `HEAD` to equal `origin/main` before any VPS release step.
 
